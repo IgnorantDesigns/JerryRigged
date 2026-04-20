@@ -4,6 +4,8 @@ Binaries/
 DerivedDataCache/
 Intermediate/
 Saved/
+Plugins/*/Binaries/
+Plugins/*/Intermediate/
 *.VC.db
 *.VC.opendb
 *.sln
