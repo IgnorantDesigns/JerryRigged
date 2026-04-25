@@ -1,0 +1,28 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1.0",
+	"FriendlyName": "SQLUI",
+	"Description": "Reusable runtime modules for data-driven Unreal UI scaffolding.",
+	"Category": "User Interface",
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "SQLUICore",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "SQLUIWidgets",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "SQLUISamples",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
