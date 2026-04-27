@@ -12,5 +12,11 @@ public class SQLUICore : ModuleRules
 			"CoreUObject",
 			"Engine"
 		});
+
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			"Json",
+			"JsonUtilities"
+		});
 	}
 }
