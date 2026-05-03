@@ -43,12 +43,24 @@ public:
 	UFUNCTION(BlueprintPure, Category = "SQLUI|Widget")
 	FString GetSQLUIWidgetTypeKey() const;
 
+	bool ApplySQLUIWidgetProperty(
+		const FString& PropertyName,
+		const FString& PropertyValue,
+		FString& OutFailureMessage,
+		bool& bOutUnsupportedProperty);
+
 	virtual bool CanAcceptSQLUIChildWidget(
 		const USQLUIBaseWidget* ChildWidget,
 		const FSQLUILayoutNode& ChildLayoutNode) const;
 
 protected:
 	virtual void NativeOnSQLUIWidgetInitialized();
+
+	virtual bool NativeApplySQLUIWidgetProperty(
+		const FString& PropertyName,
+		const FString& PropertyValue,
+		FString& OutFailureMessage,
+		bool& bOutUnsupportedProperty);
 
 private:
 	UPROPERTY(Transient)

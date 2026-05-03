@@ -19,3 +19,22 @@ void USQLUIFilterBox::ClearFilterText()
 void USQLUIFilterBox::NativeOnFilterTextChanged(const FText& InFilterText)
 {
 }
+
+bool USQLUIFilterBox::NativeApplySQLUIWidgetProperty(
+	const FString& PropertyName,
+	const FString& PropertyValue,
+	FString& OutFailureMessage,
+	bool& bOutUnsupportedProperty)
+{
+	if (PropertyName == TEXT("FilterText"))
+	{
+		SetFilterText(FText::FromString(PropertyValue));
+		return true;
+	}
+
+	return Super::NativeApplySQLUIWidgetProperty(
+		PropertyName,
+		PropertyValue,
+		OutFailureMessage,
+		bOutUnsupportedProperty);
+}

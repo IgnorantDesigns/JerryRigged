@@ -22,6 +22,11 @@ public:
 
 protected:
 	virtual void NativeOnFilterTextChanged(const FText& InFilterText);
+	virtual bool NativeApplySQLUIWidgetProperty(
+		const FString& PropertyName,
+		const FString& PropertyValue,
+		FString& OutFailureMessage,
+		bool& bOutUnsupportedProperty) override;
 
 private:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "SQLUI|Filter", meta = (AllowPrivateAccess = "true"))
