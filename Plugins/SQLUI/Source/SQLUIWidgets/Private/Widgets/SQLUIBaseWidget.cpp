@@ -33,6 +33,13 @@ FString USQLUIBaseWidget::GetSQLUIWidgetTypeKey() const
 	return InitializeParams.LayoutNode.WidgetTypeKey;
 }
 
+bool USQLUIBaseWidget::CanAcceptSQLUIChildWidget(
+	const USQLUIBaseWidget* ChildWidget,
+	const FSQLUILayoutNode& ChildLayoutNode) const
+{
+	return false;
+}
+
 void USQLUIBaseWidget::NativeOnSQLUIWidgetInitialized()
 {
 }

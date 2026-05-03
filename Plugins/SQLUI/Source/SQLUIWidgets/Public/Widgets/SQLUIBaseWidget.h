@@ -43,6 +43,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "SQLUI|Widget")
 	FString GetSQLUIWidgetTypeKey() const;
 
+	virtual bool CanAcceptSQLUIChildWidget(
+		const USQLUIBaseWidget* ChildWidget,
+		const FSQLUILayoutNode& ChildLayoutNode) const;
+
 protected:
 	virtual void NativeOnSQLUIWidgetInitialized();
 
