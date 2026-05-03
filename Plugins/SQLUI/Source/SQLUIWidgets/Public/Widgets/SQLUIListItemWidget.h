@@ -20,6 +20,11 @@ public:
 
 protected:
 	virtual void NativeOnListItemDataChanged();
+	virtual bool NativeApplySQLUIWidgetProperty(
+		const FString& PropertyName,
+		const FString& PropertyValue,
+		FString& OutFailureMessage,
+		bool& bOutUnsupportedProperty) override;
 
 private:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "SQLUI|List", meta = (AllowPrivateAccess = "true"))
