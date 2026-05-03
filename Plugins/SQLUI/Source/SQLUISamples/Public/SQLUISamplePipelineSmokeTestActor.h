@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "SQLUISampleSmokeTestRunner.h"
 
 #include "SQLUISamplePipelineSmokeTestActor.generated.h"
 
@@ -22,4 +23,7 @@ protected:
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bRunSmokeTestOnBeginPlay = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FSQLUISampleSmokeTestRequest SmokeTestRequest;
 };
