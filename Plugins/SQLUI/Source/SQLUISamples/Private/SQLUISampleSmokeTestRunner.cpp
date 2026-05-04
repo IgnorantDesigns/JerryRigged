@@ -1,5 +1,6 @@
 #include "SQLUISampleSmokeTestRunner.h"
 
+#include "Layout/SQLUILayoutJson.h"
 #include "Layout/SQLUILayoutTypes.h"
 #include "Runtime/SQLUIRuntimeContext.h"
 #include "Variables/SQLUIVariableStore.h"
@@ -11,6 +12,69 @@
 namespace
 {
 const TCHAR* SQLUISampleSmokeTestFilterVariableName = TEXT("Sample.FilterText");
+
+struct FSQLUISampleLayoutJsonFixture
+{
+	static FString GetJsonString()
+	{
+		return TEXT(R"SQLUIJSON(
+{
+	"Version": {
+		"SchemaVersion": 1,
+		"Revision": 1,
+		"Label": "SQLUI Sample JSON Layout Fixture"
+	},
+	"Metadata": {
+		"LayoutId": "sqlui.sample.json-layout-fixture",
+		"DisplayName": "SQLUI Sample JSON Layout Fixture",
+		"Description": "Minimal SQLUISamples JSON layout fixture for the runtime widget pipeline smoke test.",
+		"CreatedBy": "SQLUISamples",
+		"CreatedAtUtc": "",
+		"UpdatedAtUtc": "",
+		"Tags": [],
+		"SearchMetadata": {}
+	},
+	"RootWidgetId": "SQLUI.Sample.Json.FilterRoot",
+	"Nodes": [
+		{
+			"WidgetId": "SQLUI.Sample.Json.FilterRoot",
+			"ParentWidgetId": "",
+			"WidgetTypeKey": "SQLUI.FilterBox",
+			"ChildWidgetIds": [],
+			"Properties": {
+				"FilterText": "Smoke test JSON fixture",
+				"IsEnabled": "true"
+			},
+			"Bindings": [
+				{
+					"BindingId": "SQLUI.Sample.Json.FilterTextBinding",
+					"TargetProperty": "FilterText",
+					"SourceKey": "Variable",
+					"SourcePath": "Sample.FilterText",
+					"TransformKey": "",
+					"Options": {}
+				}
+			],
+			"Actions": [],
+			"Tags": [],
+			"SearchMetadata": {}
+		}
+	],
+	"Properties": {}
+}
+)SQLUIJSON");
+	}
+};
+
+struct FSQLUISampleSmokeTestLayoutResult
+{
+	bool bSucceeded = true;
+	bool bUsedJsonLayoutFixture = false;
+	bool bJsonLayoutFixtureParseSucceeded = false;
+	bool bJsonLayoutFixtureValidationSucceeded = false;
+	FSQLUILayoutValidationResult JsonLayoutFixtureValidation;
+	FSQLUILayoutDocument Document;
+};
 
 void AddSQLUISampleSmokeTestError(
 	FSQLUISampleSmokeTestResult& Result,
@@ -74,6 +138,74 @@ FSQLUILayoutDocument MakeSQLUISampleSmokeTestDocument(
 	return Document;
 }
 
+bool IsSQLUISampleLayoutJsonParseFailureMessage(const FString& ErrorMessage)
+{
+	return ErrorMessage.Contains(TEXT("deserialize"), ESearchCase::IgnoreCase);
+}
+
+bool DidSQLUISampleLayoutJsonParseFail(const FSQLUILayoutValidationResult& Validation)
+{
+	for (const FString& Error : Validation.Errors)
+	{
+		if (IsSQLUISampleLayoutJsonParseFailureMessage(Error))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+FSQLUISampleSmokeTestLayoutResult ResolveSQLUISampleSmokeTestLayoutDocument(
+	const FSQLUISampleSmokeTestRequest& Request)
+{
+	FSQLUISampleSmokeTestLayoutResult Result;
+	Result.bUsedJsonLayoutFixture = Request.bUseJsonLayoutFixture;
+
+	if (!Request.bUseJsonLayoutFixture)
+	{
+		Result.Document = MakeSQLUISampleSmokeTestDocument(Request);
+		return Result;
+	}
+
+	const bool bParsedAndValidated = FSQLUILayoutJson::FromJsonString(
+		FSQLUISampleLayoutJsonFixture::GetJsonString(),
+		Result.Document,
+		Result.JsonLayoutFixtureValidation);
+
+	Result.bJsonLayoutFixtureParseSucceeded =
+		!DidSQLUISampleLayoutJsonParseFail(Result.JsonLayoutFixtureValidation);
+	Result.bJsonLayoutFixtureValidationSucceeded =
+		Result.bJsonLayoutFixtureParseSucceeded && Result.JsonLayoutFixtureValidation.bIsValid;
+	Result.bSucceeded = bParsedAndValidated;
+	return Result;
+}
+
+void ApplySQLUISampleLayoutResult(
+	FSQLUISampleSmokeTestResult& Result,
+	const FSQLUISampleSmokeTestLayoutResult& LayoutResult)
+{
+	Result.bUsedJsonLayoutFixture = LayoutResult.bUsedJsonLayoutFixture;
+	Result.bJsonLayoutFixtureParseSucceeded = LayoutResult.bJsonLayoutFixtureParseSucceeded;
+	Result.bJsonLayoutFixtureValidationSucceeded = LayoutResult.bJsonLayoutFixtureValidationSucceeded;
+	Result.JsonLayoutFixtureValidation = LayoutResult.JsonLayoutFixtureValidation;
+}
+
+void AddSQLUISampleLayoutValidationMessages(
+	FSQLUISampleSmokeTestResult& Result,
+	const FSQLUILayoutValidationResult& Validation)
+{
+	for (const FString& Error : Validation.Errors)
+	{
+		AddSQLUISampleSmokeTestError(Result, Error);
+	}
+
+	for (const FString& Warning : Validation.Warnings)
+	{
+		Result.Warnings.Add(Warning);
+	}
+}
+
 void SeedSQLUISampleSmokeTestVariables(
 	USQLUIVariableStore* VariableStore,
 	const FSQLUISampleSmokeTestRequest& Request)
@@ -93,9 +225,11 @@ void SeedSQLUISampleSmokeTestVariables(
 }
 
 FSQLUISampleSmokeTestResult MakeSQLUISampleSmokeTestResult(
-	const FSQLUIRuntimeWidgetPipelineResult& PipelineResult)
+	const FSQLUIRuntimeWidgetPipelineResult& PipelineResult,
+	const FSQLUISampleSmokeTestLayoutResult& LayoutResult)
 {
 	FSQLUISampleSmokeTestResult Result;
+	ApplySQLUISampleLayoutResult(Result, LayoutResult);
 	Result.bSucceeded = PipelineResult.bSucceeded;
 	Result.ErrorMessage = PipelineResult.ErrorMessage;
 	Result.Errors = PipelineResult.Errors;
@@ -114,6 +248,20 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 {
 	FSQLUISampleSmokeTestResult Result;
 	UObject* Outer = ResolveSQLUISampleSmokeTestOuter(WorldContextObject, Request);
+
+	const FSQLUISampleSmokeTestLayoutResult LayoutResult =
+		ResolveSQLUISampleSmokeTestLayoutDocument(Request);
+	ApplySQLUISampleLayoutResult(Result, LayoutResult);
+	if (!LayoutResult.bSucceeded)
+	{
+		AddSQLUISampleSmokeTestError(
+			Result,
+			LayoutResult.bJsonLayoutFixtureParseSucceeded
+				? TEXT("SQLUI sample pipeline smoke test failed: JSON layout fixture validation failed.")
+				: TEXT("SQLUI sample pipeline smoke test failed: JSON layout fixture parse failed."));
+		AddSQLUISampleLayoutValidationMessages(Result, LayoutResult.JsonLayoutFixtureValidation);
+		return Result;
+	}
 
 	USQLUIWidgetCatalog* WidgetCatalog = NewObject<USQLUIWidgetCatalog>(Outer);
 	if (!IsValid(WidgetCatalog))
@@ -175,7 +323,7 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 	}
 
 	FSQLUIRuntimeWidgetPipelineRequest PipelineRequest;
-	PipelineRequest.Document = MakeSQLUISampleSmokeTestDocument(Request);
+	PipelineRequest.Document = LayoutResult.Document;
 	PipelineRequest.RuntimeContext = RuntimeContext;
 	PipelineRequest.WidgetCatalogOverride = WidgetCatalog;
 	PipelineRequest.WorldContextObject = WorldContextObject;
@@ -186,5 +334,14 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 	PipelineRequest.bExecuteActions = Request.bExecuteActions;
 	PipelineRequest.bStopOnOptionalStepFailure = Request.bStopOnOptionalStepFailure;
 
-	return MakeSQLUISampleSmokeTestResult(Pipeline->RunPipeline(PipelineRequest));
+	return MakeSQLUISampleSmokeTestResult(Pipeline->RunPipeline(PipelineRequest), LayoutResult);
+}
+
+FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunJsonLayoutSmokeTest(
+	UObject* WorldContextObject,
+	const FSQLUISampleSmokeTestRequest& Request)
+{
+	FSQLUISampleSmokeTestRequest JsonRequest = Request;
+	JsonRequest.bUseJsonLayoutFixture = true;
+	return RunSmokeTest(WorldContextObject, JsonRequest);
 }

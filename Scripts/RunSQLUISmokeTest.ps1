@@ -6,6 +6,8 @@ param(
 
 	[string]$ProjectPath,
 
+	[switch]$UseJsonLayoutFixture,
+
 	[Alias('?')]
 	[switch]$Help
 )
@@ -33,11 +35,15 @@ Parameters:
       Optional path to JerryRigged.uproject. Defaults to ..\JerryRigged.uproject
       relative to this script.
 
+  -UseJsonLayoutFixture
+      Run the smoke test with the built-in SQLUISamples JSON layout fixture.
+
   -Help, -?
       Show this help.
 
 Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7"
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseJsonLayoutFixture
   .\Scripts\RunSQLUISmokeTest.ps1 -UnrealEditorCmdPath "C:\UE\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -ProjectPath ".\JerryRigged.uproject"
 '@
@@ -142,6 +148,11 @@ $CommandletArgs = @(
 	'-stdout',
 	'-FullStdOutLogOutput'
 )
+
+if ($UseJsonLayoutFixture)
+{
+	$CommandletArgs += '-UseJsonLayoutFixture'
+}
 
 $PrintableCommandParts = @($ResolvedUnrealEditorCmdPath) + $CommandletArgs
 $PrintableCommand = '& ' + (($PrintableCommandParts | ForEach-Object { Format-PowerShellCommandPart -Value $_ }) -join ' ')

@@ -39,8 +39,55 @@ void LogSQLUISamplePipelineSmokeTestWarnings(const TArray<FString>& Messages)
 	}
 }
 
+void LogSQLUISamplePipelineSmokeTestJsonFixtureMessages(
+	const FSQLUILayoutValidationResult& Validation)
+{
+	for (const FString& Error : Validation.Errors)
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample pipeline smoke test JSON fixture validation error: %s"),
+			*Error);
+	}
+
+	for (const FString& Warning : Validation.Warnings)
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Warning,
+			TEXT("SQLUI sample pipeline smoke test JSON fixture validation warning: %s"),
+			*Warning);
+	}
+}
+
+void LogSQLUISamplePipelineSmokeTestJsonFixtureResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedJsonLayoutFixture)
+	{
+		return;
+	}
+
+	UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI sample pipeline smoke test JSON fixture selected."));
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample pipeline smoke test JSON fixture parse %s."),
+		Result.bJsonLayoutFixtureParseSucceeded ? TEXT("succeeded") : TEXT("failed"));
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample pipeline smoke test JSON fixture validation %s."),
+		Result.bJsonLayoutFixtureValidationSucceeded ? TEXT("succeeded") : TEXT("failed"));
+
+	LogSQLUISamplePipelineSmokeTestJsonFixtureMessages(Result.JsonLayoutFixtureValidation);
+}
+
 void LogSQLUISamplePipelineSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 {
+	LogSQLUISamplePipelineSmokeTestJsonFixtureResult(Result);
+
 	UE_LOG(
 		LogSQLUISamples,
 		Log,

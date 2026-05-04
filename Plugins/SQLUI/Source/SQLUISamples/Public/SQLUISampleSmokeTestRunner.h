@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Layout/SQLUILayoutTypes.h"
 #include "Pipeline/SQLUIRuntimeWidgetPipeline.h"
 #include "UObject/Object.h"
 
@@ -33,6 +34,9 @@ struct SQLUISAMPLES_API FSQLUISampleSmokeTestRequest
 	bool bStopOnOptionalStepFailure = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bUseJsonLayoutFixture = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	FString SampleFilterText = TEXT("Smoke test");
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
@@ -49,6 +53,18 @@ struct SQLUISAMPLES_API FSQLUISampleSmokeTestResult
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	FString ErrorMessage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bUsedJsonLayoutFixture = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bJsonLayoutFixtureParseSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bJsonLayoutFixtureValidationSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FSQLUILayoutValidationResult JsonLayoutFixtureValidation;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	TArray<FString> Errors;
@@ -77,6 +93,11 @@ class SQLUISAMPLES_API USQLUISampleSmokeTestRunner : public UObject
 public:
 	UFUNCTION(BlueprintCallable, Category = "SQLUI|Samples", meta = (WorldContext = "WorldContextObject"))
 	static FSQLUISampleSmokeTestResult RunSmokeTest(
+		UObject* WorldContextObject,
+		const FSQLUISampleSmokeTestRequest& Request);
+
+	UFUNCTION(BlueprintCallable, Category = "SQLUI|Samples", meta = (WorldContext = "WorldContextObject"))
+	static FSQLUISampleSmokeTestResult RunJsonLayoutSmokeTest(
 		UObject* WorldContextObject,
 		const FSQLUISampleSmokeTestRequest& Request);
 };
