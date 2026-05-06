@@ -1,5 +1,6 @@
 #include "SQLUISampleSmokeTestRunner.h"
 
+#include "Layout/SQLUIInMemoryLayoutRepository.h"
 #include "Layout/SQLUILayoutJson.h"
 #include "Layout/SQLUILayoutTypes.h"
 #include "Runtime/SQLUIRuntimeContext.h"
@@ -73,6 +74,15 @@ struct FSQLUISampleSmokeTestLayoutResult
 	bool bJsonLayoutFixtureParseSucceeded = false;
 	bool bJsonLayoutFixtureValidationSucceeded = false;
 	FSQLUILayoutValidationResult JsonLayoutFixtureValidation;
+	bool bUsedInMemoryLayoutRepository = false;
+	bool bRepositorySaveSucceeded = false;
+	bool bRepositoryLoadSucceeded = false;
+	FString SavedLayoutId;
+	FString LoadedLayoutId;
+	FString RepositorySaveErrorMessage;
+	FString RepositoryLoadErrorMessage;
+	FSQLUILayoutValidationResult RepositorySaveValidation;
+	FSQLUILayoutValidationResult RepositoryLoadValidation;
 	FSQLUILayoutDocument Document;
 };
 
@@ -156,13 +166,84 @@ bool DidSQLUISampleLayoutJsonParseFail(const FSQLUILayoutValidationResult& Valid
 	return false;
 }
 
+FSQLUILayoutSaveResult SaveSQLUISampleLayoutToRepository(
+	USQLUIInMemoryLayoutRepository* Repository,
+	const FSQLUILayoutDocument& Document)
+{
+	FSQLUILayoutSaveResult SaveResult;
+	SaveResult.SavedLayoutId = Document.Metadata.LayoutId;
+
+	if (!IsValid(Repository))
+	{
+		SaveResult.ErrorMessage =
+			TEXT("SQLUI sample smoke test failed: could not create in-memory layout repository.");
+		return SaveResult;
+	}
+
+	bool bSaveCompleted = false;
+	Repository->SaveLayout(
+		Document,
+		FSQLUILayoutSaveCompleteDelegate::CreateLambda(
+			[&SaveResult, &bSaveCompleted](const FSQLUILayoutSaveResult& InSaveResult)
+			{
+				SaveResult = InSaveResult;
+				bSaveCompleted = true;
+			}));
+
+	if (!bSaveCompleted)
+	{
+		SaveResult.bSucceeded = false;
+		SaveResult.ErrorMessage =
+			TEXT("SQLUI sample smoke test failed: in-memory layout repository save did not complete.");
+	}
+
+	return SaveResult;
+}
+
+FSQLUILayoutLoadResult LoadSQLUISampleLayoutFromRepository(
+	USQLUIInMemoryLayoutRepository* Repository,
+	const FString& LayoutId)
+{
+	FSQLUILayoutLoadResult LoadResult;
+	LoadResult.Document.Metadata.LayoutId = LayoutId;
+
+	if (!IsValid(Repository))
+	{
+		LoadResult.ErrorMessage =
+			TEXT("SQLUI sample smoke test failed: could not create in-memory layout repository.");
+		return LoadResult;
+	}
+
+	bool bLoadCompleted = false;
+	Repository->LoadLayout(
+		LayoutId,
+		FSQLUILayoutLoadCompleteDelegate::CreateLambda(
+			[&LoadResult, &bLoadCompleted](const FSQLUILayoutLoadResult& InLoadResult)
+			{
+				LoadResult = InLoadResult;
+				bLoadCompleted = true;
+			}));
+
+	if (!bLoadCompleted)
+	{
+		LoadResult.bSucceeded = false;
+		LoadResult.ErrorMessage =
+			TEXT("SQLUI sample smoke test failed: in-memory layout repository load did not complete.");
+	}
+
+	return LoadResult;
+}
+
 FSQLUISampleSmokeTestLayoutResult ResolveSQLUISampleSmokeTestLayoutDocument(
+	UObject* Outer,
 	const FSQLUISampleSmokeTestRequest& Request)
 {
 	FSQLUISampleSmokeTestLayoutResult Result;
-	Result.bUsedJsonLayoutFixture = Request.bUseJsonLayoutFixture;
+	Result.bUsedInMemoryLayoutRepository = Request.bUseInMemoryLayoutRepository;
+	Result.bUsedJsonLayoutFixture =
+		Request.bUseJsonLayoutFixture || Request.bUseInMemoryLayoutRepository;
 
-	if (!Request.bUseJsonLayoutFixture)
+	if (!Result.bUsedJsonLayoutFixture)
 	{
 		Result.Document = MakeSQLUISampleSmokeTestDocument(Request);
 		return Result;
@@ -178,6 +259,49 @@ FSQLUISampleSmokeTestLayoutResult ResolveSQLUISampleSmokeTestLayoutDocument(
 	Result.bJsonLayoutFixtureValidationSucceeded =
 		Result.bJsonLayoutFixtureParseSucceeded && Result.JsonLayoutFixtureValidation.bIsValid;
 	Result.bSucceeded = bParsedAndValidated;
+	if (!Result.bSucceeded || !Request.bUseInMemoryLayoutRepository)
+	{
+		return Result;
+	}
+
+	USQLUIInMemoryLayoutRepository* LayoutRepository =
+		NewObject<USQLUIInMemoryLayoutRepository>(Outer);
+	const FSQLUILayoutSaveResult SaveResult =
+		SaveSQLUISampleLayoutToRepository(LayoutRepository, Result.Document);
+
+	Result.bRepositorySaveSucceeded = SaveResult.bSucceeded;
+	Result.SavedLayoutId = SaveResult.SavedLayoutId;
+	Result.RepositorySaveErrorMessage = SaveResult.ErrorMessage;
+	Result.RepositorySaveValidation = SaveResult.Validation;
+
+	if (!SaveResult.bSucceeded)
+	{
+		Result.bSucceeded = false;
+		return Result;
+	}
+
+	const FString LayoutId = Result.Document.Metadata.LayoutId;
+	const FSQLUILayoutLoadResult LoadResult =
+		LoadSQLUISampleLayoutFromRepository(LayoutRepository, LayoutId);
+
+	Result.bRepositoryLoadSucceeded =
+		LoadResult.bSucceeded && LoadResult.Validation.bIsValid;
+	Result.LoadedLayoutId = LoadResult.Document.Metadata.LayoutId;
+	Result.RepositoryLoadErrorMessage = LoadResult.ErrorMessage;
+	Result.RepositoryLoadValidation = LoadResult.Validation;
+
+	if (!Result.bRepositoryLoadSucceeded)
+	{
+		Result.bSucceeded = false;
+		if (Result.RepositoryLoadErrorMessage.IsEmpty())
+		{
+			Result.RepositoryLoadErrorMessage =
+				TEXT("SQLUI sample smoke test failed: in-memory layout repository loaded an invalid layout document.");
+		}
+		return Result;
+	}
+
+	Result.Document = LoadResult.Document;
 	return Result;
 }
 
@@ -189,6 +313,15 @@ void ApplySQLUISampleLayoutResult(
 	Result.bJsonLayoutFixtureParseSucceeded = LayoutResult.bJsonLayoutFixtureParseSucceeded;
 	Result.bJsonLayoutFixtureValidationSucceeded = LayoutResult.bJsonLayoutFixtureValidationSucceeded;
 	Result.JsonLayoutFixtureValidation = LayoutResult.JsonLayoutFixtureValidation;
+	Result.bUsedInMemoryLayoutRepository = LayoutResult.bUsedInMemoryLayoutRepository;
+	Result.bRepositorySaveSucceeded = LayoutResult.bRepositorySaveSucceeded;
+	Result.bRepositoryLoadSucceeded = LayoutResult.bRepositoryLoadSucceeded;
+	Result.SavedLayoutId = LayoutResult.SavedLayoutId;
+	Result.LoadedLayoutId = LayoutResult.LoadedLayoutId;
+	Result.RepositorySaveErrorMessage = LayoutResult.RepositorySaveErrorMessage;
+	Result.RepositoryLoadErrorMessage = LayoutResult.RepositoryLoadErrorMessage;
+	Result.RepositorySaveValidation = LayoutResult.RepositorySaveValidation;
+	Result.RepositoryLoadValidation = LayoutResult.RepositoryLoadValidation;
 }
 
 void AddSQLUISampleLayoutValidationMessages(
@@ -204,6 +337,32 @@ void AddSQLUISampleLayoutValidationMessages(
 	{
 		Result.Warnings.Add(Warning);
 	}
+}
+
+FString MakeSQLUISampleLayoutFailureMessage(
+	const FSQLUISampleSmokeTestLayoutResult& LayoutResult)
+{
+	if (LayoutResult.bUsedJsonLayoutFixture && !LayoutResult.bJsonLayoutFixtureParseSucceeded)
+	{
+		return TEXT("SQLUI sample pipeline smoke test failed: JSON layout fixture parse failed.");
+	}
+
+	if (LayoutResult.bUsedJsonLayoutFixture && !LayoutResult.bJsonLayoutFixtureValidationSucceeded)
+	{
+		return TEXT("SQLUI sample pipeline smoke test failed: JSON layout fixture validation failed.");
+	}
+
+	if (LayoutResult.bUsedInMemoryLayoutRepository && !LayoutResult.bRepositorySaveSucceeded)
+	{
+		return TEXT("SQLUI sample pipeline smoke test failed: in-memory layout repository save failed.");
+	}
+
+	if (LayoutResult.bUsedInMemoryLayoutRepository && !LayoutResult.bRepositoryLoadSucceeded)
+	{
+		return TEXT("SQLUI sample pipeline smoke test failed: in-memory layout repository load failed.");
+	}
+
+	return TEXT("SQLUI sample pipeline smoke test failed: layout document could not be resolved.");
 }
 
 void SeedSQLUISampleSmokeTestVariables(
@@ -250,16 +409,16 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 	UObject* Outer = ResolveSQLUISampleSmokeTestOuter(WorldContextObject, Request);
 
 	const FSQLUISampleSmokeTestLayoutResult LayoutResult =
-		ResolveSQLUISampleSmokeTestLayoutDocument(Request);
+		ResolveSQLUISampleSmokeTestLayoutDocument(Outer, Request);
 	ApplySQLUISampleLayoutResult(Result, LayoutResult);
 	if (!LayoutResult.bSucceeded)
 	{
-		AddSQLUISampleSmokeTestError(
-			Result,
-			LayoutResult.bJsonLayoutFixtureParseSucceeded
-				? TEXT("SQLUI sample pipeline smoke test failed: JSON layout fixture validation failed.")
-				: TEXT("SQLUI sample pipeline smoke test failed: JSON layout fixture parse failed."));
+		AddSQLUISampleSmokeTestError(Result, MakeSQLUISampleLayoutFailureMessage(LayoutResult));
 		AddSQLUISampleLayoutValidationMessages(Result, LayoutResult.JsonLayoutFixtureValidation);
+		AddSQLUISampleLayoutValidationMessages(Result, LayoutResult.RepositorySaveValidation);
+		AddSQLUISampleLayoutValidationMessages(Result, LayoutResult.RepositoryLoadValidation);
+		AddSQLUISampleSmokeTestError(Result, LayoutResult.RepositorySaveErrorMessage);
+		AddSQLUISampleSmokeTestError(Result, LayoutResult.RepositoryLoadErrorMessage);
 		return Result;
 	}
 
