@@ -3,6 +3,7 @@
 #include "SQLUISamplesModule.h"
 #include "SQLUISampleSmokeTestRunner.h"
 #include "Engine/World.h"
+#include "Misc/Parse.h"
 
 namespace
 {
@@ -50,6 +51,51 @@ void LogSQLUISampleSmokeTestWarnings(const TArray<FString>& Messages)
 	}
 }
 
+void LogSQLUISampleSmokeTestJsonFixtureMessages(
+	const FSQLUILayoutValidationResult& Validation)
+{
+	for (const FString& Error : Validation.Errors)
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample smoke test JSON fixture validation error: %s"),
+			*Error);
+	}
+
+	for (const FString& Warning : Validation.Warnings)
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Warning,
+			TEXT("SQLUI sample smoke test JSON fixture validation warning: %s"),
+			*Warning);
+	}
+}
+
+void LogSQLUISampleSmokeTestJsonFixtureResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedJsonLayoutFixture)
+	{
+		return;
+	}
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test JSON fixture parse %s."),
+		Result.bJsonLayoutFixtureParseSucceeded ? TEXT("succeeded") : TEXT("failed"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test JSON fixture validation %s."),
+		Result.bJsonLayoutFixtureValidationSucceeded ? TEXT("succeeded") : TEXT("failed"));
+
+	LogSQLUISampleSmokeTestJsonFixtureMessages(Result.JsonLayoutFixtureValidation);
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -82,6 +128,8 @@ void LogSQLUISampleSmokeTestStepWarnings(
 
 void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 {
+	LogSQLUISampleSmokeTestJsonFixtureResult(Result);
+
 	UE_LOG(
 		LogSQLUISamples,
 		Log,
@@ -144,6 +192,15 @@ USQLUISampleSmokeTestCommandlet::USQLUISampleSmokeTestCommandlet()
 int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 {
 	UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI sample smoke test commandlet started."));
+	const bool bUseJsonLayoutFixture =
+		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
+		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test JSON fixture selected: %s"),
+		bUseJsonLayoutFixture ? TEXT("true") : TEXT("false"));
 
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
@@ -158,6 +215,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	FSQLUISampleSmokeTestResult Result;
 	{
 		FSQLUISampleSmokeTestRequest Request;
+		Request.bUseJsonLayoutFixture = bUseJsonLayoutFixture;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 
