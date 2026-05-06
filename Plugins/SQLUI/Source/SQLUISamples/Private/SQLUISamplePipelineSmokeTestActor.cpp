@@ -84,9 +84,85 @@ void LogSQLUISamplePipelineSmokeTestJsonFixtureResult(
 	LogSQLUISamplePipelineSmokeTestJsonFixtureMessages(Result.JsonLayoutFixtureValidation);
 }
 
+void LogSQLUISamplePipelineSmokeTestRepositoryValidationMessages(
+	const TCHAR* OperationName,
+	const FSQLUILayoutValidationResult& Validation)
+{
+	for (const FString& Error : Validation.Errors)
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample pipeline smoke test in-memory layout repository %s validation error: %s"),
+			OperationName,
+			*Error);
+	}
+
+	for (const FString& Warning : Validation.Warnings)
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Warning,
+			TEXT("SQLUI sample pipeline smoke test in-memory layout repository %s validation warning: %s"),
+			OperationName,
+			*Warning);
+	}
+}
+
+void LogSQLUISamplePipelineSmokeTestRepositoryResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedInMemoryLayoutRepository)
+	{
+		return;
+	}
+
+	UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI sample pipeline smoke test in-memory layout repository selected."));
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample pipeline smoke test in-memory layout repository save %s. LayoutId='%s'"),
+		Result.bRepositorySaveSucceeded ? TEXT("succeeded") : TEXT("failed"),
+		*Result.SavedLayoutId);
+
+	if (!Result.RepositorySaveErrorMessage.IsEmpty())
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample pipeline smoke test in-memory layout repository save error: %s"),
+			*Result.RepositorySaveErrorMessage);
+	}
+
+	LogSQLUISamplePipelineSmokeTestRepositoryValidationMessages(
+		TEXT("save"),
+		Result.RepositorySaveValidation);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample pipeline smoke test in-memory layout repository load %s. LayoutId='%s'"),
+		Result.bRepositoryLoadSucceeded ? TEXT("succeeded") : TEXT("failed"),
+		*Result.LoadedLayoutId);
+
+	if (!Result.RepositoryLoadErrorMessage.IsEmpty())
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample pipeline smoke test in-memory layout repository load error: %s"),
+			*Result.RepositoryLoadErrorMessage);
+	}
+
+	LogSQLUISamplePipelineSmokeTestRepositoryValidationMessages(
+		TEXT("load"),
+		Result.RepositoryLoadValidation);
+}
+
 void LogSQLUISamplePipelineSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 {
 	LogSQLUISamplePipelineSmokeTestJsonFixtureResult(Result);
+	LogSQLUISamplePipelineSmokeTestRepositoryResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,

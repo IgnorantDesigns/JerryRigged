@@ -96,6 +96,81 @@ void LogSQLUISampleSmokeTestJsonFixtureResult(
 	LogSQLUISampleSmokeTestJsonFixtureMessages(Result.JsonLayoutFixtureValidation);
 }
 
+void LogSQLUISampleSmokeTestRepositoryValidationMessages(
+	const TCHAR* OperationName,
+	const FSQLUILayoutValidationResult& Validation)
+{
+	for (const FString& Error : Validation.Errors)
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample smoke test in-memory layout repository %s validation error: %s"),
+			OperationName,
+			*Error);
+	}
+
+	for (const FString& Warning : Validation.Warnings)
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Warning,
+			TEXT("SQLUI sample smoke test in-memory layout repository %s validation warning: %s"),
+			OperationName,
+			*Warning);
+	}
+}
+
+void LogSQLUISampleSmokeTestRepositoryResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedInMemoryLayoutRepository)
+	{
+		return;
+	}
+
+	UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI sample smoke test in-memory layout repository selected."));
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test in-memory layout repository save %s. LayoutId='%s'"),
+		Result.bRepositorySaveSucceeded ? TEXT("succeeded") : TEXT("failed"),
+		*Result.SavedLayoutId);
+
+	if (!Result.RepositorySaveErrorMessage.IsEmpty())
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample smoke test in-memory layout repository save error: %s"),
+			*Result.RepositorySaveErrorMessage);
+	}
+
+	LogSQLUISampleSmokeTestRepositoryValidationMessages(
+		TEXT("save"),
+		Result.RepositorySaveValidation);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test in-memory layout repository load %s. LayoutId='%s'"),
+		Result.bRepositoryLoadSucceeded ? TEXT("succeeded") : TEXT("failed"),
+		*Result.LoadedLayoutId);
+
+	if (!Result.RepositoryLoadErrorMessage.IsEmpty())
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample smoke test in-memory layout repository load error: %s"),
+			*Result.RepositoryLoadErrorMessage);
+	}
+
+	LogSQLUISampleSmokeTestRepositoryValidationMessages(
+		TEXT("load"),
+		Result.RepositoryLoadValidation);
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -129,6 +204,7 @@ void LogSQLUISampleSmokeTestStepWarnings(
 void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 {
 	LogSQLUISampleSmokeTestJsonFixtureResult(Result);
+	LogSQLUISampleSmokeTestRepositoryResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -192,15 +268,25 @@ USQLUISampleSmokeTestCommandlet::USQLUISampleSmokeTestCommandlet()
 int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 {
 	UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI sample smoke test commandlet started."));
+	const bool bUseInMemoryLayoutRepository =
+		FParse::Param(*Params, TEXT("UseInMemoryLayoutRepository"))
+		|| FParse::Param(*Params, TEXT("InMemoryLayoutRepository"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
-		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"));
+		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
+		|| bUseInMemoryLayoutRepository;
 
 	UE_LOG(
 		LogSQLUISamples,
 		Log,
 		TEXT("SQLUI sample smoke test JSON fixture selected: %s"),
 		bUseJsonLayoutFixture ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test in-memory layout repository selected: %s"),
+		bUseInMemoryLayoutRepository ? TEXT("true") : TEXT("false"));
 
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
@@ -216,6 +302,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	{
 		FSQLUISampleSmokeTestRequest Request;
 		Request.bUseJsonLayoutFixture = bUseJsonLayoutFixture;
+		Request.bUseInMemoryLayoutRepository = bUseInMemoryLayoutRepository;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 
