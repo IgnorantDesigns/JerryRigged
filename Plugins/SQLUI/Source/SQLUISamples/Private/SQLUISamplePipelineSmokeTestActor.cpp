@@ -159,10 +159,53 @@ void LogSQLUISamplePipelineSmokeTestRepositoryResult(
 		Result.RepositoryLoadValidation);
 }
 
+void LogSQLUISamplePipelineSmokeTestJsonFileRepositoryResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedJsonFileLayoutRepository)
+	{
+		return;
+	}
+
+	UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI sample pipeline smoke test JSON file layout repository selected."));
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample pipeline smoke test JSON file layout repository save %s. LayoutId='%s'"),
+		Result.bJsonFileRepositorySaveSucceeded ? TEXT("succeeded") : TEXT("failed"),
+		*Result.JsonFileRepositorySavedLayoutId);
+
+	if (!Result.JsonFileRepositorySaveErrorMessage.IsEmpty())
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample pipeline smoke test JSON file layout repository save error: %s"),
+			*Result.JsonFileRepositorySaveErrorMessage);
+	}
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample pipeline smoke test JSON file layout repository load %s. LayoutId='%s'"),
+		Result.bJsonFileRepositoryLoadSucceeded ? TEXT("succeeded") : TEXT("failed"),
+		*Result.JsonFileRepositoryLoadedLayoutId);
+
+	if (!Result.JsonFileRepositoryLoadErrorMessage.IsEmpty())
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample pipeline smoke test JSON file layout repository load error: %s"),
+			*Result.JsonFileRepositoryLoadErrorMessage);
+	}
+}
+
 void LogSQLUISamplePipelineSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 {
 	LogSQLUISamplePipelineSmokeTestJsonFixtureResult(Result);
 	LogSQLUISamplePipelineSmokeTestRepositoryResult(Result);
+	LogSQLUISamplePipelineSmokeTestJsonFileRepositoryResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,

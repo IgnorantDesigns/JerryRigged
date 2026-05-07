@@ -171,6 +171,48 @@ void LogSQLUISampleSmokeTestRepositoryResult(
 		Result.RepositoryLoadValidation);
 }
 
+void LogSQLUISampleSmokeTestJsonFileRepositoryResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedJsonFileLayoutRepository)
+	{
+		return;
+	}
+
+	UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI sample smoke test JSON file layout repository selected."));
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test JSON file layout repository save %s. LayoutId='%s'"),
+		Result.bJsonFileRepositorySaveSucceeded ? TEXT("succeeded") : TEXT("failed"),
+		*Result.JsonFileRepositorySavedLayoutId);
+
+	if (!Result.JsonFileRepositorySaveErrorMessage.IsEmpty())
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample smoke test JSON file layout repository save error: %s"),
+			*Result.JsonFileRepositorySaveErrorMessage);
+	}
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test JSON file layout repository load %s. LayoutId='%s'"),
+		Result.bJsonFileRepositoryLoadSucceeded ? TEXT("succeeded") : TEXT("failed"),
+		*Result.JsonFileRepositoryLoadedLayoutId);
+
+	if (!Result.JsonFileRepositoryLoadErrorMessage.IsEmpty())
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample smoke test JSON file layout repository load error: %s"),
+			*Result.JsonFileRepositoryLoadErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -205,6 +247,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 {
 	LogSQLUISampleSmokeTestJsonFixtureResult(Result);
 	LogSQLUISampleSmokeTestRepositoryResult(Result);
+	LogSQLUISampleSmokeTestJsonFileRepositoryResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -271,10 +314,14 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseInMemoryLayoutRepository =
 		FParse::Param(*Params, TEXT("UseInMemoryLayoutRepository"))
 		|| FParse::Param(*Params, TEXT("InMemoryLayoutRepository"));
+	const bool bUseJsonFileLayoutRepository =
+		FParse::Param(*Params, TEXT("UseJsonFileLayoutRepository"))
+		|| FParse::Param(*Params, TEXT("JsonFileLayoutRepository"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
-		|| bUseInMemoryLayoutRepository;
+		|| bUseInMemoryLayoutRepository
+		|| bUseJsonFileLayoutRepository;
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -287,6 +334,12 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Log,
 		TEXT("SQLUI sample smoke test in-memory layout repository selected: %s"),
 		bUseInMemoryLayoutRepository ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test JSON file layout repository selected: %s"),
+		bUseJsonFileLayoutRepository ? TEXT("true") : TEXT("false"));
 
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
@@ -303,6 +356,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		FSQLUISampleSmokeTestRequest Request;
 		Request.bUseJsonLayoutFixture = bUseJsonLayoutFixture;
 		Request.bUseInMemoryLayoutRepository = bUseInMemoryLayoutRepository;
+		Request.bUseJsonFileLayoutRepository = bUseJsonFileLayoutRepository;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 

@@ -10,6 +10,8 @@ param(
 
 	[switch]$UseInMemoryLayoutRepository,
 
+	[switch]$UseJsonFileLayoutRepository,
+
 	[Alias('?')]
 	[switch]$Help
 )
@@ -44,6 +46,10 @@ Parameters:
       Run the JSON fixture through the SQLUISamples in-memory layout repository
       before running the runtime widget pipeline.
 
+  -UseJsonFileLayoutRepository
+      Run the JSON fixture through the SQLUICore JSON file layout repository
+      before running the runtime widget pipeline.
+
   -Help, -?
       Show this help.
 
@@ -51,6 +57,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7"
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseJsonLayoutFixture
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseInMemoryLayoutRepository
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseJsonFileLayoutRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -UnrealEditorCmdPath "C:\UE\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -ProjectPath ".\JerryRigged.uproject"
 '@
@@ -165,6 +172,11 @@ if ($UseJsonLayoutFixture)
 if ($UseInMemoryLayoutRepository)
 {
 	$CommandletArgs += '-UseInMemoryLayoutRepository'
+}
+
+if ($UseJsonFileLayoutRepository)
+{
+	$CommandletArgs += '-UseJsonFileLayoutRepository'
 }
 
 $PrintableCommandParts = @($ResolvedUnrealEditorCmdPath) + $CommandletArgs
