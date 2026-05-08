@@ -28,6 +28,8 @@ SQLUI / JerryRigged is a reusable Unreal Engine plugin plus host app that builds
 - `SQLUI.Samples` owns minimal sample host scaffolding and later sample assets.
 - `JerryRigged` stays a thin host project layer.
 
+Related architecture doc: [SQLUI repository architecture](docs/sqlui_repository_architecture.md).
+
 ## First Success Criteria
 - The `SQLUI` plugin and three milestone-1 modules exist.
 - Project and plugin registration are in place.
