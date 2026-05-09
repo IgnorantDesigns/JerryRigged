@@ -14,5 +14,10 @@ public class SQLUISamples : ModuleRules
 			"SQLUICore",
 			"SQLUIWidgets"
 		});
+
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			"UMG"
+		});
 	}
 }
