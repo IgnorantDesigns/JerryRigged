@@ -1,7 +1,45 @@
 #include "Widgets/SQLUIFilterBox.h"
 
 #include "Blueprint/WidgetTree.h"
+#include "Brushes/SlateColorBrush.h"
+#include "Components/Border.h"
 #include "Components/EditableTextBox.h"
+
+namespace
+{
+void ApplySQLUIFilterBoxVisualDefaults(UEditableTextBox& FilterTextBox)
+{
+	const FLinearColor TextColor(0.95f, 0.97f, 1.0f, 1.0f);
+	const FLinearColor DisabledTextColor(0.72f, 0.76f, 0.82f, 1.0f);
+	const FLinearColor BackgroundColor(0.035f, 0.045f, 0.06f, 0.98f);
+	const FLinearColor HoveredBackgroundColor(0.055f, 0.07f, 0.095f, 1.0f);
+	const FLinearColor FocusedBackgroundColor(0.07f, 0.085f, 0.115f, 1.0f);
+
+	FEditableTextBoxStyle TextBoxStyle = FilterTextBox.GetWidgetStyle();
+	TextBoxStyle
+		.SetBackgroundImageNormal(FSlateColorBrush(BackgroundColor))
+		.SetBackgroundImageHovered(FSlateColorBrush(HoveredBackgroundColor))
+		.SetBackgroundImageFocused(FSlateColorBrush(FocusedBackgroundColor))
+		.SetBackgroundImageReadOnly(FSlateColorBrush(BackgroundColor))
+		.SetBackgroundColor(FSlateColor(FLinearColor::White))
+		.SetForegroundColor(FSlateColor(TextColor))
+		.SetFocusedForegroundColor(FSlateColor(TextColor))
+		.SetReadOnlyForegroundColor(FSlateColor(DisabledTextColor))
+		.SetPadding(FMargin(10.0f, 6.0f));
+
+	FilterTextBox.SetWidgetStyle(TextBoxStyle);
+	FilterTextBox.SetForegroundColor(TextColor);
+	FilterTextBox.SetMinDesiredWidth(280.0f);
+}
+
+void ApplySQLUIFilterBoxBorderVisualDefaults(UBorder& Border)
+{
+	Border.SetBrush(FSlateColorBrush(FLinearColor(0.015f, 0.02f, 0.03f, 0.92f)));
+	Border.SetBrushColor(FLinearColor::White);
+	Border.SetContentColorAndOpacity(FLinearColor::White);
+	Border.SetPadding(FMargin(8.0f));
+}
+}
 
 void USQLUIFilterBox::SetFilterText(const FText& InFilterText)
 {
@@ -89,16 +127,27 @@ void USQLUIFilterBox::EnsureFilterTextBox()
 	}
 	else if (!WidgetTree->RootWidget)
 	{
+		UBorder* FilterBorder = WidgetTree->ConstructWidget<UBorder>(
+			UBorder::StaticClass(),
+			TEXT("SQLUIFilterBorder"));
 		FilterTextBox = WidgetTree->ConstructWidget<UEditableTextBox>(
 			UEditableTextBox::StaticClass(),
 			TEXT("SQLUIFilterTextBox"));
-		WidgetTree->RootWidget = FilterTextBox.Get();
+
+		if (IsValid(FilterBorder) && IsValid(FilterTextBox.Get()))
+		{
+			ApplySQLUIFilterBoxBorderVisualDefaults(*FilterBorder);
+			FilterBorder->SetContent(FilterTextBox.Get());
+			WidgetTree->RootWidget = FilterBorder;
+		}
 	}
 
 	if (!IsValid(FilterTextBox.Get()))
 	{
 		return;
 	}
+
+	ApplySQLUIFilterBoxVisualDefaults(*FilterTextBox);
 
 	FilterTextBox->OnTextChanged.RemoveDynamic(this, &USQLUIFilterBox::HandleFilterTextBoxTextChanged);
 	FilterTextBox->OnTextChanged.AddDynamic(this, &USQLUIFilterBox::HandleFilterTextBoxTextChanged);

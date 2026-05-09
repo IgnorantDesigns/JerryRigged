@@ -34,6 +34,15 @@ public:
 	int32 ViewportZOrder = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyViewportPlacement = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FVector2D ViewportPosition = FVector2D(24.0f, 24.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FVector2D ViewportSize = FVector2D(360.0f, 64.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	FSQLUISampleSmokeTestRequest DemoRequest;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category = "SQLUI|Samples")

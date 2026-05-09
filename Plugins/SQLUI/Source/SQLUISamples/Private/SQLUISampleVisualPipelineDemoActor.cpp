@@ -97,6 +97,14 @@ void ASQLUISampleVisualPipelineDemoActor::RunVisualPipelineDemo()
 		if (IsValid(LastResult.RootWidget.Get()))
 		{
 			LastResult.RootWidget->AddToViewport(ViewportZOrder);
+			if (bApplyViewportPlacement)
+			{
+				LastResult.RootWidget->SetPositionInViewport(ViewportPosition, true);
+				if (ViewportSize.X > 0.0f && ViewportSize.Y > 0.0f)
+				{
+					LastResult.RootWidget->SetDesiredSizeInViewport(ViewportSize);
+				}
+			}
 			AddedRootWidget = LastResult.RootWidget;
 			bAddedToViewport = true;
 		}
