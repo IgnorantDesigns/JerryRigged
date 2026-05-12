@@ -1,5 +1,45 @@
 #include "Widgets/SQLUIListWidget.h"
 
+#include "Blueprint/WidgetTree.h"
+#include "Brushes/SlateColorBrush.h"
+#include "Components/Border.h"
+#include "Components/ScrollBox.h"
+#include "Components/TextBlock.h"
+#include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
+#include "Widgets/SQLUIListItemWidget.h"
+
+namespace
+{
+FText ResolveSQLUIListEmptyText(const FText& EmptyText)
+{
+	if (EmptyText.ToString().TrimStartAndEnd().IsEmpty())
+	{
+		return NSLOCTEXT("SQLUIWidgets", "SQLUIListEmptyState", "No items");
+	}
+
+	return EmptyText;
+}
+
+void ApplySQLUIListBorderDefaults(UBorder& Border)
+{
+	Border.SetBrush(FSlateColorBrush(FLinearColor(0.018f, 0.024f, 0.034f, 0.96f)));
+	Border.SetBrushColor(FLinearColor::White);
+	Border.SetContentColorAndOpacity(FLinearColor::White);
+	Border.SetPadding(FMargin(8.0f));
+}
+
+void ApplySQLUIListEmptyTextDefaults(UTextBlock& TextBlock)
+{
+	FSlateFontInfo FontInfo = TextBlock.GetFont();
+	FontInfo.Size = 14;
+
+	TextBlock.SetFont(FontInfo);
+	TextBlock.SetColorAndOpacity(FSlateColor(FLinearColor(0.66f, 0.72f, 0.82f, 1.0f)));
+	TextBlock.SetAutoWrapText(true);
+}
+}
+
 void USQLUIListWidget::SetItems(const TArray<FSQLUIListItemData>& InItems)
 {
 	Items = InItems;
@@ -17,6 +57,161 @@ void USQLUIListWidget::ClearItems()
 	NativeOnItemsChanged();
 }
 
+void USQLUIListWidget::SetEmptyText(const FText& InEmptyText)
+{
+	EmptyText = InEmptyText;
+	RebuildListItems();
+}
+
+FText USQLUIListWidget::GetEmptyText() const
+{
+	return ResolveSQLUIListEmptyText(EmptyText);
+}
+
+void USQLUIListWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+	EnsureVisualRoot();
+	RebuildListItems();
+}
+
+void USQLUIListWidget::NativeOnSQLUIWidgetInitialized()
+{
+	Super::NativeOnSQLUIWidgetInitialized();
+	EnsureVisualRoot();
+	RebuildListItems();
+}
+
 void USQLUIListWidget::NativeOnItemsChanged()
 {
+	RebuildListItems();
+}
+
+bool USQLUIListWidget::NativeApplySQLUIWidgetProperty(
+	const FString& PropertyName,
+	const FString& PropertyValue,
+	FString& OutFailureMessage,
+	bool& bOutUnsupportedProperty)
+{
+	if (PropertyName == TEXT("EmptyText"))
+	{
+		SetEmptyText(FText::FromString(PropertyValue));
+		return true;
+	}
+
+	return Super::NativeApplySQLUIWidgetProperty(
+		PropertyName,
+		PropertyValue,
+		OutFailureMessage,
+		bOutUnsupportedProperty);
+}
+
+void USQLUIListWidget::EnsureVisualRoot()
+{
+	if (IsValid(ItemContainer.Get()) || !WidgetTree)
+	{
+		return;
+	}
+
+	if (UVerticalBox* ExistingRootVerticalBox = Cast<UVerticalBox>(WidgetTree->RootWidget))
+	{
+		ItemContainer = ExistingRootVerticalBox;
+		return;
+	}
+
+	if (WidgetTree->RootWidget)
+	{
+		return;
+	}
+
+	ListBorder = WidgetTree->ConstructWidget<UBorder>(
+		UBorder::StaticClass(),
+		TEXT("SQLUIListBorder"));
+	ListScrollBox = WidgetTree->ConstructWidget<UScrollBox>(
+		UScrollBox::StaticClass(),
+		TEXT("SQLUIListScrollBox"));
+	ItemContainer = WidgetTree->ConstructWidget<UVerticalBox>(
+		UVerticalBox::StaticClass(),
+		TEXT("SQLUIListItemContainer"));
+
+	if (!IsValid(ListBorder.Get()) || !IsValid(ListScrollBox.Get()) || !IsValid(ItemContainer.Get()))
+	{
+		return;
+	}
+
+	ApplySQLUIListBorderDefaults(*ListBorder);
+	ListScrollBox->AddChild(ItemContainer.Get());
+	ListBorder->SetContent(ListScrollBox.Get());
+	WidgetTree->RootWidget = ListBorder.Get();
+}
+
+void USQLUIListWidget::RebuildListItems()
+{
+	EnsureVisualRoot();
+
+	if (!IsValid(ItemContainer.Get()))
+	{
+		return;
+	}
+
+	ItemContainer->ClearChildren();
+	ItemWidgets.Reset();
+	EmptyTextBlock = nullptr;
+
+	if (Items.IsEmpty())
+	{
+		AddEmptyStateRow();
+		return;
+	}
+
+	ItemWidgets.Reserve(Items.Num());
+	for (const FSQLUIListItemData& ItemData : Items)
+	{
+		AddListItemRow(ItemData);
+	}
+}
+
+void USQLUIListWidget::AddEmptyStateRow()
+{
+	if (!IsValid(ItemContainer.Get()) || !WidgetTree)
+	{
+		return;
+	}
+
+	EmptyTextBlock = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass());
+	if (!IsValid(EmptyTextBlock.Get()))
+	{
+		return;
+	}
+
+	ApplySQLUIListEmptyTextDefaults(*EmptyTextBlock);
+	EmptyTextBlock->SetText(GetEmptyText());
+
+	if (UVerticalBoxSlot* EmptyTextSlot = ItemContainer->AddChildToVerticalBox(EmptyTextBlock.Get()))
+	{
+		EmptyTextSlot->SetPadding(FMargin(2.0f, 4.0f));
+	}
+}
+
+void USQLUIListWidget::AddListItemRow(const FSQLUIListItemData& ItemData)
+{
+	if (!IsValid(ItemContainer.Get()) || !WidgetTree)
+	{
+		return;
+	}
+
+	USQLUIListItemWidget* ItemWidget = WidgetTree->ConstructWidget<USQLUIListItemWidget>(
+		USQLUIListItemWidget::StaticClass());
+	if (!IsValid(ItemWidget))
+	{
+		return;
+	}
+
+	ItemWidget->SetListItemData(ItemData);
+	ItemWidgets.Add(ItemWidget);
+
+	if (UVerticalBoxSlot* ItemSlot = ItemContainer->AddChildToVerticalBox(ItemWidget))
+	{
+		ItemSlot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 6.0f));
+	}
 }
