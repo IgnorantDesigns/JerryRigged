@@ -6,6 +6,10 @@
 
 #include "SQLUIListItemWidget.generated.h"
 
+class UBorder;
+class UTextBlock;
+class UVerticalBox;
+
 UCLASS(BlueprintType, Blueprintable)
 class SQLUIWIDGETS_API USQLUIListItemWidget : public USQLUIBaseWidget
 {
@@ -19,6 +23,8 @@ public:
 	FSQLUIListItemData GetListItemData() const;
 
 protected:
+	virtual void NativeOnInitialized() override;
+	virtual void NativeOnSQLUIWidgetInitialized() override;
 	virtual void NativeOnListItemDataChanged();
 	virtual bool NativeApplySQLUIWidgetProperty(
 		const FString& PropertyName,
@@ -27,6 +33,21 @@ protected:
 		bool& bOutUnsupportedProperty) override;
 
 private:
+	void EnsureVisualRoot();
+	void SyncVisualState();
+
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "SQLUI|List", meta = (AllowPrivateAccess = "true"))
 	FSQLUIListItemData ListItemData;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UBorder> ItemBorder = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UVerticalBox> ItemTextContainer = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> DisplayTextBlock = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> ItemIdTextBlock = nullptr;
 };
