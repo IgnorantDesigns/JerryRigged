@@ -53,6 +53,9 @@ public:
 		const USQLUIBaseWidget* ChildWidget,
 		const FSQLUILayoutNode& ChildLayoutNode) const;
 
+	UFUNCTION(BlueprintCallable, Category = "SQLUI|Widget")
+	virtual bool AddSQLUIChildWidget(USQLUIBaseWidget* ChildWidget);
+
 protected:
 	virtual void NativeOnSQLUIWidgetInitialized();
 
