@@ -3,6 +3,7 @@
 #include "Widgets/SQLUIFilterBox.h"
 #include "Widgets/SQLUIListItemWidget.h"
 #include "Widgets/SQLUIListWidget.h"
+#include "Widgets/SQLUIVerticalBoxWidget.h"
 
 namespace
 {
@@ -20,6 +21,11 @@ TArray<FString> MakeSQLUIVariableBindingKeys()
 		TEXT("VariableStore")
 	};
 }
+}
+
+FSQLUIWidgetTypeKey FSQLUIWidgetTypeKeys::VerticalBox()
+{
+	return MakeSQLUIWidgetTypeKey(TEXT("SQLUI.VerticalBox"));
 }
 
 FSQLUIWidgetTypeKey FSQLUIWidgetTypeKeys::FilterBox()
@@ -45,10 +51,32 @@ bool USQLUIWidgetCatalogRegistrar::RegisterDefaultSQLUIWidgets(USQLUIWidgetCatal
 	}
 
 	bool bRegisteredAll = true;
+	bRegisteredAll &= RegisterVerticalBox(WidgetCatalog);
 	bRegisteredAll &= RegisterFilterBox(WidgetCatalog);
 	bRegisteredAll &= RegisterListWidget(WidgetCatalog);
 	bRegisteredAll &= RegisterListItemWidget(WidgetCatalog);
 	return bRegisteredAll;
+}
+
+bool USQLUIWidgetCatalogRegistrar::RegisterVerticalBox(USQLUIWidgetCatalog* WidgetCatalog)
+{
+	if (!WidgetCatalog)
+	{
+		return false;
+	}
+
+	FSQLUIWidgetCatalogEntry Entry;
+	Entry.WidgetTypeKey = FSQLUIWidgetTypeKeys::VerticalBox();
+	Entry.DisplayName = TEXT("Vertical Box");
+	Entry.Description = TEXT("SQLUI vertical container widget metadata.");
+	Entry.WidgetClassPath = USQLUIVerticalBoxWidget::StaticClass()->GetPathName();
+	Entry.SupportedPropertyKeys = {
+		TEXT("IsEnabled")
+	};
+	Entry.SupportedBindingKeys = MakeSQLUIVariableBindingKeys();
+	Entry.SupportedActionKeys = {};
+
+	return WidgetCatalog->RegisterEntry(Entry);
 }
 
 bool USQLUIWidgetCatalogRegistrar::RegisterFilterBox(USQLUIWidgetCatalog* WidgetCatalog)
