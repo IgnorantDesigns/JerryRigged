@@ -83,6 +83,11 @@ bool USQLUIBaseWidget::CanAcceptSQLUIChildWidget(
 	return false;
 }
 
+bool USQLUIBaseWidget::AddSQLUIChildWidget(USQLUIBaseWidget* ChildWidget)
+{
+	return false;
+}
+
 void USQLUIBaseWidget::NativeOnSQLUIWidgetInitialized()
 {
 }

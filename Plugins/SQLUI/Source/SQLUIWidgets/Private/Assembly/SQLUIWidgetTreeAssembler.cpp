@@ -446,6 +446,18 @@ FSQLUIAssembledWidgetNode MakeSQLUIAssembledWidgetNode(
 			{
 				AddSQLUIWidgetTreeAssemblyWarning(Result, UnsupportedContainerMessage);
 			}
+
+			continue;
+		}
+
+		if (!AssembledNode.Widget->AddSQLUIChildWidget(ChildWidget))
+		{
+			AddSQLUIWidgetTreeAssemblyError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI widget tree assembly parent '%s' accepted child '%s' but could not attach it."),
+					*LayoutNode.WidgetId,
+					*ChildWidgetId));
 		}
 	}
 

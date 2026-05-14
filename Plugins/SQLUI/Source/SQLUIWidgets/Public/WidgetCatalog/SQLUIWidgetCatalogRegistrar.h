@@ -8,6 +8,7 @@
 
 struct SQLUIWIDGETS_API FSQLUIWidgetTypeKeys
 {
+	static FSQLUIWidgetTypeKey VerticalBox();
 	static FSQLUIWidgetTypeKey FilterBox();
 	static FSQLUIWidgetTypeKey ListWidget();
 	static FSQLUIWidgetTypeKey ListItemWidget();
@@ -20,6 +21,7 @@ class SQLUIWIDGETS_API USQLUIWidgetCatalogRegistrar : public UObject
 
 public:
 	static bool RegisterDefaultSQLUIWidgets(USQLUIWidgetCatalog* WidgetCatalog);
+	static bool RegisterVerticalBox(USQLUIWidgetCatalog* WidgetCatalog);
 	static bool RegisterFilterBox(USQLUIWidgetCatalog* WidgetCatalog);
 	static bool RegisterListWidget(USQLUIWidgetCatalog* WidgetCatalog);
 	static bool RegisterListItemWidget(USQLUIWidgetCatalog* WidgetCatalog);
