@@ -28,6 +28,15 @@ public:
 	void ClearItems();
 
 	UFUNCTION(BlueprintCallable, Category = "SQLUI|List")
+	void SetFilterText(const FText& InFilterText);
+
+	UFUNCTION(BlueprintPure, Category = "SQLUI|List")
+	FText GetFilterText() const;
+
+	UFUNCTION(BlueprintCallable, Category = "SQLUI|List")
+	void ClearFilterText();
+
+	UFUNCTION(BlueprintCallable, Category = "SQLUI|List")
 	void SetEmptyText(const FText& InEmptyText);
 
 	UFUNCTION(BlueprintPure, Category = "SQLUI|List")
@@ -46,11 +55,15 @@ protected:
 private:
 	void EnsureVisualRoot();
 	void RebuildListItems();
+	bool ShouldDisplayItem(const FSQLUIListItemData& ItemData) const;
 	void AddEmptyStateRow();
 	void AddListItemRow(const FSQLUIListItemData& ItemData);
 
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "SQLUI|List", meta = (AllowPrivateAccess = "true"))
 	TArray<FSQLUIListItemData> Items;
+
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "SQLUI|List", meta = (AllowPrivateAccess = "true"))
+	FText FilterText;
 
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "SQLUI|List", meta = (AllowPrivateAccess = "true"))
 	FText EmptyText;

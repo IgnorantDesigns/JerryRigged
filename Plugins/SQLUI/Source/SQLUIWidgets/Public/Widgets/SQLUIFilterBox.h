@@ -7,12 +7,16 @@
 
 class UEditableTextBox;
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FSQLUIFilterTextChangedDelegate, const FText&);
+
 UCLASS(BlueprintType, Blueprintable)
 class SQLUIWIDGETS_API USQLUIFilterBox : public USQLUIBaseWidget
 {
 	GENERATED_BODY()
 
 public:
+	FSQLUIFilterTextChangedDelegate OnFilterTextChanged;
+
 	UFUNCTION(BlueprintCallable, Category = "SQLUI|Filter")
 	void SetFilterText(const FText& InFilterText);
 
