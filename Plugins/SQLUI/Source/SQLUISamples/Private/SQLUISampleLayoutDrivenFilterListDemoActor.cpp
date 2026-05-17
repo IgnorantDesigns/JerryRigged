@@ -7,9 +7,18 @@
 #include "WidgetCatalog/SQLUIWidgetCatalog.h"
 #include "WidgetCatalog/SQLUIWidgetCatalogRegistrar.h"
 #include "Widgets/SQLUIBaseWidget.h"
+#include "Widgets/SQLUIFilterBox.h"
+#include "Widgets/SQLUIListWidget.h"
 
 namespace
 {
+const TCHAR* SQLUISampleLayoutDrivenFilterListRootWidgetId =
+	TEXT("SQLUI.Sample.LayoutDrivenFilterList.Root");
+const TCHAR* SQLUISampleLayoutDrivenFilterListFilterBoxWidgetId =
+	TEXT("SQLUI.Sample.LayoutDrivenFilterList.FilterBox");
+const TCHAR* SQLUISampleLayoutDrivenFilterListListWidgetId =
+	TEXT("SQLUI.Sample.LayoutDrivenFilterList.ListWidget");
+
 const TCHAR* SQLUISampleLayoutDrivenFilterListDemoStepStatusToString(
 	const ESQLUIRuntimeWidgetPipelineStepStatus Status)
 {
@@ -73,9 +82,9 @@ void LogSQLUISampleLayoutDrivenFilterListDemoStepResults(
 
 FSQLUILayoutDocument MakeSQLUISampleLayoutDrivenFilterListDocument()
 {
-	const FString RootWidgetId = TEXT("SQLUI.Sample.LayoutDrivenFilterList.Root");
-	const FString FilterBoxWidgetId = TEXT("SQLUI.Sample.LayoutDrivenFilterList.FilterBox");
-	const FString ListWidgetId = TEXT("SQLUI.Sample.LayoutDrivenFilterList.ListWidget");
+	const FString RootWidgetId = SQLUISampleLayoutDrivenFilterListRootWidgetId;
+	const FString FilterBoxWidgetId = SQLUISampleLayoutDrivenFilterListFilterBoxWidgetId;
+	const FString ListWidgetId = SQLUISampleLayoutDrivenFilterListListWidgetId;
 
 	FSQLUILayoutDocument Document;
 	Document.Version.SchemaVersion = 1;
@@ -242,6 +251,18 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::RunLayoutDrivenFilterListDemo(
 
 	LastPipelineResult = Pipeline->RunPipeline(PipelineRequest);
 
+	if (LastPipelineResult.bSucceeded)
+	{
+		ConnectLayoutDrivenFilterListWidgets();
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Warning,
+			TEXT("SQLUI sample layout-driven filter/list demo skipped filter connection because the runtime pipeline failed."));
+	}
+
 	bool bAddedToViewport = false;
 	if (bAddToViewport && IsValid(LastPipelineResult.RootWidget.Get()))
 	{
@@ -267,8 +288,73 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::RunLayoutDrivenFilterListDemo(
 			: TEXT("skipped"));
 }
 
+void ASQLUISampleLayoutDrivenFilterListDemoActor::ConnectLayoutDrivenFilterListWidgets()
+{
+	DisconnectLayoutDrivenFilterListWidgets();
+
+	USQLUIBaseWidget* const* FilterBoxBaseWidget =
+		LastPipelineResult.CreatedWidgetMap.Find(FString(SQLUISampleLayoutDrivenFilterListFilterBoxWidgetId));
+	USQLUIBaseWidget* const* ListBaseWidget =
+		LastPipelineResult.CreatedWidgetMap.Find(FString(SQLUISampleLayoutDrivenFilterListListWidgetId));
+
+	USQLUIFilterBox* FilterBox = FilterBoxBaseWidget
+		? Cast<USQLUIFilterBox>(*FilterBoxBaseWidget)
+		: nullptr;
+	USQLUIListWidget* ListWidget = ListBaseWidget
+		? Cast<USQLUIListWidget>(*ListBaseWidget)
+		: nullptr;
+
+	if (!IsValid(FilterBox) || !IsValid(ListWidget))
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Warning,
+			TEXT("SQLUI sample layout-driven filter/list demo could not connect filter to list. FilterBox valid: %s. ListWidget valid: %s."),
+			SQLUISampleLayoutDrivenFilterListDemoBoolToString(IsValid(FilterBox)),
+			SQLUISampleLayoutDrivenFilterListDemoBoolToString(IsValid(ListWidget)));
+		return;
+	}
+
+	ConnectedFilterBoxWidget = FilterBox;
+	ConnectedListWidget = ListWidget;
+	FilterTextChangedDelegateHandle = ConnectedFilterBoxWidget->OnFilterTextChanged.AddUObject(
+		this,
+		&ASQLUISampleLayoutDrivenFilterListDemoActor::HandleLayoutDrivenFilterTextChanged);
+	ConnectedListWidget->SetFilterText(ConnectedFilterBoxWidget->GetFilterText());
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample layout-driven filter/list demo connected FilterBox '%s' to ListWidget '%s'."),
+		SQLUISampleLayoutDrivenFilterListFilterBoxWidgetId,
+		SQLUISampleLayoutDrivenFilterListListWidgetId);
+}
+
+void ASQLUISampleLayoutDrivenFilterListDemoActor::DisconnectLayoutDrivenFilterListWidgets()
+{
+	if (IsValid(ConnectedFilterBoxWidget.Get()) && FilterTextChangedDelegateHandle.IsValid())
+	{
+		ConnectedFilterBoxWidget->OnFilterTextChanged.Remove(FilterTextChangedDelegateHandle);
+	}
+
+	FilterTextChangedDelegateHandle.Reset();
+	ConnectedFilterBoxWidget = nullptr;
+	ConnectedListWidget = nullptr;
+}
+
+void ASQLUISampleLayoutDrivenFilterListDemoActor::HandleLayoutDrivenFilterTextChanged(
+	const FText& InFilterText)
+{
+	if (IsValid(ConnectedListWidget.Get()))
+	{
+		ConnectedListWidget->SetFilterText(InFilterText);
+	}
+}
+
 void ASQLUISampleLayoutDrivenFilterListDemoActor::RemoveAddedRootWidget()
 {
+	DisconnectLayoutDrivenFilterListWidgets();
+
 	if (IsValid(AddedRootWidget.Get()))
 	{
 		AddedRootWidget->RemoveFromParent();

@@ -7,6 +7,11 @@
 
 namespace
 {
+bool AreSQLUIFilterBoxTextsEqual(const FText& Left, const FText& Right)
+{
+	return Left.ToString() == Right.ToString();
+}
+
 void ApplySQLUIFilterBoxVisualDefaults(UEditableTextBox& FilterTextBox)
 {
 	const FLinearColor TextColor(0.95f, 0.97f, 1.0f, 1.0f);
@@ -43,9 +48,15 @@ void ApplySQLUIFilterBoxBorderVisualDefaults(UBorder& Border)
 
 void USQLUIFilterBox::SetFilterText(const FText& InFilterText)
 {
+	if (AreSQLUIFilterBoxTextsEqual(FilterText, InFilterText))
+	{
+		return;
+	}
+
 	FilterText = InFilterText;
 	SyncFilterTextBoxText();
 	NativeOnFilterTextChanged(FilterText);
+	OnFilterTextChanged.Broadcast(FilterText);
 }
 
 FText USQLUIFilterBox::GetFilterText() const

@@ -21,6 +21,20 @@ FText ResolveSQLUIListEmptyText(const FText& EmptyText)
 	return EmptyText;
 }
 
+bool DoesSQLUIListItemMatchFilter(
+	const FSQLUIListItemData& ItemData,
+	const FText& FilterText)
+{
+	const FString TrimmedFilterText = FilterText.ToString().TrimStartAndEnd();
+	if (TrimmedFilterText.IsEmpty())
+	{
+		return true;
+	}
+
+	return ItemData.DisplayText.ToString().Contains(TrimmedFilterText, ESearchCase::IgnoreCase)
+		|| ItemData.ItemId.Contains(TrimmedFilterText, ESearchCase::IgnoreCase);
+}
+
 bool TryParseSQLUIListItemsProperty(
 	const FString& PropertyValue,
 	TArray<FSQLUIListItemData>& OutItems,
@@ -111,6 +125,27 @@ void USQLUIListWidget::ClearItems()
 {
 	Items.Reset();
 	NativeOnItemsChanged();
+}
+
+void USQLUIListWidget::SetFilterText(const FText& InFilterText)
+{
+	if (FilterText.ToString() == InFilterText.ToString())
+	{
+		return;
+	}
+
+	FilterText = InFilterText;
+	RebuildListItems();
+}
+
+FText USQLUIListWidget::GetFilterText() const
+{
+	return FilterText;
+}
+
+void USQLUIListWidget::ClearFilterText()
+{
+	SetFilterText(FText::GetEmpty());
 }
 
 void USQLUIListWidget::SetEmptyText(const FText& InEmptyText)
@@ -241,10 +276,27 @@ void USQLUIListWidget::RebuildListItems()
 	}
 
 	ItemWidgets.Reserve(Items.Num());
+	int32 DisplayedItemCount = 0;
 	for (const FSQLUIListItemData& ItemData : Items)
 	{
+		if (!ShouldDisplayItem(ItemData))
+		{
+			continue;
+		}
+
 		AddListItemRow(ItemData);
+		++DisplayedItemCount;
 	}
+
+	if (DisplayedItemCount == 0)
+	{
+		AddEmptyStateRow();
+	}
+}
+
+bool USQLUIListWidget::ShouldDisplayItem(const FSQLUIListItemData& ItemData) const
+{
+	return DoesSQLUIListItemMatchFilter(ItemData, FilterText);
 }
 
 void USQLUIListWidget::AddEmptyStateRow()

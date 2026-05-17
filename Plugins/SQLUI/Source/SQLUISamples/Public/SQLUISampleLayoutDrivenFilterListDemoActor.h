@@ -7,6 +7,8 @@
 #include "SQLUISampleLayoutDrivenFilterListDemoActor.generated.h"
 
 class USQLUIBaseWidget;
+class USQLUIFilterBox;
+class USQLUIListWidget;
 
 UCLASS(BlueprintType)
 class SQLUISAMPLES_API ASQLUISampleLayoutDrivenFilterListDemoActor : public AActor
@@ -43,8 +45,19 @@ public:
 	FSQLUIRuntimeWidgetPipelineResult LastPipelineResult;
 
 private:
+	void ConnectLayoutDrivenFilterListWidgets();
+	void DisconnectLayoutDrivenFilterListWidgets();
+	void HandleLayoutDrivenFilterTextChanged(const FText& InFilterText);
 	void RemoveAddedRootWidget();
 
 	UPROPERTY(Transient)
 	TObjectPtr<USQLUIBaseWidget> AddedRootWidget = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USQLUIFilterBox> ConnectedFilterBoxWidget = nullptr;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USQLUIListWidget> ConnectedListWidget = nullptr;
+
+	FDelegateHandle FilterTextChangedDelegateHandle;
 };
