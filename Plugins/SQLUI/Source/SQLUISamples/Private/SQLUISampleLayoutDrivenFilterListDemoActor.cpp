@@ -106,6 +106,7 @@ FSQLUILayoutDocument MakeSQLUISampleLayoutDrivenFilterListDocument()
 	ListWidgetNode.ParentWidgetId = RootWidgetId;
 	ListWidgetNode.WidgetTypeKey = FSQLUIWidgetTypeKeys::ListWidget().Value;
 	ListWidgetNode.Properties.Add(TEXT("EmptyText"), TEXT("No layout-driven sample rows yet"));
+	ListWidgetNode.Properties.Add(TEXT("Items"), TEXT("row-1|First sample row;row-2|Second sample row;row-3|Third sample row"));
 	ListWidgetNode.Properties.Add(TEXT("IsEnabled"), TEXT("true"));
 
 	Document.Nodes.Add(RootNode);
