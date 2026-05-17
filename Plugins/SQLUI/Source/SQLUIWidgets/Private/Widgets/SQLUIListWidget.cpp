@@ -21,6 +21,62 @@ FText ResolveSQLUIListEmptyText(const FText& EmptyText)
 	return EmptyText;
 }
 
+bool TryParseSQLUIListItemsProperty(
+	const FString& PropertyValue,
+	TArray<FSQLUIListItemData>& OutItems,
+	FString& OutFailureMessage)
+{
+	OutItems.Reset();
+	OutFailureMessage.Reset();
+
+	if (PropertyValue.TrimStartAndEnd().IsEmpty())
+	{
+		return true;
+	}
+
+	TArray<FString> RowValues;
+	PropertyValue.ParseIntoArray(RowValues, TEXT(";"), false);
+
+	for (int32 RowIndex = 0; RowIndex < RowValues.Num(); ++RowIndex)
+	{
+		const FString RowValue = RowValues[RowIndex].TrimStartAndEnd();
+		if (RowValue.IsEmpty())
+		{
+			OutFailureMessage = FString::Printf(
+				TEXT("SQLUI list widget property 'Items' contains an empty row at index %d."),
+				RowIndex);
+			return false;
+		}
+
+		FString ItemId;
+		FString DisplayText;
+		if (!RowValue.Split(TEXT("|"), &ItemId, &DisplayText, ESearchCase::CaseSensitive, ESearchDir::FromStart))
+		{
+			OutFailureMessage = FString::Printf(
+				TEXT("SQLUI list widget property 'Items' row %d must use the format 'ItemId|Display text'."),
+				RowIndex);
+			return false;
+		}
+
+		ItemId = ItemId.TrimStartAndEnd();
+		DisplayText = DisplayText.TrimStartAndEnd();
+		if (DisplayText.IsEmpty())
+		{
+			OutFailureMessage = FString::Printf(
+				TEXT("SQLUI list widget property 'Items' row %d must include non-empty display text."),
+				RowIndex);
+			return false;
+		}
+
+		FSQLUIListItemData ItemData;
+		ItemData.ItemId = ItemId;
+		ItemData.DisplayText = FText::FromString(DisplayText);
+		OutItems.Add(ItemData);
+	}
+
+	return true;
+}
+
 void ApplySQLUIListBorderDefaults(UBorder& Border)
 {
 	Border.SetBrush(FSlateColorBrush(FLinearColor(0.018f, 0.024f, 0.034f, 0.96f)));
@@ -93,6 +149,26 @@ bool USQLUIListWidget::NativeApplySQLUIWidgetProperty(
 	FString& OutFailureMessage,
 	bool& bOutUnsupportedProperty)
 {
+	if (PropertyName == TEXT("Items"))
+	{
+		TArray<FSQLUIListItemData> ParsedItems;
+		if (!TryParseSQLUIListItemsProperty(PropertyValue, ParsedItems, OutFailureMessage))
+		{
+			return false;
+		}
+
+		if (ParsedItems.IsEmpty())
+		{
+			ClearItems();
+		}
+		else
+		{
+			SetItems(ParsedItems);
+		}
+
+		return true;
+	}
+
 	if (PropertyName == TEXT("EmptyText"))
 	{
 		SetEmptyText(FText::FromString(PropertyValue));
