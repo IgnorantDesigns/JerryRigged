@@ -1,6 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Input/Events.h"
+#include "Input/Reply.h"
+#include "Layout/Geometry.h"
 #include "Widgets/SQLUIBaseWidget.h"
 #include "Widgets/SQLUIListTypes.h"
 
@@ -16,6 +19,8 @@ class SQLUIWIDGETS_API USQLUIListItemWidget : public USQLUIBaseWidget
 	GENERATED_BODY()
 
 public:
+	FSQLUIListItemClickedDelegate OnListItemClicked;
+
 	UFUNCTION(BlueprintCallable, Category = "SQLUI|List")
 	void SetListItemData(const FSQLUIListItemData& InListItemData);
 
@@ -25,6 +30,8 @@ public:
 protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeOnSQLUIWidgetInitialized() override;
+	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual void NativeOnListItemClicked(const FSQLUIListItemData& InListItemData);
 	virtual void NativeOnListItemDataChanged();
 	virtual bool NativeApplySQLUIWidgetProperty(
 		const FString& PropertyName,
