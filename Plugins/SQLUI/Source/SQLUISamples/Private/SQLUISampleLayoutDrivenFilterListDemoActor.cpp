@@ -260,7 +260,7 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::RunLayoutDrivenFilterListDemo(
 		UE_LOG(
 			LogSQLUISamples,
 			Warning,
-			TEXT("SQLUI sample layout-driven filter/list demo skipped filter connection because the runtime pipeline failed."));
+			TEXT("SQLUI sample layout-driven filter/list demo skipped filter/list connection because the runtime pipeline failed."));
 	}
 
 	bool bAddedToViewport = false;
@@ -309,7 +309,7 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::ConnectLayoutDrivenFilterListW
 		UE_LOG(
 			LogSQLUISamples,
 			Warning,
-			TEXT("SQLUI sample layout-driven filter/list demo could not connect filter to list. FilterBox valid: %s. ListWidget valid: %s."),
+			TEXT("SQLUI sample layout-driven filter/list demo could not connect filter/list events. FilterBox valid: %s. ListWidget valid: %s."),
 			SQLUISampleLayoutDrivenFilterListDemoBoolToString(IsValid(FilterBox)),
 			SQLUISampleLayoutDrivenFilterListDemoBoolToString(IsValid(ListWidget)));
 		return;
@@ -320,6 +320,9 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::ConnectLayoutDrivenFilterListW
 	FilterTextChangedDelegateHandle = ConnectedFilterBoxWidget->OnFilterTextChanged.AddUObject(
 		this,
 		&ASQLUISampleLayoutDrivenFilterListDemoActor::HandleLayoutDrivenFilterTextChanged);
+	RowClickedDelegateHandle = ConnectedListWidget->OnRowClicked.AddUObject(
+		this,
+		&ASQLUISampleLayoutDrivenFilterListDemoActor::HandleLayoutDrivenRowClicked);
 	ConnectedListWidget->SetFilterText(ConnectedFilterBoxWidget->GetFilterText());
 
 	UE_LOG(
@@ -337,7 +340,13 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::DisconnectLayoutDrivenFilterLi
 		ConnectedFilterBoxWidget->OnFilterTextChanged.Remove(FilterTextChangedDelegateHandle);
 	}
 
+	if (IsValid(ConnectedListWidget.Get()) && RowClickedDelegateHandle.IsValid())
+	{
+		ConnectedListWidget->OnRowClicked.Remove(RowClickedDelegateHandle);
+	}
+
 	FilterTextChangedDelegateHandle.Reset();
+	RowClickedDelegateHandle.Reset();
 	ConnectedFilterBoxWidget = nullptr;
 	ConnectedListWidget = nullptr;
 }
@@ -349,6 +358,18 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::HandleLayoutDrivenFilterTextCh
 	{
 		ConnectedListWidget->SetFilterText(InFilterText);
 	}
+}
+
+void ASQLUISampleLayoutDrivenFilterListDemoActor::HandleLayoutDrivenRowClicked(
+	const FSQLUIListItemData& InItemData)
+{
+	const FString DisplayText = InItemData.DisplayText.ToString();
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample layout-driven filter/list demo row clicked. ItemId='%s', DisplayText='%s'."),
+		*InItemData.ItemId,
+		*DisplayText);
 }
 
 void ASQLUISampleLayoutDrivenFilterListDemoActor::RemoveAddedRootWidget()
