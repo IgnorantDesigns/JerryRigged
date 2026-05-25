@@ -5,9 +5,13 @@
 #include "Variables/SQLUIVariableTypes.h"
 #include "WidgetCatalog/SQLUIWidgetCatalog.h"
 #include "Widgets/SQLUIBaseWidget.h"
+#include "Widgets/SQLUIListWidget.h"
 
 namespace
 {
+const TCHAR* SQLUIWidgetActionTriggerRowClicked = TEXT("RowClicked");
+const TCHAR* SQLUIWidgetActionTriggerOnRowClicked = TEXT("OnRowClicked");
+
 FString GetSQLUIWidgetActionLabel(const FSQLUILayoutAction& Action)
 {
 	if (!Action.ActionId.IsEmpty())
@@ -231,10 +235,29 @@ FSQLUIVariableValue MakeSQLUIActionParameterValue(const FString& ParameterValue)
 	return Value;
 }
 
-FSQLUIActionRequest MakeSQLUIActionRequest(const FSQLUILayoutAction& Action)
+void AddSQLUIActionRequestStringParameter(
+	TMap<FString, FSQLUIVariableValue>& Parameters,
+	const FString& Key,
+	const FString& Value)
+{
+	if (!Key.IsEmpty())
+	{
+		Parameters.Add(Key, MakeSQLUIActionParameterValue(Value));
+	}
+}
+
+FSQLUIActionRequest MakeSQLUIActionRequest(
+	const FSQLUILayoutNode& LayoutNode,
+	const FSQLUILayoutAction& Action)
 {
 	FSQLUIActionRequest ActionRequest;
 	ActionRequest.ActionKey.Name = Action.ActionTypeKey;
+
+	AddSQLUIActionRequestStringParameter(ActionRequest.Parameters, TEXT("WidgetId"), LayoutNode.WidgetId);
+	AddSQLUIActionRequestStringParameter(ActionRequest.Parameters, TEXT("WidgetTypeKey"), LayoutNode.WidgetTypeKey);
+	AddSQLUIActionRequestStringParameter(ActionRequest.Parameters, TEXT("ActionId"), Action.ActionId);
+	AddSQLUIActionRequestStringParameter(ActionRequest.Parameters, TEXT("Trigger"), Action.Trigger);
+	AddSQLUIActionRequestStringParameter(ActionRequest.Parameters, TEXT("ActionTypeKey"), Action.ActionTypeKey);
 
 	for (const TPair<FString, FString>& ParameterPair : Action.Parameters)
 	{
@@ -272,12 +295,70 @@ bool IsSQLUIWidgetActionSupportedByCatalog(
 	}
 
 	const FSQLUIWidgetCatalogEntry* CatalogEntry = WidgetCatalog->FindEntry(LayoutNode.WidgetTypeKey);
-	if (!CatalogEntry)
+	if (!CatalogEntry || CatalogEntry->SupportedActionKeys.IsEmpty())
 	{
 		return true;
 	}
 
 	return CatalogEntry->SupportedActionKeys.Contains(Action.ActionTypeKey);
+}
+
+bool IsSQLUIRowClickedTrigger(const FString& Trigger)
+{
+	return Trigger.Equals(SQLUIWidgetActionTriggerRowClicked, ESearchCase::IgnoreCase)
+		|| Trigger.Equals(SQLUIWidgetActionTriggerOnRowClicked, ESearchCase::IgnoreCase);
+}
+
+void ClearSQLUIWidgetEventActions(USQLUIBaseWidget* Widget)
+{
+	if (USQLUIListWidget* ListWidget = Cast<USQLUIListWidget>(Widget))
+	{
+		ListWidget->ClearRowClickActions();
+	}
+}
+
+bool TryBindSQLUIWidgetEventAction(
+	USQLUIBaseWidget* Widget,
+	const FSQLUILayoutNode& LayoutNode,
+	const FSQLUILayoutAction& Action,
+	const FSQLUIActionRequest& ActionRequest,
+	FSQLUIAppliedWidgetAction& AppliedAction,
+	FSQLUIWidgetActionApplyResult& Result,
+	const bool bFailOnUnsupportedActions)
+{
+	if (!IsSQLUIRowClickedTrigger(Action.Trigger))
+	{
+		return false;
+	}
+
+	USQLUIListWidget* ListWidget = Cast<USQLUIListWidget>(Widget);
+	if (!IsValid(ListWidget))
+	{
+		AppliedAction.bUnsupportedAction = true;
+		AppliedAction.bSkipped = true;
+		AppliedAction.bFailed = bFailOnUnsupportedActions;
+		Result.AppliedActions.Add(AppliedAction);
+
+		AddSQLUIWidgetActionApplyProblem(
+			Result,
+			bFailOnUnsupportedActions,
+			LayoutNode.WidgetId,
+			Action,
+			FString::Printf(
+				TEXT("%s uses row-click trigger '%s', but widget type '%s' does not support row-click action binding."),
+				*MakeSQLUIWidgetActionMessagePrefix(LayoutNode.WidgetId, Action),
+				*Action.Trigger,
+				*LayoutNode.WidgetTypeKey),
+			false,
+			true);
+		return true;
+	}
+
+	ListWidget->AddRowClickAction(ActionRequest);
+	AppliedAction.bBoundToEvent = true;
+	AppliedAction.bSucceeded = true;
+	Result.AppliedActions.Add(AppliedAction);
+	return true;
 }
 }
 
@@ -317,6 +398,8 @@ FSQLUIWidgetActionApplyResult USQLUIWidgetActionApplier::ApplyActions(
 			continue;
 		}
 
+		ClearSQLUIWidgetEventActions(Widget);
+
 		for (const FSQLUILayoutAction& Action : LayoutNode.Actions)
 		{
 			FSQLUIActionRequest ActionRequest;
@@ -350,12 +433,12 @@ FSQLUIWidgetActionApplyResult USQLUIWidgetActionApplier::ApplyActions(
 					LayoutNode.WidgetId,
 					Action,
 					FString::Printf(
-						TEXT("%s does not include a trigger. The action was prepared for later event wiring only."),
+						TEXT("%s does not include a trigger. It will only run immediately when registered action execution is enabled."),
 						*MakeSQLUIWidgetActionMessagePrefix(LayoutNode.WidgetId, Action)),
 					true);
 			}
 
-			ActionRequest = MakeSQLUIActionRequest(Action);
+			ActionRequest = MakeSQLUIActionRequest(LayoutNode, Action);
 			AppliedAction = MakeSQLUIAppliedWidgetAction(
 				LayoutNode.WidgetId,
 				Action,
@@ -429,6 +512,33 @@ FSQLUIWidgetActionApplyResult USQLUIWidgetActionApplier::ApplyActions(
 					false,
 					false,
 					true);
+				continue;
+			}
+
+			if (TryBindSQLUIWidgetEventAction(
+				Widget,
+				LayoutNode,
+				Action,
+				ActionRequest,
+				AppliedAction,
+				Result,
+				Request.bFailOnUnsupportedActions))
+			{
+				continue;
+			}
+
+			if (!Action.Trigger.IsEmpty())
+			{
+				AppliedAction.bSkipped = true;
+				Result.AppliedActions.Add(AppliedAction);
+				AddSQLUIWidgetActionApplyWarning(
+					Result,
+					LayoutNode.WidgetId,
+					Action,
+					FString::Printf(
+						TEXT("%s uses trigger '%s', but this trigger is not wired to a runtime widget event yet."),
+						*MakeSQLUIWidgetActionMessagePrefix(LayoutNode.WidgetId, Action),
+						*Action.Trigger));
 				continue;
 			}
 
