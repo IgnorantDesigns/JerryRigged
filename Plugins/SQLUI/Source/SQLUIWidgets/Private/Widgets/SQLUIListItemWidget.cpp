@@ -6,6 +6,7 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "InputCoreTypes.h"
 
 namespace
 {
@@ -71,6 +72,24 @@ void USQLUIListItemWidget::NativeOnSQLUIWidgetInitialized()
 	Super::NativeOnSQLUIWidgetInitialized();
 	EnsureVisualRoot();
 	SyncVisualState();
+}
+
+FReply USQLUIListItemWidget::NativeOnMouseButtonDown(
+	const FGeometry& InGeometry,
+	const FPointerEvent& InMouseEvent)
+{
+	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	{
+		NativeOnListItemClicked(ListItemData);
+		OnListItemClicked.Broadcast(ListItemData);
+		return FReply::Handled();
+	}
+
+	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+}
+
+void USQLUIListItemWidget::NativeOnListItemClicked(const FSQLUIListItemData& InListItemData)
+{
 }
 
 void USQLUIListItemWidget::NativeOnListItemDataChanged()

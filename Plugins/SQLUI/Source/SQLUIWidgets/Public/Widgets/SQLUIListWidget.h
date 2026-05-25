@@ -18,6 +18,8 @@ class SQLUIWIDGETS_API USQLUIListWidget : public USQLUIBaseWidget
 	GENERATED_BODY()
 
 public:
+	FSQLUIListItemClickedDelegate OnRowClicked;
+
 	UFUNCTION(BlueprintCallable, Category = "SQLUI|List")
 	void SetItems(const TArray<FSQLUIListItemData>& InItems);
 
@@ -46,6 +48,7 @@ protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeOnSQLUIWidgetInitialized() override;
 	virtual void NativeOnItemsChanged();
+	virtual void NativeOnRowClicked(const FSQLUIListItemData& InItemData);
 	virtual bool NativeApplySQLUIWidgetProperty(
 		const FString& PropertyName,
 		const FString& PropertyValue,
@@ -58,6 +61,7 @@ private:
 	bool ShouldDisplayItem(const FSQLUIListItemData& ItemData) const;
 	void AddEmptyStateRow();
 	void AddListItemRow(const FSQLUIListItemData& ItemData);
+	void HandleListItemClicked(const FSQLUIListItemData& InItemData);
 
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "SQLUI|List", meta = (AllowPrivateAccess = "true"))
 	TArray<FSQLUIListItemData> Items;

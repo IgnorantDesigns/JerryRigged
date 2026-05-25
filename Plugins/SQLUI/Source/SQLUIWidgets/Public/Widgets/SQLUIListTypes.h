@@ -21,3 +21,5 @@ struct SQLUIWIDGETS_API FSQLUIListItemData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|List")
 	TMap<FString, FString> Metadata;
 };
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FSQLUIListItemClickedDelegate, const FSQLUIListItemData&);

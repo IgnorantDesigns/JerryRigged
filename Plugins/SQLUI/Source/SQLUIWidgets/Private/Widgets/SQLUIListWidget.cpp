@@ -178,6 +178,10 @@ void USQLUIListWidget::NativeOnItemsChanged()
 	RebuildListItems();
 }
 
+void USQLUIListWidget::NativeOnRowClicked(const FSQLUIListItemData& InItemData)
+{
+}
+
 bool USQLUIListWidget::NativeApplySQLUIWidgetProperty(
 	const FString& PropertyName,
 	const FString& PropertyValue,
@@ -336,10 +340,17 @@ void USQLUIListWidget::AddListItemRow(const FSQLUIListItemData& ItemData)
 	}
 
 	ItemWidget->SetListItemData(ItemData);
+	ItemWidget->OnListItemClicked.AddUObject(this, &USQLUIListWidget::HandleListItemClicked);
 	ItemWidgets.Add(ItemWidget);
 
 	if (UVerticalBoxSlot* ItemSlot = ItemContainer->AddChildToVerticalBox(ItemWidget))
 	{
 		ItemSlot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 6.0f));
 	}
+}
+
+void USQLUIListWidget::HandleListItemClicked(const FSQLUIListItemData& InItemData)
+{
+	NativeOnRowClicked(InItemData);
+	OnRowClicked.Broadcast(InItemData);
 }
