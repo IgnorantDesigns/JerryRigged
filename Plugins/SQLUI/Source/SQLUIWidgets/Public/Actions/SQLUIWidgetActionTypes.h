@@ -110,6 +110,9 @@ struct SQLUIWIDGETS_API FSQLUIAppliedWidgetAction
 	bool bRegistered = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Widget Actions")
+	bool bBoundToEvent = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Widget Actions")
 	bool bExecuted = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Widget Actions")
