@@ -1,6 +1,8 @@
 #include "SQLUISampleLayoutDrivenFilterListDemoActor.h"
 
 #include "Actions/SQLUIActionRegistry.h"
+#include "Layout/SQLUIJsonFileLayoutRepository.h"
+#include "Misc/Paths.h"
 #include "SQLUISamplesModule.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
@@ -45,6 +47,36 @@ const TCHAR* SQLUISampleLayoutDrivenFilterListDemoBoolToString(const bool bValue
 	return bValue ? TEXT("true") : TEXT("false");
 }
 
+FString MakeSQLUISampleLayoutDrivenFilterListRepositoryBaseDirectory()
+{
+	FString BaseDirectory = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("Samples"),
+		TEXT("LayoutDrivenFilterList"),
+		TEXT("Layouts"));
+	FPaths::NormalizeDirectoryName(BaseDirectory);
+	return BaseDirectory;
+}
+
+FString NormalizeSQLUISampleLayoutDrivenFilterListRepositoryBaseDirectory(
+	const FString& BaseDirectory)
+{
+	FString NormalizedBaseDirectory = BaseDirectory;
+	if (NormalizedBaseDirectory.IsEmpty())
+	{
+		return MakeSQLUISampleLayoutDrivenFilterListRepositoryBaseDirectory();
+	}
+
+	if (FPaths::IsRelative(NormalizedBaseDirectory))
+	{
+		NormalizedBaseDirectory = FPaths::ConvertRelativePathToFull(NormalizedBaseDirectory);
+	}
+
+	FPaths::NormalizeDirectoryName(NormalizedBaseDirectory);
+	return NormalizedBaseDirectory;
+}
+
 FString GetSQLUISampleActionParameterString(
 	const FSQLUIActionRequest& Request,
 	const FString& ParameterName)
@@ -73,6 +105,92 @@ FSQLUIActionResult MakeSQLUISampleSucceededActionResult()
 	FSQLUIActionResult Result;
 	Result.bSucceeded = true;
 	return Result;
+}
+
+bool SaveSQLUISampleLayoutDrivenFilterListDocument(
+	USQLUIJsonFileLayoutRepository* Repository,
+	const FSQLUILayoutDocument& Document,
+	FSQLUILayoutSaveResult& OutSaveResult)
+{
+	OutSaveResult = FSQLUILayoutSaveResult();
+
+	if (!IsValid(Repository))
+	{
+		OutSaveResult.ErrorMessage = TEXT("SQLUI sample layout-driven filter/list demo failed: repository is invalid during save.");
+		return false;
+	}
+
+	bool bSaveCompleted = false;
+	Repository->SaveLayout(
+		Document,
+		FSQLUILayoutSaveCompleteDelegate::CreateLambda(
+			[&OutSaveResult, &bSaveCompleted](const FSQLUILayoutSaveResult& InSaveResult)
+			{
+				OutSaveResult = InSaveResult;
+				bSaveCompleted = true;
+			}));
+
+	if (!bSaveCompleted)
+	{
+		OutSaveResult.ErrorMessage = TEXT("SQLUI sample layout-driven filter/list demo failed: repository save did not complete.");
+		return false;
+	}
+
+	return OutSaveResult.bSucceeded;
+}
+
+bool LoadSQLUISampleLayoutDrivenFilterListDocument(
+	USQLUIJsonFileLayoutRepository* Repository,
+	const FString& LayoutId,
+	FSQLUILayoutLoadResult& OutLoadResult)
+{
+	OutLoadResult = FSQLUILayoutLoadResult();
+
+	if (!IsValid(Repository))
+	{
+		OutLoadResult.ErrorMessage = TEXT("SQLUI sample layout-driven filter/list demo failed: repository is invalid during load.");
+		return false;
+	}
+
+	bool bLoadCompleted = false;
+	Repository->LoadLayout(
+		LayoutId,
+		FSQLUILayoutLoadCompleteDelegate::CreateLambda(
+			[&OutLoadResult, &bLoadCompleted](const FSQLUILayoutLoadResult& InLoadResult)
+			{
+				OutLoadResult = InLoadResult;
+				bLoadCompleted = true;
+			}));
+
+	if (!bLoadCompleted)
+	{
+		OutLoadResult.ErrorMessage = TEXT("SQLUI sample layout-driven filter/list demo failed: repository load did not complete.");
+		return false;
+	}
+
+	return OutLoadResult.bSucceeded && OutLoadResult.Validation.bIsValid;
+}
+
+void LogSQLUISampleLayoutDrivenFilterListValidationMessages(
+	const FSQLUILayoutValidationResult& Validation)
+{
+	for (const FString& Error : Validation.Errors)
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample layout-driven filter/list demo layout validation error: %s"),
+			*Error);
+	}
+
+	for (const FString& Warning : Validation.Warnings)
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Warning,
+			TEXT("SQLUI sample layout-driven filter/list demo layout validation warning: %s"),
+			*Warning);
+	}
 }
 
 void LogSQLUISampleLayoutDrivenFilterListDemoErrors(const TArray<FString>& Messages)
@@ -221,6 +339,15 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::RunLayoutDrivenFilterListDemo(
 {
 	RemoveAddedRootWidget();
 	LastPipelineResult = FSQLUIRuntimeWidgetPipelineResult();
+	bLastLayoutLoadedThroughRepository = false;
+	LastLayoutRepositoryBaseDirectory.Reset();
+
+	FSQLUILayoutDocument LayoutDocument;
+	if (!TryResolveLayoutDrivenFilterListDocument(LayoutDocument))
+	{
+		LogSQLUISampleLayoutDrivenFilterListDemoResult(LastPipelineResult);
+		return;
+	}
 
 	USQLUIWidgetCatalog* WidgetCatalog = NewObject<USQLUIWidgetCatalog>(this);
 	if (!IsValid(WidgetCatalog))
@@ -311,7 +438,7 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::RunLayoutDrivenFilterListDemo(
 	APlayerController* OwningPlayer = World ? World->GetFirstPlayerController() : nullptr;
 
 	FSQLUIRuntimeWidgetPipelineRequest PipelineRequest;
-	PipelineRequest.Document = MakeSQLUISampleLayoutDrivenFilterListDocument();
+	PipelineRequest.Document = LayoutDocument;
 	PipelineRequest.RuntimeContext = RuntimeContext;
 	PipelineRequest.WidgetCatalogOverride = WidgetCatalog;
 	PipelineRequest.WorldContextObject = this;
@@ -354,6 +481,90 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::RunLayoutDrivenFilterListDemo(
 		bAddToViewport
 			? (bAddedToViewport ? TEXT("added") : TEXT("failed"))
 			: TEXT("skipped"));
+}
+
+bool ASQLUISampleLayoutDrivenFilterListDemoActor::TryResolveLayoutDrivenFilterListDocument(
+	FSQLUILayoutDocument& OutDocument)
+{
+	OutDocument = MakeSQLUISampleLayoutDrivenFilterListDocument();
+
+	if (!bLoadLayoutThroughJsonFileRepository)
+	{
+		return true;
+	}
+
+	USQLUIJsonFileLayoutRepository* LayoutRepository = NewObject<USQLUIJsonFileLayoutRepository>(this);
+	if (!IsValid(LayoutRepository))
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample layout-driven filter/list demo failed: could not create JSON file layout repository."));
+		return false;
+	}
+
+	FSQLUIJsonFileLayoutRepositorySettings RepositorySettings;
+	RepositorySettings.BaseDirectory = NormalizeSQLUISampleLayoutDrivenFilterListRepositoryBaseDirectory(
+		LayoutRepositoryBaseDirectory);
+	LayoutRepository->Configure(RepositorySettings);
+
+	LastLayoutRepositoryBaseDirectory = LayoutRepository->GetResolvedBaseDirectory();
+
+	FSQLUILayoutSaveResult SaveResult;
+	if (!SaveSQLUISampleLayoutDrivenFilterListDocument(LayoutRepository, OutDocument, SaveResult))
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample layout-driven filter/list demo failed: could not save layout '%s' to repository '%s'. %s"),
+			*OutDocument.Metadata.LayoutId,
+			*LastLayoutRepositoryBaseDirectory,
+			*SaveResult.ErrorMessage);
+		LogSQLUISampleLayoutDrivenFilterListValidationMessages(SaveResult.Validation);
+		return false;
+	}
+
+	FSQLUILayoutLoadResult LoadResult;
+	if (!LoadSQLUISampleLayoutDrivenFilterListDocument(LayoutRepository, SaveResult.SavedLayoutId, LoadResult))
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample layout-driven filter/list demo failed: could not load layout '%s' from repository '%s'. %s"),
+			*SaveResult.SavedLayoutId,
+			*LastLayoutRepositoryBaseDirectory,
+			*LoadResult.ErrorMessage);
+		LogSQLUISampleLayoutDrivenFilterListValidationMessages(LoadResult.Validation);
+		return false;
+	}
+
+	OutDocument = LoadResult.Document;
+	bLastLayoutLoadedThroughRepository = true;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample layout-driven filter/list demo loaded layout '%s' through JSON file repository '%s'."),
+		*OutDocument.Metadata.LayoutId,
+		*LastLayoutRepositoryBaseDirectory);
+
+	if (bRemoveRepositoryLayoutAfterLoad)
+	{
+		const FSQLUILayoutRepositoryRemoveResult RemoveResult =
+			LayoutRepository->RemoveLayout(OutDocument.Metadata.LayoutId);
+		if (!RemoveResult.bSucceeded || !RemoveResult.bRemoved)
+		{
+			UE_LOG(
+				LogSQLUISamples,
+				Warning,
+				TEXT("SQLUI sample layout-driven filter/list demo repository cleanup did not remove layout '%s' from '%s'. %s"),
+				*OutDocument.Metadata.LayoutId,
+				*LastLayoutRepositoryBaseDirectory,
+				*RemoveResult.ErrorMessage);
+		}
+	}
+
+	return true;
 }
 
 void ASQLUISampleLayoutDrivenFilterListDemoActor::ConnectLayoutDrivenFilterListWidgets()
