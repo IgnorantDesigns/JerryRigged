@@ -1,5 +1,6 @@
 #include "Widgets/SQLUIListWidget.h"
 
+#include "Actions/SQLUIActionRegistry.h"
 #include "Blueprint/WidgetTree.h"
 #include "Brushes/SlateColorBrush.h"
 #include "Components/Border.h"
@@ -7,6 +8,7 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Runtime/SQLUIRuntimeContext.h"
 #include "Widgets/SQLUIListItemWidget.h"
 
 namespace
@@ -91,6 +93,37 @@ bool TryParseSQLUIListItemsProperty(
 	return true;
 }
 
+FSQLUIVariableValue MakeSQLUIListActionStringParameterValue(const FString& InValue)
+{
+	FSQLUIVariableValue Value;
+	Value.Type = ESQLUIVariableValueType::String;
+	Value.StringValue = InValue;
+	return Value;
+}
+
+void AddSQLUIListActionStringParameter(
+	TMap<FString, FSQLUIVariableValue>& Parameters,
+	const FString& Key,
+	const FString& Value)
+{
+	if (!Key.IsEmpty())
+	{
+		Parameters.Add(Key, MakeSQLUIListActionStringParameterValue(Value));
+	}
+}
+
+FSQLUIActionResult MakeSQLUIListUnavailableActionResult(const FString& ActionName, const FString& Reason)
+{
+	FSQLUIActionResult Result;
+	Result.bSucceeded = false;
+	Result.bActionUnavailable = true;
+	Result.bNotImplemented = true;
+	Result.ErrorMessage = ActionName.IsEmpty()
+		? Reason
+		: FString::Printf(TEXT("SQLUI list row-click action '%s' is unavailable: %s"), *ActionName, *Reason);
+	return Result;
+}
+
 void ApplySQLUIListBorderDefaults(UBorder& Border)
 {
 	Border.SetBrush(FSlateColorBrush(FLinearColor(0.018f, 0.024f, 0.034f, 0.96f)));
@@ -159,6 +192,26 @@ FText USQLUIListWidget::GetEmptyText() const
 	return ResolveSQLUIListEmptyText(EmptyText);
 }
 
+void USQLUIListWidget::SetRowClickActions(const TArray<FSQLUIActionRequest>& InActionRequests)
+{
+	RowClickActionRequests = InActionRequests;
+}
+
+void USQLUIListWidget::AddRowClickAction(const FSQLUIActionRequest& InActionRequest)
+{
+	RowClickActionRequests.Add(InActionRequest);
+}
+
+void USQLUIListWidget::ClearRowClickActions()
+{
+	RowClickActionRequests.Reset();
+}
+
+TArray<FSQLUIActionRequest> USQLUIListWidget::GetRowClickActions() const
+{
+	return RowClickActionRequests;
+}
+
 void USQLUIListWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
@@ -180,6 +233,37 @@ void USQLUIListWidget::NativeOnItemsChanged()
 
 void USQLUIListWidget::NativeOnRowClicked(const FSQLUIListItemData& InItemData)
 {
+	ExecuteRowClickActions(InItemData);
+}
+
+FSQLUIActionResult USQLUIListWidget::NativeExecuteRowClickAction(
+	const FSQLUIActionRequest& InActionRequest,
+	const FSQLUIListItemData& InItemData)
+{
+	USQLUIRuntimeContext* RuntimeContext = GetSQLUIRuntimeContext();
+	if (!IsValid(RuntimeContext))
+	{
+		return MakeSQLUIListUnavailableActionResult(
+			InActionRequest.ActionKey.Name,
+			TEXT("no runtime context is available."));
+	}
+
+	if (!RuntimeContext->IsInitialized())
+	{
+		return MakeSQLUIListUnavailableActionResult(
+			InActionRequest.ActionKey.Name,
+			TEXT("the runtime context is not initialized."));
+	}
+
+	USQLUIActionRegistry* ActionRegistry = RuntimeContext->GetActionRegistry();
+	if (!IsValid(ActionRegistry))
+	{
+		return MakeSQLUIListUnavailableActionResult(
+			InActionRequest.ActionKey.Name,
+			TEXT("no action registry is available."));
+	}
+
+	return ActionRegistry->ExecuteAction(InActionRequest);
 }
 
 bool USQLUIListWidget::NativeApplySQLUIWidgetProperty(
@@ -353,4 +437,49 @@ void USQLUIListWidget::HandleListItemClicked(const FSQLUIListItemData& InItemDat
 {
 	NativeOnRowClicked(InItemData);
 	OnRowClicked.Broadcast(InItemData);
+}
+
+void USQLUIListWidget::ExecuteRowClickActions(const FSQLUIListItemData& InItemData)
+{
+	for (const FSQLUIActionRequest& RowClickActionRequest : RowClickActionRequests)
+	{
+		NativeExecuteRowClickAction(MakeRowClickActionRequest(RowClickActionRequest, InItemData), InItemData);
+	}
+}
+
+FSQLUIActionRequest USQLUIListWidget::MakeRowClickActionRequest(
+	const FSQLUIActionRequest& InActionRequest,
+	const FSQLUIListItemData& InItemData) const
+{
+	FSQLUIActionRequest RowClickActionRequest = InActionRequest;
+	AddSQLUIListActionStringParameter(RowClickActionRequest.Parameters, TEXT("WidgetId"), GetSQLUIWidgetId());
+	AddSQLUIListActionStringParameter(RowClickActionRequest.Parameters, TEXT("WidgetTypeKey"), GetSQLUIWidgetTypeKey());
+	AddSQLUIListActionStringParameter(RowClickActionRequest.Parameters, TEXT("ItemId"), InItemData.ItemId);
+	AddSQLUIListActionStringParameter(RowClickActionRequest.Parameters, TEXT("RowItemId"), InItemData.ItemId);
+	AddSQLUIListActionStringParameter(RowClickActionRequest.Parameters, TEXT("DisplayText"), InItemData.DisplayText.ToString());
+	AddSQLUIListActionStringParameter(RowClickActionRequest.Parameters, TEXT("RowDisplayText"), InItemData.DisplayText.ToString());
+
+	for (const TPair<FString, FString>& PropertyPair : InItemData.Properties)
+	{
+		if (!PropertyPair.Key.IsEmpty())
+		{
+			AddSQLUIListActionStringParameter(
+				RowClickActionRequest.Parameters,
+				FString::Printf(TEXT("RowProperty.%s"), *PropertyPair.Key),
+				PropertyPair.Value);
+		}
+	}
+
+	for (const TPair<FString, FString>& MetadataPair : InItemData.Metadata)
+	{
+		if (!MetadataPair.Key.IsEmpty())
+		{
+			AddSQLUIListActionStringParameter(
+				RowClickActionRequest.Parameters,
+				FString::Printf(TEXT("RowMetadata.%s"), *MetadataPair.Key),
+				MetadataPair.Value);
+		}
+	}
+
+	return RowClickActionRequest;
 }

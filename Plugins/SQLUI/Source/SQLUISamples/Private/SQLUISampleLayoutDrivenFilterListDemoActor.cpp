@@ -1,5 +1,6 @@
 #include "SQLUISampleLayoutDrivenFilterListDemoActor.h"
 
+#include "Actions/SQLUIActionRegistry.h"
 #include "SQLUISamplesModule.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
@@ -18,6 +19,8 @@ const TCHAR* SQLUISampleLayoutDrivenFilterListFilterBoxWidgetId =
 	TEXT("SQLUI.Sample.LayoutDrivenFilterList.FilterBox");
 const TCHAR* SQLUISampleLayoutDrivenFilterListListWidgetId =
 	TEXT("SQLUI.Sample.LayoutDrivenFilterList.ListWidget");
+const TCHAR* SQLUISampleLayoutDrivenFilterListRowClickedActionKey =
+	TEXT("SQLUI.Sample.LogRowClicked");
 
 const TCHAR* SQLUISampleLayoutDrivenFilterListDemoStepStatusToString(
 	const ESQLUIRuntimeWidgetPipelineStepStatus Status)
@@ -40,6 +43,36 @@ const TCHAR* SQLUISampleLayoutDrivenFilterListDemoStepStatusToString(
 const TCHAR* SQLUISampleLayoutDrivenFilterListDemoBoolToString(const bool bValue)
 {
 	return bValue ? TEXT("true") : TEXT("false");
+}
+
+FString GetSQLUISampleActionParameterString(
+	const FSQLUIActionRequest& Request,
+	const FString& ParameterName)
+{
+	const FSQLUIVariableValue* Value = Request.Parameters.Find(ParameterName);
+	if (!Value)
+	{
+		return FString();
+	}
+
+	switch (Value->Type)
+	{
+	case ESQLUIVariableValueType::String:
+		return Value->StringValue;
+	case ESQLUIVariableValueType::Number:
+		return FString::SanitizeFloat(Value->NumberValue);
+	case ESQLUIVariableValueType::Boolean:
+		return SQLUISampleLayoutDrivenFilterListDemoBoolToString(Value->bBooleanValue);
+	default:
+		return FString();
+	}
+}
+
+FSQLUIActionResult MakeSQLUISampleSucceededActionResult()
+{
+	FSQLUIActionResult Result;
+	Result.bSucceeded = true;
+	return Result;
 }
 
 void LogSQLUISampleLayoutDrivenFilterListDemoErrors(const TArray<FString>& Messages)
@@ -110,6 +143,12 @@ FSQLUILayoutDocument MakeSQLUISampleLayoutDrivenFilterListDocument()
 	FilterBoxNode.Properties.Add(TEXT("PlaceholderText"), TEXT("Filter layout-driven sample rows"));
 	FilterBoxNode.Properties.Add(TEXT("IsEnabled"), TEXT("true"));
 
+	FSQLUILayoutAction RowClickedAction;
+	RowClickedAction.ActionId = TEXT("SQLUI.Sample.LayoutDrivenFilterList.RowClicked");
+	RowClickedAction.Trigger = TEXT("RowClicked");
+	RowClickedAction.ActionTypeKey = SQLUISampleLayoutDrivenFilterListRowClickedActionKey;
+	RowClickedAction.Parameters.Add(TEXT("Source"), TEXT("LayoutDrivenFilterListDemo"));
+
 	FSQLUILayoutNode ListWidgetNode;
 	ListWidgetNode.WidgetId = ListWidgetId;
 	ListWidgetNode.ParentWidgetId = RootWidgetId;
@@ -117,6 +156,7 @@ FSQLUILayoutDocument MakeSQLUISampleLayoutDrivenFilterListDocument()
 	ListWidgetNode.Properties.Add(TEXT("EmptyText"), TEXT("No layout-driven sample rows yet"));
 	ListWidgetNode.Properties.Add(TEXT("Items"), TEXT("row-1|First sample row;row-2|Second sample row;row-3|Third sample row"));
 	ListWidgetNode.Properties.Add(TEXT("IsEnabled"), TEXT("true"));
+	ListWidgetNode.Actions.Add(RowClickedAction);
 
 	Document.Nodes.Add(RootNode);
 	Document.Nodes.Add(FilterBoxNode);
@@ -203,6 +243,33 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::RunLayoutDrivenFilterListDemo(
 		return;
 	}
 
+	USQLUIActionRegistry* ActionRegistry = NewObject<USQLUIActionRegistry>(this);
+	if (!IsValid(ActionRegistry))
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample layout-driven filter/list demo failed: could not create action registry."));
+		LogSQLUISampleLayoutDrivenFilterListDemoResult(LastPipelineResult);
+		return;
+	}
+
+	FSQLUIActionKey RowClickedActionKey;
+	RowClickedActionKey.Name = SQLUISampleLayoutDrivenFilterListRowClickedActionKey;
+	if (!ActionRegistry->RegisterAction(
+		RowClickedActionKey,
+		FSQLUIActionHandler::CreateUObject(
+			this,
+			&ASQLUISampleLayoutDrivenFilterListDemoActor::HandleLayoutDrivenRowClickedAction)))
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample layout-driven filter/list demo failed: could not register row-click action handler."));
+		LogSQLUISampleLayoutDrivenFilterListDemoResult(LastPipelineResult);
+		return;
+	}
+
 	USQLUIRuntimeContext* RuntimeContext = NewObject<USQLUIRuntimeContext>(this);
 	if (!IsValid(RuntimeContext))
 	{
@@ -215,6 +282,7 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::RunLayoutDrivenFilterListDemo(
 	}
 
 	FSQLUIRuntimeContextSettings RuntimeContextSettings;
+	RuntimeContextSettings.ActionRegistry = ActionRegistry;
 	RuntimeContextSettings.WidgetCatalog = WidgetCatalog;
 	RuntimeContext->Initialize(RuntimeContextSettings);
 
@@ -320,9 +388,6 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::ConnectLayoutDrivenFilterListW
 	FilterTextChangedDelegateHandle = ConnectedFilterBoxWidget->OnFilterTextChanged.AddUObject(
 		this,
 		&ASQLUISampleLayoutDrivenFilterListDemoActor::HandleLayoutDrivenFilterTextChanged);
-	RowClickedDelegateHandle = ConnectedListWidget->OnRowClicked.AddUObject(
-		this,
-		&ASQLUISampleLayoutDrivenFilterListDemoActor::HandleLayoutDrivenRowClicked);
 	ConnectedListWidget->SetFilterText(ConnectedFilterBoxWidget->GetFilterText());
 
 	UE_LOG(
@@ -340,13 +405,7 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::DisconnectLayoutDrivenFilterLi
 		ConnectedFilterBoxWidget->OnFilterTextChanged.Remove(FilterTextChangedDelegateHandle);
 	}
 
-	if (IsValid(ConnectedListWidget.Get()) && RowClickedDelegateHandle.IsValid())
-	{
-		ConnectedListWidget->OnRowClicked.Remove(RowClickedDelegateHandle);
-	}
-
 	FilterTextChangedDelegateHandle.Reset();
-	RowClickedDelegateHandle.Reset();
 	ConnectedFilterBoxWidget = nullptr;
 	ConnectedListWidget = nullptr;
 }
@@ -360,16 +419,24 @@ void ASQLUISampleLayoutDrivenFilterListDemoActor::HandleLayoutDrivenFilterTextCh
 	}
 }
 
-void ASQLUISampleLayoutDrivenFilterListDemoActor::HandleLayoutDrivenRowClicked(
-	const FSQLUIListItemData& InItemData)
+FSQLUIActionResult ASQLUISampleLayoutDrivenFilterListDemoActor::HandleLayoutDrivenRowClickedAction(
+	const FSQLUIActionRequest& Request)
 {
-	const FString DisplayText = InItemData.DisplayText.ToString();
+	const FString ActionId = GetSQLUISampleActionParameterString(Request, TEXT("ActionId"));
+	const FString WidgetId = GetSQLUISampleActionParameterString(Request, TEXT("WidgetId"));
+	const FString ItemId = GetSQLUISampleActionParameterString(Request, TEXT("ItemId"));
+	const FString DisplayText = GetSQLUISampleActionParameterString(Request, TEXT("DisplayText"));
+
 	UE_LOG(
 		LogSQLUISamples,
 		Log,
-		TEXT("SQLUI sample layout-driven filter/list demo row clicked. ItemId='%s', DisplayText='%s'."),
-		*InItemData.ItemId,
+		TEXT("SQLUI sample layout-driven filter/list demo row-click action dispatched. ActionId='%s', WidgetId='%s', ItemId='%s', DisplayText='%s'."),
+		*ActionId,
+		*WidgetId,
+		*ItemId,
 		*DisplayText);
+
+	return MakeSQLUISampleSucceededActionResult();
 }
 
 void ASQLUISampleLayoutDrivenFilterListDemoActor::RemoveAddedRootWidget()

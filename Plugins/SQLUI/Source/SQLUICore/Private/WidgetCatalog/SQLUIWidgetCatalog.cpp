@@ -73,6 +73,11 @@ void ValidateSQLUIWidgetCatalogKey(
 		return;
 	}
 
+	if (SupportedKeys.IsEmpty())
+	{
+		return;
+	}
+
 	if (!SupportedKeys.Contains(Key))
 	{
 		AddSQLUIWidgetCatalogValidationError(

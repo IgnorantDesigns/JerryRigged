@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Actions/SQLUIActionTypes.h"
 #include "CoreMinimal.h"
 #include "Widgets/SQLUIBaseWidget.h"
 #include "Widgets/SQLUIListTypes.h"
@@ -44,11 +45,19 @@ public:
 	UFUNCTION(BlueprintPure, Category = "SQLUI|List")
 	FText GetEmptyText() const;
 
+	void SetRowClickActions(const TArray<FSQLUIActionRequest>& InActionRequests);
+	void AddRowClickAction(const FSQLUIActionRequest& InActionRequest);
+	void ClearRowClickActions();
+	TArray<FSQLUIActionRequest> GetRowClickActions() const;
+
 protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeOnSQLUIWidgetInitialized() override;
 	virtual void NativeOnItemsChanged();
 	virtual void NativeOnRowClicked(const FSQLUIListItemData& InItemData);
+	virtual FSQLUIActionResult NativeExecuteRowClickAction(
+		const FSQLUIActionRequest& InActionRequest,
+		const FSQLUIListItemData& InItemData);
 	virtual bool NativeApplySQLUIWidgetProperty(
 		const FString& PropertyName,
 		const FString& PropertyValue,
@@ -62,6 +71,10 @@ private:
 	void AddEmptyStateRow();
 	void AddListItemRow(const FSQLUIListItemData& ItemData);
 	void HandleListItemClicked(const FSQLUIListItemData& InItemData);
+	void ExecuteRowClickActions(const FSQLUIListItemData& InItemData);
+	FSQLUIActionRequest MakeRowClickActionRequest(
+		const FSQLUIActionRequest& InActionRequest,
+		const FSQLUIListItemData& InItemData) const;
 
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "SQLUI|List", meta = (AllowPrivateAccess = "true"))
 	TArray<FSQLUIListItemData> Items;
@@ -71,6 +84,9 @@ private:
 
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "SQLUI|List", meta = (AllowPrivateAccess = "true"))
 	FText EmptyText;
+
+	UPROPERTY(Transient)
+	TArray<FSQLUIActionRequest> RowClickActionRequests;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UBorder> ListBorder = nullptr;
