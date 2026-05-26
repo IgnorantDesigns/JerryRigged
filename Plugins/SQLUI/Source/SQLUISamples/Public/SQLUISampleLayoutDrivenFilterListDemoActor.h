@@ -34,6 +34,15 @@ public:
 	bool bAddToViewport = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bLoadLayoutThroughJsonFileRepository = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bRemoveRepositoryLayoutAfterLoad = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FString LayoutRepositoryBaseDirectory;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	FVector2D ViewportPosition = FVector2D(24.0f, 24.0f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
@@ -43,9 +52,16 @@ public:
 	int32 ViewportZOrder = 0;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category = "SQLUI|Samples")
+	bool bLastLayoutLoadedThroughRepository = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category = "SQLUI|Samples")
+	FString LastLayoutRepositoryBaseDirectory;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category = "SQLUI|Samples")
 	FSQLUIRuntimeWidgetPipelineResult LastPipelineResult;
 
 private:
+	bool TryResolveLayoutDrivenFilterListDocument(FSQLUILayoutDocument& OutDocument);
 	void ConnectLayoutDrivenFilterListWidgets();
 	void DisconnectLayoutDrivenFilterListWidgets();
 	void HandleLayoutDrivenFilterTextChanged(const FText& InFilterText);
