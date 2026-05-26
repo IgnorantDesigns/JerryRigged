@@ -1,9 +1,9 @@
 #pragma once
 
+#include "Actions/SQLUIActionTypes.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Pipeline/SQLUIRuntimeWidgetPipeline.h"
-#include "Widgets/SQLUIListTypes.h"
 
 #include "SQLUISampleLayoutDrivenFilterListDemoActor.generated.h"
 
@@ -49,7 +49,7 @@ private:
 	void ConnectLayoutDrivenFilterListWidgets();
 	void DisconnectLayoutDrivenFilterListWidgets();
 	void HandleLayoutDrivenFilterTextChanged(const FText& InFilterText);
-	void HandleLayoutDrivenRowClicked(const FSQLUIListItemData& InItemData);
+	FSQLUIActionResult HandleLayoutDrivenRowClickedAction(const FSQLUIActionRequest& Request);
 	void RemoveAddedRootWidget();
 
 	UPROPERTY(Transient)
@@ -62,5 +62,4 @@ private:
 	TObjectPtr<USQLUIListWidget> ConnectedListWidget = nullptr;
 
 	FDelegateHandle FilterTextChangedDelegateHandle;
-	FDelegateHandle RowClickedDelegateHandle;
 };
