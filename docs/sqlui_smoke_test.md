@@ -4,13 +4,13 @@ The SQLUI sample smoke test commandlet runs the current sample runtime widget pi
 
 By default, the smoke test uses the existing in-memory C++ layout document. It can also run the built-in SQLUISamples JSON layout fixture, which deserializes a tiny `SQLUI.FilterBox` layout through SQLUICore's layout JSON helpers before running the same runtime widget pipeline.
 
-The in-memory repository smoke path reuses that same JSON fixture, saves the deserialized layout into `USQLUIInMemoryLayoutRepository`, loads it back by layout id, and then runs the runtime widget pipeline with the loaded document.
+The in-memory repository smoke path reuses that same JSON fixture, saves the deserialized layout into `USQLUIInMemoryLayoutRepository`, verifies `ListLayouts` includes the saved metadata, loads it back by layout id, verifies `RemoveLayout` removes it, verifies `ListLayouts` no longer includes it, exercises `ClearLayouts`, and then runs the runtime widget pipeline with the loaded document.
 
-The JSON file repository smoke path also reuses the JSON fixture, saves the deserialized layout into `USQLUIJsonFileLayoutRepository`, loads it back by layout id, and then runs the runtime widget pipeline with the loaded document.
+The JSON file repository smoke path also reuses the JSON fixture, saves the deserialized layout into `USQLUIJsonFileLayoutRepository`, verifies `ListLayouts` includes the saved metadata, loads it back by layout id, verifies `RemoveLayout` removes it, verifies `ListLayouts` no longer includes it, exercises `ClearLayouts`, and then runs the runtime widget pipeline with the loaded document.
 
 This is a local developer workflow only. It is not CI yet, and it does not assume Unreal Engine is installed on GitHub Actions or any build agent.
 
-The smoke test does not edit maps, levels, Content, SQLite databases, or the viewport. It does not add database behavior, use SQLite, or attach widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts` and attempts to remove its test layout after loading it.
+The smoke test does not edit maps, levels, Content, SQLite databases, or the viewport. It does not add database behavior, use SQLite, or attach widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory.
 
 ## Build JerryRiggedEditor
 
@@ -64,7 +64,7 @@ The commandlet also accepts `-JsonLayoutFixture` directly as an alias when invok
 
 ## Run The In-Memory Repository Smoke Test
 
-The in-memory repository path keeps the same transient commandlet flow, deserializes the built-in SQLUISamples JSON layout fixture, saves it into `USQLUIInMemoryLayoutRepository`, loads it back by `LayoutId`, and runs the same runtime widget pipeline with the loaded layout document:
+The in-memory repository path keeps the same transient commandlet flow, deserializes the built-in SQLUISamples JSON layout fixture, saves it into `USQLUIInMemoryLayoutRepository`, verifies list-after-save, loads it back by `LayoutId`, checks remove/list-after-remove/clear repository operations, and runs the same runtime widget pipeline with the loaded layout document:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseInMemoryLayoutRepository
@@ -76,7 +76,7 @@ This path is still sample scaffolding only. It does not use SQLite, disk persist
 
 ## Run The JSON File Repository Smoke Test
 
-The JSON file repository path keeps the same transient commandlet flow, deserializes the built-in SQLUISamples JSON layout fixture, saves it into `USQLUIJsonFileLayoutRepository`, loads it back by `LayoutId`, and runs the same runtime widget pipeline with the loaded layout document:
+The JSON file repository path keeps the same transient commandlet flow, deserializes the built-in SQLUISamples JSON layout fixture, saves it into `USQLUIJsonFileLayoutRepository`, verifies list-after-save, loads it back by `LayoutId`, checks remove/list-after-remove/clear repository operations, and runs the same runtime widget pipeline with the loaded layout document:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseJsonFileLayoutRepository
@@ -84,7 +84,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-JsonFileLayoutRepository` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
-This path is still sample scaffolding only. It does not use SQLite, Content, maps, or viewport attachment. It writes the temporary layout file under `Saved\SQLUI\SmokeTests\Layouts` and attempts to remove it after the load step. If cleanup cannot remove the file, the warning log names that Saved path.
+This path is still sample scaffolding only. It does not use SQLite, Content, maps, or viewport attachment. It writes temporary layout files under `Saved\SQLUI\SmokeTests\Layouts`, removes the saved fixture layout after the load step, and verifies `ClearLayouts` removes the same number of remaining layouts reported by the post-remove list.
 
 ## Expected Results
 
@@ -120,6 +120,10 @@ SQLUI sample smoke test JSON fixture validation succeeded.
 SQLUI sample smoke test in-memory layout repository selected.
 SQLUI sample smoke test in-memory layout repository save succeeded.
 SQLUI sample smoke test in-memory layout repository load succeeded.
+SQLUI sample smoke test in-memory layout repository list after save succeeded. LayoutCount=1 MetadataFound=true
+SQLUI sample smoke test in-memory layout repository remove succeeded. Removed=true
+SQLUI sample smoke test in-memory layout repository list after remove succeeded. LayoutCount=0 MetadataAbsent=true
+SQLUI sample smoke test in-memory layout repository clear succeeded. RemovedCount=0 ExpectedRemovedCount=0
 SQLUI sample smoke test commandlet succeeded.
 SQLUI sample smoke test root widget valid: true
 SQLUI sample smoke test created widget count: 1
@@ -134,10 +138,16 @@ SQLUI sample smoke test JSON fixture validation succeeded.
 SQLUI sample smoke test JSON file layout repository selected.
 SQLUI sample smoke test JSON file layout repository save succeeded.
 SQLUI sample smoke test JSON file layout repository load succeeded.
+SQLUI sample smoke test JSON file layout repository list after save succeeded. LayoutCount=1 MetadataFound=true
+SQLUI sample smoke test JSON file layout repository remove succeeded. Removed=true
+SQLUI sample smoke test JSON file layout repository list after remove succeeded. LayoutCount=0 MetadataAbsent=true
+SQLUI sample smoke test JSON file layout repository clear succeeded. RemovedCount=0 ExpectedRemovedCount=0
 SQLUI sample smoke test commandlet succeeded.
 SQLUI sample smoke test root widget valid: true
 SQLUI sample smoke test created widget count: 1
 ```
+
+If the JSON file repository smoke directory already contains valid layout files, the listed counts can be higher; the clear step still expects `RemovedCount` to match the post-remove list count.
 
 Some optional pipeline steps may log `Skipped` depending on the current sample request. Failures are logged with `SQLUI sample smoke test commandlet failed.` and the script returns a non-zero exit code.
 
