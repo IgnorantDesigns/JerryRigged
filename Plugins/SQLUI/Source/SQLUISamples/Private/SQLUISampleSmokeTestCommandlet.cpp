@@ -121,6 +121,86 @@ void LogSQLUISampleSmokeTestRepositoryValidationMessages(
 	}
 }
 
+void LogSQLUISampleSmokeTestRepositoryOperationResult(
+	const TCHAR* RepositoryName,
+	const FSQLUISampleRepositoryOperationSmokeResult& Result)
+{
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test %s list after save %s. LayoutCount=%d MetadataFound=%s"),
+		RepositoryName,
+		Result.bListAfterSaveSucceeded ? TEXT("succeeded") : TEXT("failed"),
+		Result.ListAfterSaveLayoutCount,
+		Result.bSavedLayoutMetadataFound ? TEXT("true") : TEXT("false"));
+
+	if (!Result.ListAfterSaveErrorMessage.IsEmpty())
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample smoke test %s list after save error: %s"),
+			RepositoryName,
+			*Result.ListAfterSaveErrorMessage);
+	}
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test %s remove %s. Removed=%s"),
+		RepositoryName,
+		Result.bRemoveSucceeded ? TEXT("succeeded") : TEXT("failed"),
+		Result.bSavedLayoutRemoved ? TEXT("true") : TEXT("false"));
+
+	if (!Result.RemoveErrorMessage.IsEmpty())
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample smoke test %s remove error: %s"),
+			RepositoryName,
+			*Result.RemoveErrorMessage);
+	}
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test %s list after remove %s. LayoutCount=%d MetadataAbsent=%s"),
+		RepositoryName,
+		Result.bListAfterRemoveSucceeded ? TEXT("succeeded") : TEXT("failed"),
+		Result.ListAfterRemoveLayoutCount,
+		Result.bRemovedLayoutMetadataAbsent ? TEXT("true") : TEXT("false"));
+
+	if (!Result.ListAfterRemoveErrorMessage.IsEmpty())
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample smoke test %s list after remove error: %s"),
+			RepositoryName,
+			*Result.ListAfterRemoveErrorMessage);
+	}
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test %s clear %s. RemovedCount=%d ExpectedRemovedCount=%d"),
+		RepositoryName,
+		Result.bClearSucceeded ? TEXT("succeeded") : TEXT("failed"),
+		Result.ClearRemovedCount,
+		Result.ExpectedClearRemovedCount);
+
+	if (!Result.ClearErrorMessage.IsEmpty())
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample smoke test %s clear error: %s"),
+			RepositoryName,
+			*Result.ClearErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestRepositoryResult(
 	const FSQLUISampleSmokeTestResult& Result)
 {
@@ -169,6 +249,13 @@ void LogSQLUISampleSmokeTestRepositoryResult(
 	LogSQLUISampleSmokeTestRepositoryValidationMessages(
 		TEXT("load"),
 		Result.RepositoryLoadValidation);
+
+	if (Result.bRepositorySaveSucceeded)
+	{
+		LogSQLUISampleSmokeTestRepositoryOperationResult(
+			TEXT("in-memory layout repository"),
+			Result.RepositoryOperationSmoke);
+	}
 }
 
 void LogSQLUISampleSmokeTestJsonFileRepositoryResult(
@@ -210,6 +297,13 @@ void LogSQLUISampleSmokeTestJsonFileRepositoryResult(
 			Error,
 			TEXT("SQLUI sample smoke test JSON file layout repository load error: %s"),
 			*Result.JsonFileRepositoryLoadErrorMessage);
+	}
+
+	if (Result.bJsonFileRepositorySaveSucceeded)
+	{
+		LogSQLUISampleSmokeTestRepositoryOperationResult(
+			TEXT("JSON file layout repository"),
+			Result.JsonFileRepositoryOperationSmoke);
 	}
 }
 
