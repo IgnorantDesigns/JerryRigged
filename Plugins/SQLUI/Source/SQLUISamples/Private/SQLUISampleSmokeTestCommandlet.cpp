@@ -96,6 +96,32 @@ void LogSQLUISampleSmokeTestJsonFixtureResult(
 	LogSQLUISampleSmokeTestJsonFixtureMessages(Result.JsonLayoutFixtureValidation);
 }
 
+void LogSQLUISampleSmokeTestRepositorySelectionResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bRepositorySelectionSmokeTested)
+	{
+		return;
+	}
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI sample smoke test layout repository factory unavailable backend %s. SaveBackendUnavailable=%s LoadBackendUnavailable=%s"),
+		Result.bUnavailableRepositorySelectionSucceeded ? TEXT("succeeded") : TEXT("failed"),
+		Result.bUnavailableRepositorySaveBackendUnavailable ? TEXT("true") : TEXT("false"),
+		Result.bUnavailableRepositoryLoadBackendUnavailable ? TEXT("true") : TEXT("false"));
+
+	if (!Result.UnavailableRepositorySelectionErrorMessage.IsEmpty())
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI sample smoke test layout repository factory unavailable backend error: %s"),
+			*Result.UnavailableRepositorySelectionErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestRepositoryValidationMessages(
 	const TCHAR* OperationName,
 	const FSQLUILayoutValidationResult& Validation)
@@ -340,6 +366,7 @@ void LogSQLUISampleSmokeTestStepWarnings(
 void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 {
 	LogSQLUISampleSmokeTestJsonFixtureResult(Result);
+	LogSQLUISampleSmokeTestRepositorySelectionResult(Result);
 	LogSQLUISampleSmokeTestRepositoryResult(Result);
 	LogSQLUISampleSmokeTestJsonFileRepositoryResult(Result);
 

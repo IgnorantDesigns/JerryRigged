@@ -4,6 +4,7 @@
 #include "Layout/SQLUIInMemoryLayoutRepository.h"
 #include "Layout/SQLUIJsonFileLayoutRepository.h"
 #include "Layout/SQLUILayoutJson.h"
+#include "Layout/SQLUILayoutRepositoryFactory.h"
 #include "Layout/SQLUILayoutTypes.h"
 #include "Misc/Paths.h"
 #include "Runtime/SQLUIRuntimeContext.h"
@@ -77,6 +78,11 @@ struct FSQLUISampleSmokeTestLayoutResult
 	bool bJsonLayoutFixtureParseSucceeded = false;
 	bool bJsonLayoutFixtureValidationSucceeded = false;
 	FSQLUILayoutValidationResult JsonLayoutFixtureValidation;
+	bool bRepositorySelectionSmokeTested = false;
+	bool bUnavailableRepositorySelectionSucceeded = false;
+	bool bUnavailableRepositorySaveBackendUnavailable = false;
+	bool bUnavailableRepositoryLoadBackendUnavailable = false;
+	FString UnavailableRepositorySelectionErrorMessage;
 	bool bUsedInMemoryLayoutRepository = false;
 	bool bRepositorySaveSucceeded = false;
 	bool bRepositoryLoadSucceeded = false;
@@ -356,6 +362,51 @@ bool DidSQLUISampleRepositoryOperationSmokeSucceed(
 		&& Result.bClearSucceeded;
 }
 
+void RunSQLUISampleUnavailableRepositorySelectionSmoke(
+	UObject* Outer,
+	const FSQLUILayoutDocument& Document,
+	FSQLUISampleSmokeTestLayoutResult& Result)
+{
+	Result.bRepositorySelectionSmokeTested = true;
+
+	FSQLUILayoutRepositoryFactorySettings Settings;
+	Settings.Backend = ESQLUILayoutRepositoryBackend::Unavailable;
+
+	USQLUILayoutRepository* Repository =
+		USQLUILayoutRepositoryFactory::CreateLayoutRepository(Outer, Settings);
+	if (!IsValid(Repository))
+	{
+		Result.UnavailableRepositorySelectionErrorMessage =
+			TEXT("SQLUI sample smoke test failed: layout repository factory did not create an unavailable repository.");
+		return;
+	}
+
+	const FSQLUILayoutSaveResult SaveResult = SaveSQLUISampleLayoutToRepository(
+		Repository,
+		TEXT("unavailable layout repository"),
+		Document);
+	const FSQLUILayoutLoadResult LoadResult = LoadSQLUISampleLayoutFromRepository(
+		Repository,
+		TEXT("unavailable layout repository"),
+		Document.Metadata.LayoutId);
+
+	Result.bUnavailableRepositorySaveBackendUnavailable =
+		!SaveResult.bSucceeded && SaveResult.bBackendUnavailable;
+	Result.bUnavailableRepositoryLoadBackendUnavailable =
+		!LoadResult.bSucceeded && LoadResult.bBackendUnavailable;
+	Result.bUnavailableRepositorySelectionSucceeded =
+		Result.bUnavailableRepositorySaveBackendUnavailable
+		&& Result.bUnavailableRepositoryLoadBackendUnavailable;
+
+	if (!Result.bUnavailableRepositorySelectionSucceeded)
+	{
+		Result.UnavailableRepositorySelectionErrorMessage = FString::Printf(
+			TEXT("SQLUI sample smoke test failed: unavailable layout repository did not report backend unavailable cleanly. SaveError='%s' LoadError='%s'"),
+			*SaveResult.ErrorMessage,
+			*LoadResult.ErrorMessage);
+	}
+}
+
 template<typename LayoutRepositoryType>
 void RunSQLUISampleLayoutRepositorySmoke(
 	LayoutRepositoryType* Repository,
@@ -530,10 +581,30 @@ FSQLUISampleSmokeTestLayoutResult ResolveSQLUISampleSmokeTestLayoutDocument(
 		return Result;
 	}
 
+	if (Request.bUseInMemoryLayoutRepository || Request.bUseJsonFileLayoutRepository)
+	{
+		RunSQLUISampleUnavailableRepositorySelectionSmoke(Outer, Result.Document, Result);
+		if (!Result.bUnavailableRepositorySelectionSucceeded)
+		{
+			Result.bSucceeded = false;
+			return Result;
+		}
+	}
+
 	if (Request.bUseInMemoryLayoutRepository)
 	{
-		USQLUIInMemoryLayoutRepository* LayoutRepository =
-			NewObject<USQLUIInMemoryLayoutRepository>(Outer);
+		FSQLUILayoutRepositoryFactorySettings RepositorySettings;
+		RepositorySettings.Backend = ESQLUILayoutRepositoryBackend::InMemory;
+		USQLUIInMemoryLayoutRepository* LayoutRepository = Cast<USQLUIInMemoryLayoutRepository>(
+			USQLUILayoutRepositoryFactory::CreateLayoutRepository(Outer, RepositorySettings));
+		if (!IsValid(LayoutRepository))
+		{
+			Result.RepositorySaveErrorMessage =
+				TEXT("SQLUI sample smoke test failed: layout repository factory did not create an in-memory layout repository.");
+			Result.bSucceeded = false;
+			return Result;
+		}
+
 		FSQLUILayoutSaveResult SaveResult;
 		FSQLUILayoutLoadResult LoadResult;
 		RunSQLUISampleLayoutRepositorySmoke(
@@ -583,13 +654,17 @@ FSQLUISampleSmokeTestLayoutResult ResolveSQLUISampleSmokeTestLayoutDocument(
 
 	if (Request.bUseJsonFileLayoutRepository)
 	{
-		USQLUIJsonFileLayoutRepository* LayoutRepository =
-			NewObject<USQLUIJsonFileLayoutRepository>(Outer);
-		if (IsValid(LayoutRepository))
+		FSQLUILayoutRepositoryFactorySettings RepositorySettings;
+		RepositorySettings.Backend = ESQLUILayoutRepositoryBackend::JsonFile;
+		RepositorySettings.JsonFileBaseDirectory = MakeSQLUISampleJsonFileLayoutRepositoryBaseDirectory();
+		USQLUIJsonFileLayoutRepository* LayoutRepository = Cast<USQLUIJsonFileLayoutRepository>(
+			USQLUILayoutRepositoryFactory::CreateLayoutRepository(Outer, RepositorySettings));
+		if (!IsValid(LayoutRepository))
 		{
-			FSQLUIJsonFileLayoutRepositorySettings Settings;
-			Settings.BaseDirectory = MakeSQLUISampleJsonFileLayoutRepositoryBaseDirectory();
-			LayoutRepository->Configure(Settings);
+			Result.JsonFileRepositorySaveErrorMessage =
+				TEXT("SQLUI sample smoke test failed: layout repository factory did not create a JSON file layout repository.");
+			Result.bSucceeded = false;
+			return Result;
 		}
 
 		FSQLUILayoutSaveResult SaveResult;
@@ -650,6 +725,11 @@ void ApplySQLUISampleLayoutResult(
 	Result.bJsonLayoutFixtureParseSucceeded = LayoutResult.bJsonLayoutFixtureParseSucceeded;
 	Result.bJsonLayoutFixtureValidationSucceeded = LayoutResult.bJsonLayoutFixtureValidationSucceeded;
 	Result.JsonLayoutFixtureValidation = LayoutResult.JsonLayoutFixtureValidation;
+	Result.bRepositorySelectionSmokeTested = LayoutResult.bRepositorySelectionSmokeTested;
+	Result.bUnavailableRepositorySelectionSucceeded = LayoutResult.bUnavailableRepositorySelectionSucceeded;
+	Result.bUnavailableRepositorySaveBackendUnavailable = LayoutResult.bUnavailableRepositorySaveBackendUnavailable;
+	Result.bUnavailableRepositoryLoadBackendUnavailable = LayoutResult.bUnavailableRepositoryLoadBackendUnavailable;
+	Result.UnavailableRepositorySelectionErrorMessage = LayoutResult.UnavailableRepositorySelectionErrorMessage;
 	Result.bUsedInMemoryLayoutRepository = LayoutResult.bUsedInMemoryLayoutRepository;
 	Result.bRepositorySaveSucceeded = LayoutResult.bRepositorySaveSucceeded;
 	Result.bRepositoryLoadSucceeded = LayoutResult.bRepositoryLoadSucceeded;
@@ -706,6 +786,12 @@ FString MakeSQLUISampleLayoutFailureMessage(
 	if (LayoutResult.bUsedJsonLayoutFixture && !LayoutResult.bJsonLayoutFixtureValidationSucceeded)
 	{
 		return TEXT("SQLUI sample pipeline smoke test failed: JSON layout fixture validation failed.");
+	}
+
+	if (LayoutResult.bRepositorySelectionSmokeTested &&
+		!LayoutResult.bUnavailableRepositorySelectionSucceeded)
+	{
+		return TEXT("SQLUI sample pipeline smoke test failed: unavailable layout repository selection smoke failed.");
 	}
 
 	if (LayoutResult.bUsedInMemoryLayoutRepository && !LayoutResult.bRepositorySaveSucceeded)
@@ -798,6 +884,7 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 		AddSQLUISampleLayoutValidationMessages(Result, LayoutResult.RepositoryLoadValidation);
 		AddSQLUISampleLayoutValidationMessages(Result, LayoutResult.JsonFileRepositorySaveValidation);
 		AddSQLUISampleLayoutValidationMessages(Result, LayoutResult.JsonFileRepositoryLoadValidation);
+		AddSQLUISampleSmokeTestError(Result, LayoutResult.UnavailableRepositorySelectionErrorMessage);
 		AddSQLUISampleSmokeTestError(Result, LayoutResult.RepositorySaveErrorMessage);
 		AddSQLUISampleSmokeTestError(Result, LayoutResult.RepositoryLoadErrorMessage);
 		AddSQLUISampleSmokeTestError(Result, LayoutResult.JsonFileRepositorySaveErrorMessage);

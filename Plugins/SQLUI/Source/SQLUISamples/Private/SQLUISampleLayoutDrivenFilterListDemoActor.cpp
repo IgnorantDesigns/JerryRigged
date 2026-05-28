@@ -1,7 +1,9 @@
 #include "SQLUISampleLayoutDrivenFilterListDemoActor.h"
 
 #include "Actions/SQLUIActionRegistry.h"
+#include "Layout/ISQLUILayoutRepository.h"
 #include "Layout/SQLUIJsonFileLayoutRepository.h"
+#include "Layout/SQLUILayoutRepositoryFactory.h"
 #include "Misc/Paths.h"
 #include "SQLUISamplesModule.h"
 #include "Engine/World.h"
@@ -108,13 +110,13 @@ FSQLUIActionResult MakeSQLUISampleSucceededActionResult()
 }
 
 bool SaveSQLUISampleLayoutDrivenFilterListDocument(
-	USQLUIJsonFileLayoutRepository* Repository,
+	ISQLUILayoutRepository* Repository,
 	const FSQLUILayoutDocument& Document,
 	FSQLUILayoutSaveResult& OutSaveResult)
 {
 	OutSaveResult = FSQLUILayoutSaveResult();
 
-	if (!IsValid(Repository))
+	if (!Repository)
 	{
 		OutSaveResult.ErrorMessage = TEXT("SQLUI sample layout-driven filter/list demo failed: repository is invalid during save.");
 		return false;
@@ -140,13 +142,13 @@ bool SaveSQLUISampleLayoutDrivenFilterListDocument(
 }
 
 bool LoadSQLUISampleLayoutDrivenFilterListDocument(
-	USQLUIJsonFileLayoutRepository* Repository,
+	ISQLUILayoutRepository* Repository,
 	const FString& LayoutId,
 	FSQLUILayoutLoadResult& OutLoadResult)
 {
 	OutLoadResult = FSQLUILayoutLoadResult();
 
-	if (!IsValid(Repository))
+	if (!Repository)
 	{
 		OutLoadResult.ErrorMessage = TEXT("SQLUI sample layout-driven filter/list demo failed: repository is invalid during load.");
 		return false;
@@ -493,20 +495,21 @@ bool ASQLUISampleLayoutDrivenFilterListDemoActor::TryResolveLayoutDrivenFilterLi
 		return true;
 	}
 
-	USQLUIJsonFileLayoutRepository* LayoutRepository = NewObject<USQLUIJsonFileLayoutRepository>(this);
+	FSQLUILayoutRepositoryFactorySettings RepositorySettings;
+	RepositorySettings.Backend = ESQLUILayoutRepositoryBackend::JsonFile;
+	RepositorySettings.JsonFileBaseDirectory = NormalizeSQLUISampleLayoutDrivenFilterListRepositoryBaseDirectory(
+		LayoutRepositoryBaseDirectory);
+
+	USQLUIJsonFileLayoutRepository* LayoutRepository = Cast<USQLUIJsonFileLayoutRepository>(
+		USQLUILayoutRepositoryFactory::CreateLayoutRepository(this, RepositorySettings));
 	if (!IsValid(LayoutRepository))
 	{
 		UE_LOG(
 			LogSQLUISamples,
 			Error,
-			TEXT("SQLUI sample layout-driven filter/list demo failed: could not create JSON file layout repository."));
+			TEXT("SQLUI sample layout-driven filter/list demo failed: layout repository factory did not create a JSON file layout repository."));
 		return false;
 	}
-
-	FSQLUIJsonFileLayoutRepositorySettings RepositorySettings;
-	RepositorySettings.BaseDirectory = NormalizeSQLUISampleLayoutDrivenFilterListRepositoryBaseDirectory(
-		LayoutRepositoryBaseDirectory);
-	LayoutRepository->Configure(RepositorySettings);
 
 	LastLayoutRepositoryBaseDirectory = LayoutRepository->GetResolvedBaseDirectory();
 
