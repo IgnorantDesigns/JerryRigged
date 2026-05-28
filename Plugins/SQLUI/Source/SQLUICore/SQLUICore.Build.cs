@@ -16,7 +16,8 @@ public class SQLUICore : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
 			"Json",
-			"JsonUtilities"
+			"JsonUtilities",
+			"SQLiteCore"
 		});
 	}
 }

@@ -57,6 +57,37 @@ Important limitations:
 - Threading guarantees beyond the public API and build comments need an implementation proof with SQLUI's planned worker boundary.
 - No third-party Marketplace plugin was inspected locally for this evaluation.
 
+## SQLiteCore Availability Proof
+
+SQLUICore now includes a minimal compile-time availability probe for engine-provided `SQLiteCore`.
+
+The proof:
+
+- Adds the smallest dependency wiring needed for SQLUICore to compile against `SQLiteCore`.
+- Adds `FSQLUISQLiteAvailability` in SQLUICore.
+- Includes `SQLiteDatabase.h` and compiles a trivial `FSQLiteDatabase` wrapper check.
+- Reports a short availability summary without opening a database.
+
+The proof does not:
+
+- Add a SQLite layout repository.
+- Add `ESQLUILayoutRepositoryBackend::SQLite`.
+- Change `USQLUILayoutRepositoryFactory`.
+- Open, create, or write database files.
+- Execute SQL.
+- Run migrations.
+- Add async database workers.
+- Modify widgets or smoke-test behavior.
+
+Remaining blockers before SQLite layout persistence:
+
+- Packaged-build validation.
+- Database open/path validation under `Saved/SQLUI/...`.
+- Async worker boundary.
+- Migration runner.
+- Repository implementation.
+- SQLite smoke coverage.
+
 ## Evaluation Criteria
 
 Each option is compared against:
@@ -254,7 +285,7 @@ Before any SQLite implementation PR changes project code, confirm:
 
 ## Decision Record
 
-Current status: not selected in code.
+Current status: compile availability proven only; not selected as a layout repository backend.
 
 Preferred candidate: engine-provided `SQLiteCore`, wrapped by a small SQLUI Core-owned async database boundary.
 
