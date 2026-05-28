@@ -15,6 +15,20 @@ The callback shape is important even while the current concrete repositories com
 
 Widgets, widget factories, and runtime pipeline code should depend on layout documents, repositories, variable stores, action systems, and runtime context objects. They should not depend on raw SQL strings, SQLite connection objects, table names, or direct file paths.
 
+## Repository Selection
+
+Runtime-facing code can choose a repository backend through `FSQLUILayoutRepositoryFactorySettings` and `USQLUILayoutRepositoryFactory`.
+
+`ESQLUILayoutRepositoryBackend` currently supports:
+
+- `Unavailable`: creates `USQLUILayoutRepository`, which reports `bBackendUnavailable` for load and save.
+- `InMemory`: creates `USQLUIInMemoryLayoutRepository`.
+- `JsonFile`: creates `USQLUIJsonFileLayoutRepository`.
+
+`FSQLUILayoutRepositoryFactorySettings` also includes an optional `JsonFileBaseDirectory`. When it is set, the JSON file repository is configured with that directory. When it is empty, the JSON file repository keeps its default `Saved/SQLUI/Layouts` path.
+
+The factory falls back to the transient package when no valid outer is supplied. It is the runtime selection boundary for current sample code and later storage implementations. Widgets should stay behind repository/runtime-context APIs and should not select concrete storage classes themselves.
+
 ## Current Repositories
 
 ### `USQLUILayoutRepository`
@@ -112,8 +126,9 @@ Current paths are:
 
 - Default in-memory C++ document: the sample runner creates a minimal `FSQLUILayoutDocument` in code and runs the widget pipeline.
 - JSON fixture: SQLUISamples parses and validates a built-in JSON layout fixture, then runs the same widget pipeline.
-- In-memory repository round trip: the JSON fixture is saved into `USQLUIInMemoryLayoutRepository`, loaded back by layout id, and passed into the widget pipeline.
-- JSON file repository round trip: the JSON fixture is saved into `USQLUIJsonFileLayoutRepository`, loaded back by layout id, removed from `Saved/SQLUI/SmokeTests/Layouts`, and passed into the widget pipeline.
+- In-memory repository round trip: the factory selects `InMemory`, the JSON fixture is saved into `USQLUIInMemoryLayoutRepository`, loaded back by layout id, and passed into the widget pipeline.
+- JSON file repository round trip: the factory selects `JsonFile`, the JSON fixture is saved into `USQLUIJsonFileLayoutRepository`, loaded back by layout id, removed from `Saved/SQLUI/SmokeTests/Layouts`, and passed into the widget pipeline.
+- Unavailable repository selection: repository smoke paths also select `Unavailable` and verify load/save report `bBackendUnavailable` cleanly.
 
 These paths do not use SQLite, Content, maps, viewport attachment, or durable project assets.
 
@@ -137,8 +152,6 @@ SQLite is intentionally not implemented as part of this documentation task. Choo
 
 Near-term implementation work can stay small and repository-focused:
 
-1. Add smoke coverage for list, remove, and clear behavior on existing repositories.
-2. Define how runtime code selects a repository implementation without coupling widgets to concrete storage.
-3. Draft the future SQLite layout schema before choosing or integrating a backend.
-4. Add the SQLite repository only after async boundaries, backend selection, and `Saved` database copy behavior are agreed.
-5. Extend lifecycle features through repository contracts instead of exposing storage details to widgets.
+1. Draft the future SQLite layout schema before choosing or integrating a backend.
+2. Add the SQLite repository only after async boundaries, backend selection, and `Saved` database copy behavior are agreed.
+3. Extend lifecycle features through repository contracts instead of exposing storage details to widgets.
