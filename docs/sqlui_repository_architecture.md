@@ -136,6 +136,8 @@ These paths do not use SQLite, Content, maps, viewport attachment, or durable pr
 
 A future SQLite-backed layout repository should sit behind the same repository contract as the current implementations. Callers should be able to request, save, list, remove, and clear layouts without knowing whether the backing store is in memory, JSON files, or SQLite.
 
+The proposed SQLite schema is drafted in [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md). That document defines the planned tables, keys, indexes, revision/history behavior, soft-delete semantics for normal remove operations, destructive clear behavior for scoped cleanup, migration/versioning expectations, validation boundaries, threading expectations, and repository-operation mapping.
+
 The SQLite implementation should:
 
 - Use async or background database boundaries. Database work must not run on the game thread.
@@ -146,12 +148,13 @@ The SQLite implementation should:
 - Preserve the current document validation boundary before saving and after loading.
 - Use `Saved/SQLUI/...` for writable runtime database state, with any seed-copy behavior handled before mutation.
 
-SQLite is intentionally not implemented as part of this documentation task. Choosing a concrete SQLite backend, adding schema, wiring migrations, and expanding smoke coverage should happen in later implementation work.
+SQLite is intentionally not implemented yet. Choosing a concrete SQLite backend, adding executable migrations, adding database files, wiring async database execution, and expanding smoke coverage should happen in later implementation work.
 
 ## Suggested Next Steps
 
 Near-term implementation work can stay small and repository-focused:
 
-1. Draft the future SQLite layout schema before choosing or integrating a backend.
-2. Add the SQLite repository only after async boundaries, backend selection, and `Saved` database copy behavior are agreed.
-3. Extend lifecycle features through repository contracts instead of exposing storage details to widgets.
+1. Choose a SQLite backend only after the schema and async boundaries are agreed.
+2. Extend repository selection with a SQLite backend setting when implementation begins.
+3. Add executable migrations and database file handling in SQLUICore, not in widgets.
+4. Extend lifecycle features through repository contracts instead of exposing storage details to widgets.
