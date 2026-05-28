@@ -1,6 +1,6 @@
 # SQLUI SQLite Backend Evaluation
 
-This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. It is documentation only. It does not add SQLite code, choose a backend through project configuration, change `Build.cs` files, add plugin dependencies, add migrations, or create database files.
+This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current SQLiteCore availability proof adds only the minimal engine `SQLiteCore` plugin/module wiring and a compile/link probe in SQLUICore; it does not add SQLite layout persistence, migrations, async database work, repository factory changes, widgets, maps, assets, scripts, CI, or database files.
 
 ## Purpose
 
@@ -15,10 +15,12 @@ This evaluation compares backend options before implementation work starts. The 
 
 ## Non-Goals
 
-- Do not implement SQLite in this step.
-- Do not select a backend by editing project files.
-- Do not add engine plugin dependencies, Marketplace dependencies, or vendored third-party source.
-- Do not modify `Build.cs`, repository C++ code, smoke tests, scripts, CI, assets, maps, or database files.
+- Do not implement SQLite layout persistence in this step.
+- Do not add `ESQLUILayoutRepositoryBackend::SQLite` or select SQLite in repository factory behavior.
+- Do not add dependencies beyond the minimal engine `SQLiteCore` plugin/module wiring used for the compile proof.
+- Do not add Marketplace dependencies, third-party Unreal plugins, or vendored third-party source.
+- Do not modify repository C++ code, smoke tests, scripts, CI, assets, maps, or database files.
+- Do not open, create, or write SQLite databases.
 - Do not treat this evaluation as proof that packaged builds work. Packaging still needs implementation-time validation.
 
 ## Local Verification
@@ -48,7 +50,7 @@ Verified local findings:
 - `SQLiteCore.Build.cs` notes that when Unreal's custom SQLite platform is used, shared memory and granular file locks are not provided, affecting concurrency so only one `FSQLiteDatabase` can have a file open at the same time in that mode.
 - `SQLiteSupport.uplugin` declares a `SQLiteSupport` module with `"Type": "Runtime"` and depends on the engine `DatabaseSupport` and `SQLiteCore` plugins.
 - `SQLiteSupport` public headers expose `FSQLiteDatabaseConnection` and `FSQLiteResultSet` through the older `FDataBaseConnection` and `FDataBaseRecordSet` style abstraction.
-- The JerryRigged project and SQLUI plugin do not currently declare SQLite plugin/module dependencies.
+- At the time of the original evaluation, the JerryRigged project and SQLUI plugin did not declare SQLite plugin/module dependencies. The availability proof below now adds minimal `SQLiteCore` wiring to SQLUI only.
 
 Important limitations:
 
@@ -56,6 +58,37 @@ Important limitations:
 - Runtime module type is verified, but target-platform packaging behavior for JerryRigged remains unverified.
 - Threading guarantees beyond the public API and build comments need an implementation proof with SQLUI's planned worker boundary.
 - No third-party Marketplace plugin was inspected locally for this evaluation.
+
+## SQLiteCore Availability Proof
+
+SQLUICore now includes a minimal compile-time availability probe for engine-provided `SQLiteCore`.
+
+The proof:
+
+- Adds the smallest dependency wiring needed for SQLUICore to compile against `SQLiteCore`.
+- Adds `FSQLUISQLiteAvailability` in SQLUICore.
+- Includes `SQLiteDatabase.h` and compiles a trivial `FSQLiteDatabase` wrapper check.
+- Reports a short availability summary without opening a database.
+
+The proof does not:
+
+- Add a SQLite layout repository.
+- Add `ESQLUILayoutRepositoryBackend::SQLite`.
+- Change `USQLUILayoutRepositoryFactory`.
+- Open, create, or write database files.
+- Execute SQL.
+- Run migrations.
+- Add async database workers.
+- Modify widgets or smoke-test behavior.
+
+Remaining blockers before SQLite layout persistence:
+
+- Packaged-build validation.
+- Database open/path validation under `Saved/SQLUI/...`.
+- Async worker boundary.
+- Migration runner.
+- Repository implementation.
+- SQLite smoke coverage.
 
 ## Evaluation Criteria
 
@@ -254,7 +287,7 @@ Before any SQLite implementation PR changes project code, confirm:
 
 ## Decision Record
 
-Current status: not selected in code.
+Current status: compile availability proven only; not selected as a layout repository backend.
 
 Preferred candidate: engine-provided `SQLiteCore`, wrapped by a small SQLUI Core-owned async database boundary.
 
