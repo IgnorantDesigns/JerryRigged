@@ -140,6 +140,8 @@ The proposed SQLite schema is drafted in [`sqlui_sqlite_layout_schema.md`](sqlui
 
 The future async/backend implementation plan is drafted in [`sqlui_sqlite_async_backend_plan.md`](sqlui_sqlite_async_backend_plan.md). That document defines the intended game-thread and worker-thread responsibilities, callback delivery rules, UObject lifetime and shutdown safety, database connection and transaction ownership, migration and seed-copy timing, result mapping, unavailable-backend behavior, logging expectations, smoke-test implications, repository factory fit, and criteria for choosing a concrete SQLite backend later.
 
+The SQLite backend evaluation is drafted in [`sqlui_sqlite_backend_evaluation.md`](sqlui_sqlite_backend_evaluation.md). That document compares engine-provided SQLite support, a SQLUI-owned wrapper around engine SQLite APIs, third-party plugins, vendored SQLite, and continued JSON-file persistence. The current docs-only recommendation is to prefer the locally verified engine `SQLiteCore` runtime plugin behind a small SQLUI-owned async wrapper if packaged-build and smoke-test verification pass, and otherwise defer SQLite while continuing JSON-file persistence.
+
 The SQLite implementation should:
 
 - Use async or background database boundaries. Database work must not run on the game thread.
@@ -156,7 +158,7 @@ SQLite is intentionally not implemented yet. Choosing a concrete SQLite backend,
 
 Near-term implementation work can stay small and repository-focused:
 
-1. Choose a SQLite backend only after the schema, async boundaries, and backend selection criteria are agreed.
+1. Choose a SQLite backend only after the schema, async boundaries, backend selection criteria, and backend evaluation blockers are resolved.
 2. Extend repository selection with a SQLite backend setting when implementation begins.
 3. Add executable migrations and database file handling in SQLUICore, not in widgets.
 4. Extend lifecycle features through repository contracts instead of exposing storage details to widgets.
