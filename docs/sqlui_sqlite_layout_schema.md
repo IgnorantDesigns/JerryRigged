@@ -1,6 +1,6 @@
 # SQLUI SQLite Layout Schema Draft
 
-This document drafts the future SQLite-backed layout repository for SQLUI. It is design documentation only. It does not choose a SQLite plugin, add a database dependency, add migrations as executable code, or create database files.
+This document drafts the future SQLite-backed layout repository for SQLUI. The original schema draft was documentation-only. SQLUICore now also has a temporary smoke proof that applies the planned initial layout schema to a database under `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, verifies the expected tables and indexes, then removes the database. This still does not implement SQLite layout persistence, repository factory selection, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -10,7 +10,8 @@ The proposed schema is meant to support the current repository lifecycle plus la
 
 ## Non-Goals
 
-- Do not add SQLite code or pick a SQLite backend in this step.
+- Do not implement the SQLite layout repository in this step.
+- Do not add SQLite repository factory selection in this step.
 - Do not expose SQL or schema details to `SQLUI.Widgets`.
 - Do not replace JSON document validation with database constraints.
 - Do not use `Content/`, maps, or assets as writable runtime layout storage.
@@ -31,10 +32,13 @@ Smoke tests or sample-specific stores should use narrower scopes such as:
 
 ```text
 Saved/SQLUI/SmokeTests/Layouts/Layouts.db
+Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe/LayoutSchemaMigrationProbe.db
 Saved/SQLUI/Samples/LayoutDrivenFilterList/Layouts.db
 ```
 
 The repository factory can later gain a SQLite backend setting and optional database path or base directory setting. Until then, SQLite should remain absent from runtime selection.
+
+The layout schema migration smoke proof uses `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe/LayoutSchemaMigrationProbe.db` only as temporary runtime output and removes the database and SQLite sidecar files after verification.
 
 ## Seed Copy Expectations
 
@@ -166,6 +170,8 @@ FOREIGN KEY (layout_id) REFERENCES layouts(layout_id)
 ```
 
 ## Suggested Initial DDL
+
+The SQLUICore layout schema migration smoke proof applies the layout tables and indexes below as migration `001_initial_layout_schema`. The shared migration runner owns creation and recording of `sqlui_schema_migrations`.
 
 ```sql
 CREATE TABLE IF NOT EXISTS sqlui_schema_migrations (
@@ -401,6 +407,8 @@ Load and validate `layout_previews.document_json`, save it as a new revision thr
 ## Migration and Versioning Approach
 
 The first SQLite implementation should apply named migrations inside a transaction and record them in `sqlui_schema_migrations`.
+
+The current layout schema migration smoke proof applies only the planned initial DDL to a temporary probe database and verifies table/index existence. It is a schema-readiness proof, not repository persistence.
 
 Migration rules:
 

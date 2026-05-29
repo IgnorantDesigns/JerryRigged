@@ -1,6 +1,6 @@
 # SQLUI SQLite Async Backend Plan
 
-This document drafts the async and backend boundary for a future SQLite-backed SQLUI layout repository. The original plan was documentation-only. The current proof work includes minimal `SQLiteCore` availability and open/close probes, a SQLUICore-owned async boundary/probe that runs plain database-style work on a background task and delivers the result back through a game-thread callback, and a smoke-only migration-runner probe. It still does not add SQLite layout persistence, real layout schema migrations, SQLite repository selection, widgets, maps, assets, CI, or persistent database files.
+This document drafts the async and backend boundary for a future SQLite-backed SQLUI layout repository. The original plan was documentation-only. The current proof work includes minimal `SQLiteCore` availability and open/close probes, a SQLUICore-owned async boundary/probe that runs plain database-style work on a background task and delivers the result back through a game-thread callback, a smoke-only migration-runner probe, and a planned layout schema migration probe. It still does not add SQLite layout persistence, SQLite repository selection, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -21,7 +21,7 @@ The schema itself is drafted separately in [`sqlui_sqlite_layout_schema.md`](sql
 - Do not implement SQLite layout persistence in this step.
 - Do not choose a concrete SQLite plugin or library beyond the already-proven engine `SQLiteCore` candidate.
 - Do not add new SQLite module dependencies or modify `Build.cs`.
-- Do not add SQLite repository C++ code, real layout schema migrations, or persistent database files.
+- Do not add SQLite repository C++ code or persistent database files.
 - Do not expand the async scaffold beyond a small proof that can run plain background work and marshal a result safely.
 - Do not expose SQL, table names, database paths, worker objects, or SQLite connection details to `SQLUI.Widgets`.
 - Do not change existing smoke-test behavior unless an optional probe flag is explicitly passed.
@@ -275,6 +275,8 @@ The optional database async probe exercises the minimal SQLUICore async boundary
 
 The optional SQLite migration probe exercises only a smoke-safe migration-runner slice. It opens a temporary database under `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`, creates and records a probe migration in `sqlui_schema_migrations`, verifies the row, closes the database, and removes the file. That probe is intentionally separate from the real layout schema migration and does not change repository factory selection or implement SQLite layout persistence.
 
+The optional SQLite layout schema migration probe applies the planned initial layout schema to a temporary database under `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, verifies the expected tables and indexes, closes the database, and removes the file. It proves schema DDL readiness only; repository operations and factory selection remain deferred.
+
 When the SQLite backend is added later, smoke coverage should prove:
 
 - Repository factory selection creates the SQLite repository only when the backend is available.
@@ -337,7 +339,7 @@ Use the minimal SQLUI Core-owned async scaffold as the starting point, then hard
 
 ### Phase 3: Migration Runner
 
-Build on the smoke-only migration-runner proof by adding executable migrations for the agreed layout schema and recording them in `sqlui_schema_migrations`. Ensure migration failures produce clear unavailable-backend results.
+Build on the smoke-only migration-runner proof and layout schema migration proof by integrating executable schema migrations behind the future SQLite repository. Ensure migration failures produce clear unavailable-backend results.
 
 ### Phase 4: Read-Only Repository Operations
 

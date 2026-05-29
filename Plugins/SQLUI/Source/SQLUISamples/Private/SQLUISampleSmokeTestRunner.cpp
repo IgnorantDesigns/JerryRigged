@@ -833,6 +833,40 @@ FString MakeSQLUISampleSQLiteMigrationProbeFailureMessage(
 		Result.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
 }
 
+bool DidSQLUISampleSQLiteLayoutSchemaMigrationProbeSucceed(
+	const FSQLUISQLiteLayoutSchemaMigrationProbeResult& Result)
+{
+	return Result.bSucceeded
+		&& Result.bMigrationSucceeded
+		&& Result.bLayoutsTableExists
+		&& Result.bLayoutRevisionsTableExists
+		&& Result.bLayoutTagsTableExists
+		&& Result.bLayoutCheckpointsTableExists
+		&& Result.bLayoutPreviewsTableExists
+		&& Result.bExpectedIndexesExist
+		&& Result.bDatabaseRemoved;
+}
+
+FString MakeSQLUISampleSQLiteLayoutSchemaMigrationProbeFailureMessage(
+	const FSQLUISQLiteLayoutSchemaMigrationProbeResult& Result)
+{
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		return Result.ErrorMessage;
+	}
+
+	return FString::Printf(
+		TEXT("SQLUI SQLite layout schema migration probe failed. MigrationSucceeded=%s LayoutsTable=%s LayoutRevisionsTable=%s LayoutTagsTable=%s LayoutCheckpointsTable=%s LayoutPreviewsTable=%s ExpectedIndexes=%s DatabaseRemoved=%s"),
+		Result.bMigrationSucceeded ? TEXT("true") : TEXT("false"),
+		Result.bLayoutsTableExists ? TEXT("true") : TEXT("false"),
+		Result.bLayoutRevisionsTableExists ? TEXT("true") : TEXT("false"),
+		Result.bLayoutTagsTableExists ? TEXT("true") : TEXT("false"),
+		Result.bLayoutCheckpointsTableExists ? TEXT("true") : TEXT("false"),
+		Result.bLayoutPreviewsTableExists ? TEXT("true") : TEXT("false"),
+		Result.bExpectedIndexesExist ? TEXT("true") : TEXT("false"),
+		Result.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+}
+
 struct FSQLUISampleDatabaseAsyncProbeState
 {
 	FSQLUIDatabaseAsyncResult Result;
@@ -1117,6 +1151,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 			AddSQLUISampleSmokeTestError(
 				Result,
 				MakeSQLUISampleSQLiteMigrationProbeFailureMessage(Result.SQLiteMigrationProbe));
+		}
+	}
+
+	if (Request.bUseSQLiteLayoutSchemaMigrationProbe)
+	{
+		Result.bUsedSQLiteLayoutSchemaMigrationProbe = true;
+		Result.SQLiteLayoutSchemaMigrationProbe =
+			FSQLUISQLiteLayoutSchemaMigration::RunProbe();
+		if (!DidSQLUISampleSQLiteLayoutSchemaMigrationProbeSucceed(
+			Result.SQLiteLayoutSchemaMigrationProbe))
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				MakeSQLUISampleSQLiteLayoutSchemaMigrationProbeFailureMessage(
+					Result.SQLiteLayoutSchemaMigrationProbe));
 		}
 	}
 

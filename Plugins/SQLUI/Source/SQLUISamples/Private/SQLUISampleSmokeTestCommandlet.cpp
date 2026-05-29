@@ -489,6 +489,85 @@ void LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteLayoutSchemaMigrationProbe)
+	{
+		return;
+	}
+
+	const FSQLUISQLiteLayoutSchemaMigrationProbeResult& ProbeResult =
+		Result.SQLiteLayoutSchemaMigrationProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout schema migration probe database path: '%s'"),
+		*ProbeResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout schema migration probe migration succeeded: %s"),
+		ProbeResult.bMigrationSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout schema migration probe layouts table exists: %s"),
+		ProbeResult.bLayoutsTableExists ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout schema migration probe layout revisions table exists: %s"),
+		ProbeResult.bLayoutRevisionsTableExists ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout schema migration probe layout tags table exists: %s"),
+		ProbeResult.bLayoutTagsTableExists ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout schema migration probe layout checkpoints table exists: %s"),
+		ProbeResult.bLayoutCheckpointsTableExists ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout schema migration probe layout previews table exists: %s"),
+		ProbeResult.bLayoutPreviewsTableExists ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout schema migration probe expected indexes exist: %s"),
+		ProbeResult.bExpectedIndexesExist ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout schema migration probe database removed: %s"),
+		ProbeResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite layout schema migration probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite layout schema migration probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -528,6 +607,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteCoreProbeResult(Result);
 	LogSQLUISampleSmokeTestDatabaseAsyncProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(Result);
+	LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -606,6 +686,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteMigrationProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteMigrationProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteMigrationProbe"));
+	const bool bUseSQLiteLayoutSchemaMigrationProbe =
+		FParse::Param(*Params, TEXT("UseSQLiteLayoutSchemaMigrationProbe"))
+		|| FParse::Param(*Params, TEXT("SQLiteLayoutSchemaMigrationProbe"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -645,6 +728,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite migration probe selected: true"));
 	}
 
+	if (bUseSQLiteLayoutSchemaMigrationProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite layout schema migration probe selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -664,6 +752,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteCoreProbe = bUseSQLiteCoreProbe;
 		Request.bUseDatabaseAsyncProbe = bUseDatabaseAsyncProbe;
 		Request.bUseSQLiteMigrationProbe = bUseSQLiteMigrationProbe;
+		Request.bUseSQLiteLayoutSchemaMigrationProbe = bUseSQLiteLayoutSchemaMigrationProbe;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 
