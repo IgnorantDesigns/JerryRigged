@@ -12,9 +12,11 @@ Both repository smoke paths also select the unavailable backend through the fact
 
 The optional SQLiteCore probe opens and closes a temporary SQLite database under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe`, then removes the probe database file. This proves engine `SQLiteCore` can use a runtime-writable SQLUI smoke-test path without adding a layout repository, migrations, schema tables, async database workers, or repository factory behavior.
 
+The optional database async probe runs a tiny SQLUICore-owned database-boundary request on a background thread and delivers the result back through the game-thread callback path. It does not open SQLite, run SQL, write database files, add migrations, or change repository selection.
+
 This is a local developer workflow only. It is not CI yet, and it does not assume Unreal Engine is installed on GitHub Actions or any build agent.
 
-The smoke test does not edit maps, levels, Content, persistent database files, or the viewport. It does not add SQLite layout repository behavior or attach widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory. The SQLiteCore probe writes only under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe` and removes `SQLiteCoreProbe.db` after the check.
+The smoke test does not edit maps, levels, Content, persistent database files, or the viewport. It does not add SQLite layout repository behavior or attach widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory. The SQLiteCore probe writes only under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe` and removes `SQLiteCoreProbe.db` after the check. The database async probe does not perform file I/O.
 
 ## Build JerryRiggedEditor
 
@@ -102,6 +104,18 @@ The commandlet also accepts `-SQLiteCoreProbe` directly as an alias when invokin
 
 This path is a backend availability proof only. It does not add a SQLite layout repository, repository factory selection, schema tables, migrations, async database work, Content, maps, or persistent database files.
 
+## Run The Database Async Probe
+
+The database async probe keeps the same transient commandlet flow, enqueues a plain SQLUICore database-boundary request onto a background task, marshals the result back to the game thread, and then runs the same default runtime widget pipeline:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseDatabaseAsyncProbe
+```
+
+The commandlet also accepts `-DatabaseAsyncProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
+
+This path is an async-boundary proof only. It does not open SQLite, create database files, run SQL, add migrations, implement a SQLite layout repository, change repository factory selection, modify Content, or edit maps.
+
 ## Expected Results
 
 The script prints the exact command it runs, then returns the same exit code as the commandlet. It passes `-DDC-AllowNoActiveStores` so this transient smoke-test commandlet does not require a writable local Derived Data Cache.
@@ -181,6 +195,18 @@ SQLUI sample smoke test created widget count: 1
 ```
 
 After the probe succeeds, `Saved\SQLUI\SmokeTests\SQLiteCoreProbe\SQLiteCoreProbe.db` should not exist.
+
+For the database async probe, also look for:
+
+```text
+SQLUI database async probe selected: true
+SQLUI database async probe background work completed: true
+SQLUI database async probe callback delivered: true
+SQLUI database async probe succeeded.
+SQLUI sample smoke test commandlet succeeded.
+SQLUI sample smoke test root widget valid: true
+SQLUI sample smoke test created widget count: 1
+```
 
 Some optional pipeline steps may log `Skipped` depending on the current sample request. Failures are logged with `SQLUI sample smoke test commandlet failed.` and the script returns a non-zero exit code.
 
