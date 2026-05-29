@@ -1,6 +1,6 @@
 # SQLUI SQLite Backend Evaluation
 
-This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, an optional smoke-safe open/close probe under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`, and a minimal SQLUICore async-boundary probe; it does not add SQLite layout persistence, migrations, SQLite repository selection, widgets, maps, assets, CI, or persistent database files.
+This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, an optional smoke-safe open/close probe under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`, a minimal SQLUICore async-boundary probe, and an optional smoke-only migration-runner probe under `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`; it does not add SQLite layout persistence, real layout schema migrations, SQLite repository selection, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -20,7 +20,7 @@ This evaluation compares backend options before implementation work starts. The 
 - Do not add dependencies beyond the minimal engine `SQLiteCore` plugin/module wiring used for the compile proof.
 - Do not add Marketplace dependencies, third-party Unreal plugins, or vendored third-party source.
 - Do not modify repository C++ code, widgets, CI, assets, maps, or persistent database files.
-- Do not open, create, or write SQLite databases outside the optional smoke-safe probe path under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`.
+- Do not open, create, or write SQLite databases outside the optional smoke-safe probe paths under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe` and `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`.
 - Do not treat this evaluation as proof that packaged builds work. Packaging still needs implementation-time validation.
 
 ## Local Verification
@@ -122,11 +122,34 @@ The async-boundary proof does not:
 - Change `USQLUILayoutRepositoryFactory`.
 - Modify widgets or default smoke-test behavior.
 
+SQLUICore also includes an optional smoke-only migration-runner probe.
+
+The migration-runner proof:
+
+- Resolves a runtime-writable probe database path under `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`.
+- Opens `SQLiteMigrationProbe.db` with `FSQLiteDatabase`.
+- Creates a minimal smoke-only `sqlui_schema_migrations` tracking table.
+- Applies one tiny probe migration that creates `sqlui_migration_probe`.
+- Records the probe migration id and verifies the recorded migration row.
+- Closes the database.
+- Removes the probe database file by default after the check.
+- Is available only through the optional smoke-test flag.
+
+The migration-runner proof does not:
+
+- Add a SQLite layout repository.
+- Add `ESQLUILayoutRepositoryBackend::SQLite`.
+- Change `USQLUILayoutRepositoryFactory`.
+- Implement the real layout schema migration.
+- Create layout tables.
+- Add async SQLite database workers.
+- Modify widgets or default smoke-test behavior.
+
 Remaining blockers before SQLite layout persistence:
 
 - Packaged-build validation.
 - Production SQLite worker boundary and shutdown policy.
-- Migration runner.
+- Real layout-schema migration implementation.
 - Repository implementation.
 - SQLite repository smoke coverage.
 
