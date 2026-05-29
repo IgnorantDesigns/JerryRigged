@@ -20,6 +20,8 @@ param(
 
 	[switch]$UseSQLiteLayoutSchemaMigrationProbe,
 
+	[switch]$UseSQLiteLayoutReadProbe,
+
 	[Alias('?')]
 	[switch]$Help
 )
@@ -70,6 +72,9 @@ Parameters:
   -UseSQLiteLayoutSchemaMigrationProbe
       Run the optional SQLUICore SQLite layout schema migration probe.
 
+  -UseSQLiteLayoutReadProbe
+      Run the optional SQLUICore SQLite layout read probe.
+
   -Help, -?
       Show this help.
 
@@ -82,6 +87,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseDatabaseAsyncProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteMigrationProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteLayoutSchemaMigrationProbe
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteLayoutReadProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -UnrealEditorCmdPath "C:\UE\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -ProjectPath ".\JerryRigged.uproject"
 '@
@@ -221,6 +227,11 @@ if ($UseSQLiteMigrationProbe)
 if ($UseSQLiteLayoutSchemaMigrationProbe)
 {
 	$CommandletArgs += '-SQLiteLayoutSchemaMigrationProbe'
+}
+
+if ($UseSQLiteLayoutReadProbe)
+{
+	$CommandletArgs += '-SQLiteLayoutReadProbe'
 }
 
 $PrintableCommandParts = @($ResolvedUnrealEditorCmdPath) + $CommandletArgs

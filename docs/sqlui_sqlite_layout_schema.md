@@ -1,6 +1,6 @@
 # SQLUI SQLite Layout Schema Draft
 
-This document drafts the future SQLite-backed layout repository for SQLUI. The original schema draft was documentation-only. SQLUICore now also has a temporary smoke proof that applies the planned initial layout schema to a database under `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, verifies the expected tables and indexes, then removes the database. This still does not implement SQLite layout persistence, repository factory selection, widgets, maps, assets, CI, or persistent database files.
+This document drafts the future SQLite-backed layout repository for SQLUI. The original schema draft was documentation-only. SQLUICore now also has temporary smoke proofs that apply the planned initial layout schema to a database under `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, verify the expected tables and indexes, and seed/read one probe-only layout under `Saved/SQLUI/SmokeTests/LayoutReadProbe`. These probes remove their databases afterward and still do not implement SQLite layout persistence, repository factory selection, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -33,12 +33,15 @@ Smoke tests or sample-specific stores should use narrower scopes such as:
 ```text
 Saved/SQLUI/SmokeTests/Layouts/Layouts.db
 Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe/LayoutSchemaMigrationProbe.db
+Saved/SQLUI/SmokeTests/LayoutReadProbe/LayoutReadProbe.db
 Saved/SQLUI/Samples/LayoutDrivenFilterList/Layouts.db
 ```
 
 The repository factory can later gain a SQLite backend setting and optional database path or base directory setting. Until then, SQLite should remain absent from runtime selection.
 
 The layout schema migration smoke proof uses `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe/LayoutSchemaMigrationProbe.db` only as temporary runtime output and removes the database and SQLite sidecar files after verification.
+
+The layout read smoke proof uses `Saved/SQLUI/SmokeTests/LayoutReadProbe/LayoutReadProbe.db` only as temporary runtime output. It applies the same planned schema, inserts one valid probe-only layout into `layouts`, `layout_revisions`, and `layout_tags`, verifies list/load style reads, deserializes and validates the loaded document JSON, then removes the database and SQLite sidecar files after verification.
 
 ## Seed Copy Expectations
 
@@ -408,7 +411,7 @@ Load and validate `layout_previews.document_json`, save it as a new revision thr
 
 The first SQLite implementation should apply named migrations inside a transaction and record them in `sqlui_schema_migrations`.
 
-The current layout schema migration smoke proof applies only the planned initial DDL to a temporary probe database and verifies table/index existence. It is a schema-readiness proof, not repository persistence.
+The current layout schema migration smoke proof applies only the planned initial DDL to a temporary probe database and verifies table/index existence. The layout read smoke proof then seeds one valid layout into that schema and verifies list/load style reads. These are schema-readiness and read-mapping proofs, not repository persistence.
 
 Migration rules:
 
