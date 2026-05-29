@@ -333,6 +333,54 @@ void LogSQLUISampleSmokeTestJsonFileRepositoryResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteCoreProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteCoreProbe)
+	{
+		return;
+	}
+
+	const FSQLUISQLiteProbeResult& ProbeResult = Result.SQLiteCoreProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLiteCore probe database path: '%s'"),
+		*ProbeResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLiteCore probe database opened: %s"),
+		ProbeResult.bDatabaseOpened ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLiteCore probe database closed: %s"),
+		ProbeResult.bDatabaseClosed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLiteCore probe database removed: %s"),
+		ProbeResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLiteCore probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLiteCore probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -369,6 +417,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestRepositorySelectionResult(Result);
 	LogSQLUISampleSmokeTestRepositoryResult(Result);
 	LogSQLUISampleSmokeTestJsonFileRepositoryResult(Result);
+	LogSQLUISampleSmokeTestSQLiteCoreProbeResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -438,6 +487,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseJsonFileLayoutRepository =
 		FParse::Param(*Params, TEXT("UseJsonFileLayoutRepository"))
 		|| FParse::Param(*Params, TEXT("JsonFileLayoutRepository"));
+	const bool bUseSQLiteCoreProbe =
+		FParse::Param(*Params, TEXT("UseSQLiteCoreProbe"))
+		|| FParse::Param(*Params, TEXT("SQLiteCoreProbe"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -462,6 +514,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		TEXT("SQLUI sample smoke test JSON file layout repository selected: %s"),
 		bUseJsonFileLayoutRepository ? TEXT("true") : TEXT("false"));
 
+	if (bUseSQLiteCoreProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLiteCore probe selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -478,6 +535,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseJsonLayoutFixture = bUseJsonLayoutFixture;
 		Request.bUseInMemoryLayoutRepository = bUseInMemoryLayoutRepository;
 		Request.bUseJsonFileLayoutRepository = bUseJsonFileLayoutRepository;
+		Request.bUseSQLiteCoreProbe = bUseSQLiteCoreProbe;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 

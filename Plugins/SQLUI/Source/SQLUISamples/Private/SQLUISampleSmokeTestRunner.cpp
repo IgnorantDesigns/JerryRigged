@@ -1,5 +1,6 @@
 #include "SQLUISampleSmokeTestRunner.h"
 
+#include "Database/SQLUISQLiteProbe.h"
 #include "Layout/ISQLUILayoutRepository.h"
 #include "Layout/SQLUIInMemoryLayoutRepository.h"
 #include "Layout/SQLUIJsonFileLayoutRepository.h"
@@ -966,7 +967,24 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 	PipelineRequest.bExecuteActions = Request.bExecuteActions;
 	PipelineRequest.bStopOnOptionalStepFailure = Request.bStopOnOptionalStepFailure;
 
-	return MakeSQLUISampleSmokeTestResult(Pipeline->RunPipeline(PipelineRequest), LayoutResult);
+	Result = MakeSQLUISampleSmokeTestResult(Pipeline->RunPipeline(PipelineRequest), LayoutResult);
+
+	if (Request.bUseSQLiteCoreProbe)
+	{
+		Result.bUsedSQLiteCoreProbe = true;
+		Result.SQLiteCoreProbe = FSQLUISQLiteProbe::RunOpenCloseProbe();
+		if (!Result.SQLiteCoreProbe.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.SQLiteCoreProbe.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLiteCore probe failed.")
+					: Result.SQLiteCoreProbe.ErrorMessage);
+		}
+	}
+
+	return Result;
 }
 
 FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunJsonLayoutSmokeTest(
