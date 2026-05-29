@@ -14,6 +14,8 @@ param(
 
 	[switch]$UseSQLiteCoreProbe,
 
+	[switch]$UseDatabaseAsyncProbe,
+
 	[Alias('?')]
 	[switch]$Help
 )
@@ -55,6 +57,9 @@ Parameters:
   -UseSQLiteCoreProbe
       Run the optional SQLiteCore open/close probe under Saved\SQLUI\SmokeTests.
 
+  -UseDatabaseAsyncProbe
+      Run the optional SQLUICore database async-boundary probe.
+
   -Help, -?
       Show this help.
 
@@ -64,6 +69,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseInMemoryLayoutRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseJsonFileLayoutRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteCoreProbe
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseDatabaseAsyncProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -UnrealEditorCmdPath "C:\UE\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -ProjectPath ".\JerryRigged.uproject"
 '@
@@ -188,6 +194,11 @@ if ($UseJsonFileLayoutRepository)
 if ($UseSQLiteCoreProbe)
 {
 	$CommandletArgs += '-SQLiteCoreProbe'
+}
+
+if ($UseDatabaseAsyncProbe)
+{
+	$CommandletArgs += '-DatabaseAsyncProbe'
 }
 
 $PrintableCommandParts = @($ResolvedUnrealEditorCmdPath) + $CommandletArgs

@@ -381,6 +381,48 @@ void LogSQLUISampleSmokeTestSQLiteCoreProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestDatabaseAsyncProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedDatabaseAsyncProbe)
+	{
+		return;
+	}
+
+	const FSQLUIDatabaseAsyncResult& ProbeResult = Result.DatabaseAsyncProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI database async probe background work completed: %s"),
+		ProbeResult.bBackgroundWorkCompleted ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI database async probe callback delivered: %s"),
+		ProbeResult.bDeliveredOnGameThread ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI database async probe worker thread id: %d"),
+		ProbeResult.WorkerThreadId);
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI database async probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI database async probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -418,6 +460,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestRepositoryResult(Result);
 	LogSQLUISampleSmokeTestJsonFileRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteCoreProbeResult(Result);
+	LogSQLUISampleSmokeTestDatabaseAsyncProbeResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -490,6 +533,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteCoreProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteCoreProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteCoreProbe"));
+	const bool bUseDatabaseAsyncProbe =
+		FParse::Param(*Params, TEXT("UseDatabaseAsyncProbe"))
+		|| FParse::Param(*Params, TEXT("DatabaseAsyncProbe"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -519,6 +565,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLiteCore probe selected: true"));
 	}
 
+	if (bUseDatabaseAsyncProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI database async probe selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -536,6 +587,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseInMemoryLayoutRepository = bUseInMemoryLayoutRepository;
 		Request.bUseJsonFileLayoutRepository = bUseJsonFileLayoutRepository;
 		Request.bUseSQLiteCoreProbe = bUseSQLiteCoreProbe;
+		Request.bUseDatabaseAsyncProbe = bUseDatabaseAsyncProbe;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 

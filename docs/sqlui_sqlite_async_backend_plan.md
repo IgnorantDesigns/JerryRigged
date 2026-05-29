@@ -1,6 +1,6 @@
 # SQLUI SQLite Async Backend Plan
 
-This document drafts the async and backend boundary for a future SQLite-backed SQLUI layout repository. It is design documentation only. It does not choose a SQLite backend, add SQLite code, add plugin dependencies, change `Build.cs` files, add executable migrations, or create database files.
+This document drafts the async and backend boundary for a future SQLite-backed SQLUI layout repository. The original plan was documentation-only; the current scaffold adds a minimal SQLUICore-owned async boundary/probe that runs plain database-style work on a background task and delivers the result back through a game-thread callback. It still does not choose a SQLite backend, add SQLite layout persistence, run SQLite operations, add plugin dependencies, change `Build.cs` files, add executable migrations, or create database files.
 
 ## Purpose
 
@@ -21,9 +21,10 @@ The schema itself is drafted separately in [`sqlui_sqlite_layout_schema.md`](sql
 - Do not implement SQLite in this step.
 - Do not choose a concrete SQLite plugin or library.
 - Do not add a SQLite module dependency or modify `Build.cs`.
-- Do not add repository C++ code, async service code, migrations, or database files.
+- Do not add SQLite repository C++ code, migrations, or database files.
+- Do not expand the async scaffold beyond a small proof that can run plain background work and marshal a result safely.
 - Do not expose SQL, table names, database paths, worker objects, or SQLite connection details to `SQLUI.Widgets`.
-- Do not change the existing smoke-test behavior.
+- Do not change existing smoke-test behavior unless an optional probe flag is explicitly passed.
 - Do not require the first SQLite implementation to ship history, checkpoints, previews, or search UI.
 
 ## Design Principles
@@ -54,6 +55,8 @@ The recommended shape is a small SQLUI Core-owned worker boundary:
 6. The repository converts plain result data into the existing repository result structs and invokes the caller callback if it is still safe to do so.
 
 This boundary can be implemented with whichever Unreal async primitive best fits the chosen backend later. The design requirement is the boundary itself, not a specific task API.
+
+The current scaffold proves only the boundary shape. `FSQLUIDatabaseAsyncRunner` accepts immutable request data, runs a simulated database-style task on a background thread, and marshals `FSQLUIDatabaseAsyncResult` back to the game thread before invoking the callback. It deliberately does not open SQLite, execute SQL, write files, manage migrations, or expose a repository backend.
 
 ## Game-Thread Responsibilities
 
@@ -268,6 +271,8 @@ Do not log full `document_json` bodies by default. If verbose document logging i
 
 Existing smoke paths should remain unchanged until SQLite is implemented.
 
+The optional database async probe exercises the minimal SQLUICore async boundary without touching SQLite or the filesystem. In commandlet smoke runs, the harness pumps the game-thread task queue while waiting for the probe callback because there is no normal gameplay tick while the commandlet stack is blocked. Runtime code should use the callback asynchronously rather than copying that blocking smoke-test wait pattern.
+
 When the SQLite backend is added later, smoke coverage should prove:
 
 - Repository factory selection creates the SQLite repository only when the backend is available.
@@ -326,7 +331,7 @@ Evaluate candidate SQLite backends against the selection criteria. Propose the m
 
 ### Phase 2: Async Database Service Boundary
 
-Add the SQLUI Core-owned async boundary that can execute database work away from the game thread and marshal results back safely.
+Use the minimal SQLUI Core-owned async scaffold as the starting point, then harden it for real SQLite work. The implementation PR should decide whether the simple task-graph runner remains sufficient or whether SQLite needs a serialized worker queue, explicit cancellation tokens, or a longer-lived database service boundary.
 
 ### Phase 3: Migration Runner
 

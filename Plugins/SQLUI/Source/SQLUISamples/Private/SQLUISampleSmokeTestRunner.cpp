@@ -1,6 +1,10 @@
 #include "SQLUISampleSmokeTestRunner.h"
 
+#include "Database/SQLUIDatabaseAsyncRunner.h"
 #include "Database/SQLUISQLiteProbe.h"
+#include "Async/TaskGraphInterfaces.h"
+#include "HAL/PlatformProcess.h"
+#include "HAL/PlatformTime.h"
 #include "Layout/ISQLUILayoutRepository.h"
 #include "Layout/SQLUIInMemoryLayoutRepository.h"
 #include "Layout/SQLUIJsonFileLayoutRepository.h"
@@ -776,6 +780,82 @@ void AddSQLUISampleRepositoryOperationMessages(
 	AddSQLUISampleSmokeTestError(Result, OperationResult.ClearErrorMessage);
 }
 
+bool DidSQLUISampleDatabaseAsyncProbeSucceed(const FSQLUIDatabaseAsyncResult& Result)
+{
+	return Result.bSucceeded
+		&& Result.bBackgroundWorkCompleted
+		&& Result.bRanOnBackgroundThread
+		&& Result.bDeliveredOnGameThread;
+}
+
+FString MakeSQLUISampleDatabaseAsyncProbeFailureMessage(
+	const FSQLUIDatabaseAsyncResult& Result)
+{
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		return Result.ErrorMessage;
+	}
+
+	return FString::Printf(
+		TEXT("SQLUI database async probe failed. BackgroundWorkCompleted=%s RanOnBackgroundThread=%s DeliveredOnGameThread=%s"),
+		Result.bBackgroundWorkCompleted ? TEXT("true") : TEXT("false"),
+		Result.bRanOnBackgroundThread ? TEXT("true") : TEXT("false"),
+		Result.bDeliveredOnGameThread ? TEXT("true") : TEXT("false"));
+}
+
+struct FSQLUISampleDatabaseAsyncProbeState
+{
+	FSQLUIDatabaseAsyncResult Result;
+	bool bCallbackDelivered = false;
+};
+
+FSQLUIDatabaseAsyncResult RunSQLUISampleDatabaseAsyncProbe()
+{
+	FSQLUIDatabaseAsyncRequest Request;
+	Request.RequestId = TEXT("sqlui.smoke.database-async-probe");
+	Request.DebugName = TEXT("SQLUI Database Async Smoke Probe");
+	Request.bSimulateSuccess = true;
+
+	TSharedRef<FSQLUISampleDatabaseAsyncProbeState, ESPMode::ThreadSafe> SharedState =
+		MakeShared<FSQLUISampleDatabaseAsyncProbeState, ESPMode::ThreadSafe>();
+
+	FSQLUIDatabaseAsyncRunner::RunAsync(
+		Request,
+		FSQLUIDatabaseAsyncCompleteDelegate::CreateLambda(
+			[SharedState](const FSQLUIDatabaseAsyncResult& InResult)
+			{
+				SharedState->Result = InResult;
+				SharedState->bCallbackDelivered = true;
+			}));
+
+	const double TimeoutSeconds = 5.0;
+	const double StartSeconds = FPlatformTime::Seconds();
+
+	// Commandlets do not tick the normal game loop while this smoke helper is on
+	// the stack, so pump only the game-thread task queue until the callback arrives.
+	while (!SharedState->bCallbackDelivered && (FPlatformTime::Seconds() - StartSeconds) < TimeoutSeconds)
+	{
+		FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread);
+		if (!SharedState->bCallbackDelivered)
+		{
+			FPlatformProcess::Sleep(0.01f);
+		}
+	}
+
+	FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread);
+
+	if (!SharedState->bCallbackDelivered)
+	{
+		SharedState->Result.RequestId = Request.RequestId;
+		SharedState->Result.DebugName = Request.DebugName;
+		SharedState->Result.bSucceeded = false;
+		SharedState->Result.ErrorMessage =
+			TEXT("SQLUI database async probe timed out waiting for the game-thread callback.");
+	}
+
+	return SharedState->Result;
+}
+
 FString MakeSQLUISampleLayoutFailureMessage(
 	const FSQLUISampleSmokeTestLayoutResult& LayoutResult)
 {
@@ -981,6 +1061,19 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.SQLiteCoreProbe.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI SQLiteCore probe failed.")
 					: Result.SQLiteCoreProbe.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseDatabaseAsyncProbe)
+	{
+		Result.bUsedDatabaseAsyncProbe = true;
+		Result.DatabaseAsyncProbe = RunSQLUISampleDatabaseAsyncProbe();
+		if (!DidSQLUISampleDatabaseAsyncProbeSucceed(Result.DatabaseAsyncProbe))
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				MakeSQLUISampleDatabaseAsyncProbeFailureMessage(Result.DatabaseAsyncProbe));
 		}
 	}
 

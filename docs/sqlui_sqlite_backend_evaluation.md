@@ -1,6 +1,6 @@
 # SQLUI SQLite Backend Evaluation
 
-This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current SQLiteCore proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, and an optional smoke-safe open/close probe under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`; it does not add SQLite layout persistence, migrations, async database work, repository factory changes, widgets, maps, assets, CI, or persistent database files.
+This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, an optional smoke-safe open/close probe under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`, and a minimal SQLUICore async-boundary probe; it does not add SQLite layout persistence, migrations, SQLite repository selection, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -78,7 +78,7 @@ The proof does not:
 - Open, create, or write database files.
 - Execute SQL.
 - Run migrations.
-- Add async database workers.
+- Add SQLite database workers.
 - Modify widgets or smoke-test behavior.
 
 SQLUICore also includes an optional open/close probe for engine-provided `SQLiteCore`.
@@ -100,13 +100,32 @@ The open/close proof does not:
 - Change `USQLUILayoutRepositoryFactory`.
 - Run SQLUI migrations.
 - Create SQLUI schema tables.
-- Add async database workers.
+- Add SQLite database workers.
+- Modify widgets or default smoke-test behavior.
+
+SQLUICore also includes an optional async-boundary probe.
+
+The async-boundary proof:
+
+- Runs plain database-style request data on a background task.
+- Marshals the result back through a game-thread callback.
+- Reports whether background work completed and whether the callback was delivered on the game thread.
+- Is available only through the optional smoke-test flag.
+
+The async-boundary proof does not:
+
+- Open SQLite databases.
+- Execute SQL.
+- Create, write, or delete database files.
+- Add migrations.
+- Add a SQLite layout repository.
+- Change `USQLUILayoutRepositoryFactory`.
 - Modify widgets or default smoke-test behavior.
 
 Remaining blockers before SQLite layout persistence:
 
 - Packaged-build validation.
-- Async worker boundary.
+- Production SQLite worker boundary and shutdown policy.
 - Migration runner.
 - Repository implementation.
 - SQLite repository smoke coverage.
