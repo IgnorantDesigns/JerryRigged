@@ -12,6 +12,8 @@ param(
 
 	[switch]$UseJsonFileLayoutRepository,
 
+	[switch]$UseSQLiteCoreProbe,
+
 	[Alias('?')]
 	[switch]$Help
 )
@@ -50,6 +52,9 @@ Parameters:
       Run the JSON fixture through the SQLUICore JSON file layout repository
       before running the runtime widget pipeline.
 
+  -UseSQLiteCoreProbe
+      Run the optional SQLiteCore open/close probe under Saved\SQLUI\SmokeTests.
+
   -Help, -?
       Show this help.
 
@@ -58,6 +63,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseJsonLayoutFixture
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseInMemoryLayoutRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseJsonFileLayoutRepository
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteCoreProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -UnrealEditorCmdPath "C:\UE\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -ProjectPath ".\JerryRigged.uproject"
 '@
@@ -177,6 +183,11 @@ if ($UseInMemoryLayoutRepository)
 if ($UseJsonFileLayoutRepository)
 {
 	$CommandletArgs += '-UseJsonFileLayoutRepository'
+}
+
+if ($UseSQLiteCoreProbe)
+{
+	$CommandletArgs += '-SQLiteCoreProbe'
 }
 
 $PrintableCommandParts = @($ResolvedUnrealEditorCmdPath) + $CommandletArgs
