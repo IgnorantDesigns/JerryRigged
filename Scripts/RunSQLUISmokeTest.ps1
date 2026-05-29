@@ -16,6 +16,8 @@ param(
 
 	[switch]$UseDatabaseAsyncProbe,
 
+	[switch]$UseSQLiteMigrationProbe,
+
 	[Alias('?')]
 	[switch]$Help
 )
@@ -60,6 +62,9 @@ Parameters:
   -UseDatabaseAsyncProbe
       Run the optional SQLUICore database async-boundary probe.
 
+  -UseSQLiteMigrationProbe
+      Run the optional SQLUICore SQLite migration-runner probe.
+
   -Help, -?
       Show this help.
 
@@ -70,6 +75,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseJsonFileLayoutRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteCoreProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseDatabaseAsyncProbe
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteMigrationProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -UnrealEditorCmdPath "C:\UE\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -ProjectPath ".\JerryRigged.uproject"
 '@
@@ -199,6 +205,11 @@ if ($UseSQLiteCoreProbe)
 if ($UseDatabaseAsyncProbe)
 {
 	$CommandletArgs += '-DatabaseAsyncProbe'
+}
+
+if ($UseSQLiteMigrationProbe)
+{
+	$CommandletArgs += '-SQLiteMigrationProbe'
 }
 
 $PrintableCommandParts = @($ResolvedUnrealEditorCmdPath) + $CommandletArgs

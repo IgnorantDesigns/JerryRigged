@@ -423,6 +423,72 @@ void LogSQLUISampleSmokeTestDatabaseAsyncProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteMigrationProbe)
+	{
+		return;
+	}
+
+	const FSQLUISQLiteMigrationResult& ProbeResult = Result.SQLiteMigrationProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration probe database path: '%s'"),
+		*ProbeResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration probe database opened: %s"),
+		ProbeResult.bDatabaseOpened ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration probe migration table created: %s"),
+		ProbeResult.bMigrationTableCreated ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration probe migration applied: %s"),
+		ProbeResult.bMigrationApplied ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration probe migration recorded: %s"),
+		ProbeResult.bMigrationRecorded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration probe database closed: %s"),
+		ProbeResult.bDatabaseClosed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration probe database removed: %s"),
+		ProbeResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite migration probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite migration probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -461,6 +527,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestJsonFileRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteCoreProbeResult(Result);
 	LogSQLUISampleSmokeTestDatabaseAsyncProbeResult(Result);
+	LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -536,6 +603,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseDatabaseAsyncProbe =
 		FParse::Param(*Params, TEXT("UseDatabaseAsyncProbe"))
 		|| FParse::Param(*Params, TEXT("DatabaseAsyncProbe"));
+	const bool bUseSQLiteMigrationProbe =
+		FParse::Param(*Params, TEXT("UseSQLiteMigrationProbe"))
+		|| FParse::Param(*Params, TEXT("SQLiteMigrationProbe"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -570,6 +640,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI database async probe selected: true"));
 	}
 
+	if (bUseSQLiteMigrationProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite migration probe selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -588,6 +663,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseJsonFileLayoutRepository = bUseJsonFileLayoutRepository;
 		Request.bUseSQLiteCoreProbe = bUseSQLiteCoreProbe;
 		Request.bUseDatabaseAsyncProbe = bUseDatabaseAsyncProbe;
+		Request.bUseSQLiteMigrationProbe = bUseSQLiteMigrationProbe;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 

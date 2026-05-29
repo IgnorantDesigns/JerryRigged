@@ -1,6 +1,7 @@
 #include "SQLUISampleSmokeTestRunner.h"
 
 #include "Database/SQLUIDatabaseAsyncRunner.h"
+#include "Database/SQLUISQLiteMigrationRunner.h"
 #include "Database/SQLUISQLiteProbe.h"
 #include "Async/TaskGraphInterfaces.h"
 #include "HAL/PlatformProcess.h"
@@ -803,6 +804,35 @@ FString MakeSQLUISampleDatabaseAsyncProbeFailureMessage(
 		Result.bDeliveredOnGameThread ? TEXT("true") : TEXT("false"));
 }
 
+bool DidSQLUISampleSQLiteMigrationProbeSucceed(const FSQLUISQLiteMigrationResult& Result)
+{
+	return Result.bSucceeded
+		&& Result.bDatabaseOpened
+		&& Result.bMigrationTableCreated
+		&& Result.bMigrationApplied
+		&& Result.bMigrationRecorded
+		&& Result.bDatabaseClosed
+		&& Result.bDatabaseRemoved;
+}
+
+FString MakeSQLUISampleSQLiteMigrationProbeFailureMessage(
+	const FSQLUISQLiteMigrationResult& Result)
+{
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		return Result.ErrorMessage;
+	}
+
+	return FString::Printf(
+		TEXT("SQLUI SQLite migration probe failed. DatabaseOpened=%s MigrationTableCreated=%s MigrationApplied=%s MigrationRecorded=%s DatabaseClosed=%s DatabaseRemoved=%s"),
+		Result.bDatabaseOpened ? TEXT("true") : TEXT("false"),
+		Result.bMigrationTableCreated ? TEXT("true") : TEXT("false"),
+		Result.bMigrationApplied ? TEXT("true") : TEXT("false"),
+		Result.bMigrationRecorded ? TEXT("true") : TEXT("false"),
+		Result.bDatabaseClosed ? TEXT("true") : TEXT("false"),
+		Result.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+}
+
 struct FSQLUISampleDatabaseAsyncProbeState
 {
 	FSQLUIDatabaseAsyncResult Result;
@@ -1074,6 +1104,19 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 			AddSQLUISampleSmokeTestError(
 				Result,
 				MakeSQLUISampleDatabaseAsyncProbeFailureMessage(Result.DatabaseAsyncProbe));
+		}
+	}
+
+	if (Request.bUseSQLiteMigrationProbe)
+	{
+		Result.bUsedSQLiteMigrationProbe = true;
+		Result.SQLiteMigrationProbe = FSQLUISQLiteMigrationRunner::RunMigrationProbe();
+		if (!DidSQLUISampleSQLiteMigrationProbeSucceed(Result.SQLiteMigrationProbe))
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				MakeSQLUISampleSQLiteMigrationProbeFailureMessage(Result.SQLiteMigrationProbe));
 		}
 	}
 
