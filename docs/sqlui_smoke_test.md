@@ -16,9 +16,11 @@ The optional database async probe runs a tiny SQLUICore-owned database-boundary 
 
 The optional SQLite migration probe opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe`, creates the smoke-only migration tracking table, applies and records one probe migration, verifies the migration row, closes the database, and removes the probe database file. This is not the planned SQLUI layout schema migration and does not add a SQLite layout repository.
 
+The optional SQLite layout schema migration probe opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe`, applies the planned initial layout schema through the SQLUICore migration runner, verifies the expected layout tables and indexes exist, closes the database, and removes the probe database file. This proves the schema DDL can apply locally without adding a SQLite layout repository or repository factory selection.
+
 This is a local developer workflow only. It is not CI yet, and it does not assume Unreal Engine is installed on GitHub Actions or any build agent.
 
-The smoke test does not edit maps, levels, Content, persistent database files, or the viewport. It does not add SQLite layout repository behavior or attach widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory. The SQLiteCore probe writes only under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe` and removes `SQLiteCoreProbe.db` after the check. The SQLite migration probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe` and removes `SQLiteMigrationProbe.db` after the check. The database async probe does not perform file I/O.
+The smoke test does not edit maps, levels, Content, persistent database files, or the viewport. It does not add SQLite layout repository behavior or attach widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory. The SQLiteCore probe writes only under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe` and removes `SQLiteCoreProbe.db` after the check. The SQLite migration probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe` and removes `SQLiteMigrationProbe.db` after the check. The SQLite layout schema migration probe writes only under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe` and removes `LayoutSchemaMigrationProbe.db` after the check. The database async probe does not perform file I/O.
 
 ## Build JerryRiggedEditor
 
@@ -130,6 +132,18 @@ The commandlet also accepts `-SQLiteMigrationProbe` directly as an alias when in
 
 This path is a migration-runner proof only. The probe migration is clearly separate from the planned layout schema. It does not implement SQLite layout persistence, add real layout schema migrations, change repository factory selection, modify Content, edit maps, or leave persistent database files behind.
 
+## Run The SQLite Layout Schema Migration Probe
+
+The SQLite layout schema migration probe keeps the same transient commandlet flow, applies the planned initial layout schema to a temporary database under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe`, verifies expected tables and indexes, removes the probe database file, and then runs the same default runtime widget pipeline:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteLayoutSchemaMigrationProbe
+```
+
+The commandlet also accepts `-SQLiteLayoutSchemaMigrationProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
+
+This path is a layout-schema migration proof only. It does not implement SQLite layout persistence, add repository factory selection, modify Content, edit maps, or leave persistent database files behind.
+
 ## Expected Results
 
 The script prints the exact command it runs, then returns the same exit code as the commandlet. It passes `-DDC-AllowNoActiveStores` so this transient smoke-test commandlet does not require a writable local Derived Data Cache.
@@ -239,6 +253,26 @@ SQLUI sample smoke test created widget count: 1
 ```
 
 After the probe succeeds, `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe\SQLiteMigrationProbe.db` should not exist.
+
+For the SQLite layout schema migration probe, also look for:
+
+```text
+SQLUI SQLite layout schema migration probe selected: true
+SQLUI SQLite layout schema migration probe migration succeeded: true
+SQLUI SQLite layout schema migration probe layouts table exists: true
+SQLUI SQLite layout schema migration probe layout revisions table exists: true
+SQLUI SQLite layout schema migration probe layout tags table exists: true
+SQLUI SQLite layout schema migration probe layout checkpoints table exists: true
+SQLUI SQLite layout schema migration probe layout previews table exists: true
+SQLUI SQLite layout schema migration probe expected indexes exist: true
+SQLUI SQLite layout schema migration probe database removed: true
+SQLUI SQLite layout schema migration probe succeeded.
+SQLUI sample smoke test commandlet succeeded.
+SQLUI sample smoke test root widget valid: true
+SQLUI sample smoke test created widget count: 1
+```
+
+After the probe succeeds, `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe\LayoutSchemaMigrationProbe.db` should not exist.
 
 Some optional pipeline steps may log `Skipped` depending on the current sample request. Failures are logged with `SQLUI sample smoke test commandlet failed.` and the script returns a non-zero exit code.
 
