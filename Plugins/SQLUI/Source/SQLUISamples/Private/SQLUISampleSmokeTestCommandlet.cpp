@@ -986,6 +986,158 @@ void LogSQLUISampleSmokeTestSQLiteRemoveLayoutRepositoryResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteClearLayoutsRepositoryResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteClearLayoutsRepository)
+	{
+		return;
+	}
+
+	const FSQLUISampleSQLiteClearLayoutsRepositorySmokeResult& RepositoryResult =
+		Result.SQLiteClearLayoutsRepository;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository database path: '%s'"),
+		*RepositoryResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository database prepared: %s"),
+		RepositoryResult.bDatabasePrepared ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository first save succeeded: %s"),
+		RepositoryResult.bFirstSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository second save succeeded: %s"),
+		RepositoryResult.bSecondSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository list before remove succeeded: %s"),
+		RepositoryResult.bListBeforeRemoveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository both metadata entries found before remove: %s"),
+		RepositoryResult.bBothMetadataEntriesFoundBeforeRemove ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository remove succeeded: %s"),
+		RepositoryResult.bRemoveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository removed: %s"),
+		RepositoryResult.bRemoved ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository list before clear succeeded: %s"),
+		RepositoryResult.bListBeforeClearSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository active metadata preserved before clear: %s"),
+		RepositoryResult.bActiveMetadataPreservedBeforeClear ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository removed metadata absent before clear: %s"),
+		RepositoryResult.bRemovedMetadataAbsentBeforeClear ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository clear succeeded: %s"),
+		RepositoryResult.bClearSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository removed count matched expected: %s"),
+		RepositoryResult.bRemovedCountMatchedExpected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository list after clear succeeded: %s"),
+		RepositoryResult.bListAfterClearSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository empty after clear: %s"),
+		RepositoryResult.bEmptyAfterClear ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository loads after clear failed as expected: %s"),
+		RepositoryResult.bLoadsAfterClearFailedAsExpected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository tables empty after clear: %s"),
+		RepositoryResult.bTablesEmptyAfterClear ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository table rows after clear: layouts=%d revisions=%d tags=%d checkpoints=%d previews=%d"),
+		RepositoryResult.TableRowCountsAfterClear.Layouts,
+		RepositoryResult.TableRowCountsAfterClear.LayoutRevisions,
+		RepositoryResult.TableRowCountsAfterClear.LayoutTags,
+		RepositoryResult.TableRowCountsAfterClear.LayoutCheckpoints,
+		RepositoryResult.TableRowCountsAfterClear.LayoutPreviews);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository first layout id: '%s' second layout id: '%s' removed layout id: '%s' removed count: %d"),
+		*RepositoryResult.FirstLayoutId,
+		*RepositoryResult.SecondLayoutId,
+		*RepositoryResult.RemovedLayoutId,
+		RepositoryResult.ClearRemovedCount);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite ClearLayouts repository database removed: %s"),
+		RepositoryResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (RepositoryResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite ClearLayouts repository succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite ClearLayouts repository failed: %s"),
+			*RepositoryResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -1030,6 +1182,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteReadOnlyLayoutRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteSaveLayoutRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteRemoveLayoutRepositoryResult(Result);
+	LogSQLUISampleSmokeTestSQLiteClearLayoutsRepositoryResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -1123,6 +1276,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteRemoveLayoutRepository =
 		FParse::Param(*Params, TEXT("UseSQLiteRemoveLayoutRepository"))
 		|| FParse::Param(*Params, TEXT("SQLiteRemoveLayoutRepository"));
+	const bool bUseSQLiteClearLayoutsRepository =
+		FParse::Param(*Params, TEXT("UseSQLiteClearLayoutsRepository"))
+		|| FParse::Param(*Params, TEXT("SQLiteClearLayoutsRepository"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -1187,6 +1343,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite RemoveLayout repository selected: true"));
 	}
 
+	if (bUseSQLiteClearLayoutsRepository)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite ClearLayouts repository selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -1211,6 +1372,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteReadOnlyLayoutRepository = bUseSQLiteReadOnlyLayoutRepository;
 		Request.bUseSQLiteSaveLayoutRepository = bUseSQLiteSaveLayoutRepository;
 		Request.bUseSQLiteRemoveLayoutRepository = bUseSQLiteRemoveLayoutRepository;
+		Request.bUseSQLiteClearLayoutsRepository = bUseSQLiteClearLayoutsRepository;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 

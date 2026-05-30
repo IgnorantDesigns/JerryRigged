@@ -486,6 +486,48 @@ bool LoadSQLUILayoutReadProbeDocument(
 
 	return true;
 }
+
+bool QuerySQLUILayoutReadProbeTableRowCount(
+	FSQLiteDatabase& Database,
+	const TCHAR* TableName,
+	int32& OutRowCount,
+	FString& OutErrorMessage)
+{
+	OutRowCount = 0;
+	OutErrorMessage.Empty();
+
+	const FString Query = FString::Printf(TEXT("SELECT COUNT(*) FROM %s;"), TableName);
+	FSQLitePreparedStatement Statement = Database.PrepareStatement(*Query);
+
+	if (!Statement.IsValid())
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout read probe could not prepare row-count query for table '%s'. SQLiteCore error: %s"),
+			TableName,
+			*Database.GetLastError());
+		return false;
+	}
+
+	const int64 RowCount = Statement.Execute(
+		[&OutRowCount](const FSQLitePreparedStatement& Row)
+		{
+			return Row.GetColumnValueByIndex(0, OutRowCount)
+				? ESQLitePreparedStatementExecuteRowResult::Continue
+				: ESQLitePreparedStatementExecuteRowResult::Error;
+		});
+
+	if (RowCount != 1)
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout read probe row-count query failed for table '%s'. RowCount=%lld SQLiteCore error: %s"),
+			TableName,
+			RowCount,
+			*Database.GetLastError());
+		return false;
+	}
+
+	return true;
+}
 }
 
 FString FSQLUISQLiteLayoutReadProbe::GetDefaultProbeDatabasePath()
@@ -692,6 +734,78 @@ bool FSQLUISQLiteLayoutReadProbe::CountLayoutRevisions(
 	{
 		OutErrorMessage = FString::Printf(
 			TEXT("SQLUI SQLite layout read probe could not close database after revision count query. SQLiteCore error: %s"),
+			*Database.GetLastError());
+		return false;
+	}
+
+	return bSucceeded;
+}
+
+bool FSQLUISQLiteLayoutReadProbe::CountLayoutSchemaRows(
+	const FString& DatabasePath,
+	FSQLUISQLiteLayoutSchemaRowCounts& OutRowCounts,
+	FString& OutErrorMessage)
+{
+	OutRowCounts = FSQLUISQLiteLayoutSchemaRowCounts();
+	OutErrorMessage.Empty();
+
+	if (DatabasePath.IsEmpty())
+	{
+		OutErrorMessage = TEXT("SQLUI SQLite layout read probe could not count schema rows: database path is empty.");
+		return false;
+	}
+
+	const FString ResolvedDatabasePath = NormalizeSQLUILayoutReadProbePath(DatabasePath);
+
+	if (!FPaths::FileExists(ResolvedDatabasePath))
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout read probe could not count schema rows: database '%s' does not exist."),
+			*ResolvedDatabasePath);
+		return false;
+	}
+
+	FSQLiteDatabase Database;
+	if (!Database.Open(*ResolvedDatabasePath, ESQLiteDatabaseOpenMode::ReadOnly))
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout read probe could not count schema rows: failed to open database '%s' read-only. SQLiteCore error: %s"),
+			*ResolvedDatabasePath,
+			*Database.GetLastError());
+		return false;
+	}
+
+	bool bSucceeded =
+		QuerySQLUILayoutReadProbeTableRowCount(
+			Database,
+			TEXT("layouts"),
+			OutRowCounts.Layouts,
+			OutErrorMessage)
+		&& QuerySQLUILayoutReadProbeTableRowCount(
+			Database,
+			TEXT("layout_revisions"),
+			OutRowCounts.LayoutRevisions,
+			OutErrorMessage)
+		&& QuerySQLUILayoutReadProbeTableRowCount(
+			Database,
+			TEXT("layout_tags"),
+			OutRowCounts.LayoutTags,
+			OutErrorMessage)
+		&& QuerySQLUILayoutReadProbeTableRowCount(
+			Database,
+			TEXT("layout_checkpoints"),
+			OutRowCounts.LayoutCheckpoints,
+			OutErrorMessage)
+		&& QuerySQLUILayoutReadProbeTableRowCount(
+			Database,
+			TEXT("layout_previews"),
+			OutRowCounts.LayoutPreviews,
+			OutErrorMessage);
+
+	if (!Database.Close())
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout read probe could not close database after schema row-count queries. SQLiteCore error: %s"),
 			*Database.GetLastError());
 		return false;
 	}

@@ -1541,6 +1541,425 @@ FSQLUISampleSQLiteRemoveLayoutRepositorySmokeResult RunSQLUISampleSQLiteRemoveLa
 	return Result;
 }
 
+void AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+	FSQLUISampleSQLiteClearLayoutsRepositorySmokeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleSQLiteClearLayoutsRepositoryDatabasePath()
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("SQLiteClearLayoutsRepository"),
+		TEXT("SQLiteClearLayoutsRepository.db"));
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+bool DeleteSQLUISampleSQLiteClearLayoutsRepositoryFiles(
+	const FString& DatabasePath,
+	FSQLUISampleSQLiteClearLayoutsRepositorySmokeResult& Result)
+{
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite ClearLayouts repository smoke failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+FSQLUILayoutDocument MakeSQLUISampleSQLiteClearLayoutsRepositoryDocument(
+	const TCHAR* LayoutIdSuffix,
+	const TCHAR* DisplayNameSuffix,
+	const TCHAR* TagSuffix)
+{
+	FSQLUILayoutDocument Document = MakeSQLUISampleSQLiteSaveLayoutRepositoryDocument();
+	Document.Version.Label = FString::Printf(
+		TEXT("SQLite ClearLayouts Repository Probe %s"),
+		DisplayNameSuffix);
+	Document.Metadata.LayoutId = FString::Printf(
+		TEXT("sqlui.smoke.sqlite-clear-layouts-repository.%s"),
+		LayoutIdSuffix);
+	Document.Metadata.DisplayName = FString::Printf(
+		TEXT("SQLUI SQLite ClearLayouts Repository Probe %s"),
+		DisplayNameSuffix);
+	Document.Metadata.Description = TEXT("Smoke/probe layout for SQLite ClearLayouts repository mapping.");
+	Document.Metadata.Tags.Reset();
+	Document.Metadata.Tags.Add(TEXT("sqlite"));
+	Document.Metadata.Tags.Add(TEXT("smoke"));
+	Document.Metadata.Tags.Add(TEXT("clear-layouts"));
+	Document.Metadata.Tags.Add(TagSuffix);
+	Document.Metadata.SearchMetadata.Reset();
+	Document.Metadata.SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteClearLayoutsRepository"));
+	Document.RootWidgetId = FString::Printf(
+		TEXT("SQLUI.SQLite.ClearLayoutsRepository.%s.Root"),
+		LayoutIdSuffix);
+
+	if (Document.Nodes.Num() > 0)
+	{
+		Document.Nodes[0].WidgetId = Document.RootWidgetId;
+		Document.Nodes[0].WidgetTypeKey = TEXT("SQLUI.ProbeRoot");
+		Document.Nodes[0].Properties.Add(TEXT("Text"), Document.Metadata.DisplayName);
+		Document.Nodes[0].Tags.Reset();
+		Document.Nodes[0].Tags.Add(TEXT("sqlite"));
+		Document.Nodes[0].Tags.Add(TEXT("clear-layouts"));
+		Document.Nodes[0].Tags.Add(TagSuffix);
+		Document.Nodes[0].SearchMetadata.Reset();
+		Document.Nodes[0].SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteClearLayoutsRepository"));
+	}
+
+	return Document;
+}
+
+FSQLUISampleSQLiteClearLayoutsRepositorySmokeResult RunSQLUISampleSQLiteClearLayoutsRepositorySmoke(
+	UObject* Outer)
+{
+	FSQLUISampleSQLiteClearLayoutsRepositorySmokeResult Result;
+	Result.DatabasePath = MakeSQLUISampleSQLiteClearLayoutsRepositoryDatabasePath();
+
+	const FSQLUISQLiteLayoutSchemaMigrationProbeResult SchemaResult =
+		FSQLUISQLiteLayoutSchemaMigration::RunProbe(Result.DatabasePath, false);
+	Result.bDatabasePrepared = SchemaResult.bSucceeded && SchemaResult.bMigrationSucceeded;
+	if (!Result.bDatabasePrepared)
+	{
+		AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+			Result,
+			SchemaResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite ClearLayouts repository smoke failed: could not prepare probe database.")
+				: SchemaResult.ErrorMessage);
+		Result.bDatabaseRemoved =
+			DeleteSQLUISampleSQLiteClearLayoutsRepositoryFiles(Result.DatabasePath, Result);
+		return Result;
+	}
+
+	USQLUISQLiteLayoutRepository* Repository =
+		NewObject<USQLUISQLiteLayoutRepository>(IsValid(Outer) ? Outer : GetTransientPackage());
+	if (!IsValid(Repository))
+	{
+		AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite ClearLayouts repository smoke failed: could not create repository object."));
+		Result.bDatabaseRemoved =
+			DeleteSQLUISampleSQLiteClearLayoutsRepositoryFiles(Result.DatabasePath, Result);
+		return Result;
+	}
+
+	FSQLUISQLiteLayoutRepositorySettings RepositorySettings;
+	RepositorySettings.DatabasePath = Result.DatabasePath;
+	RepositorySettings.bReadOnly = false;
+	Repository->Configure(RepositorySettings);
+
+	const FSQLUILayoutDocument FirstDocument =
+		MakeSQLUISampleSQLiteClearLayoutsRepositoryDocument(
+			TEXT("first"),
+			TEXT("First"),
+			TEXT("first"));
+	const FSQLUILayoutDocument SecondDocument =
+		MakeSQLUISampleSQLiteClearLayoutsRepositoryDocument(
+			TEXT("second"),
+			TEXT("Second"),
+			TEXT("second"));
+
+	const FSQLUILayoutSaveResult FirstSaveResult = SaveSQLUISampleLayoutToRepository(
+		Repository,
+		TEXT("SQLite ClearLayouts repository first layout"),
+		FirstDocument);
+	Result.FirstLayoutId = FirstSaveResult.SavedLayoutId;
+	Result.bFirstSaveSucceeded =
+		FirstSaveResult.bSucceeded
+		&& FirstSaveResult.SavedLayoutId == FirstDocument.Metadata.LayoutId
+		&& FirstSaveResult.Validation.bIsValid;
+	if (!Result.bFirstSaveSucceeded)
+	{
+		AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+			Result,
+			FirstSaveResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite ClearLayouts repository smoke failed: first SaveLayout failed.")
+				: FirstSaveResult.ErrorMessage);
+	}
+
+	const FSQLUILayoutSaveResult SecondSaveResult = SaveSQLUISampleLayoutToRepository(
+		Repository,
+		TEXT("SQLite ClearLayouts repository second layout"),
+		SecondDocument);
+	Result.SecondLayoutId = SecondSaveResult.SavedLayoutId;
+	Result.bSecondSaveSucceeded =
+		SecondSaveResult.bSucceeded
+		&& SecondSaveResult.SavedLayoutId == SecondDocument.Metadata.LayoutId
+		&& SecondSaveResult.Validation.bIsValid;
+	if (!Result.bSecondSaveSucceeded)
+	{
+		AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+			Result,
+			SecondSaveResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite ClearLayouts repository smoke failed: second SaveLayout failed.")
+				: SecondSaveResult.ErrorMessage);
+	}
+
+	if (Result.bFirstSaveSucceeded && Result.bSecondSaveSucceeded)
+	{
+		const FSQLUILayoutRepositoryListResult ListBeforeRemoveResult =
+			Repository->ListLayouts();
+		Result.bListBeforeRemoveSucceeded = ListBeforeRemoveResult.bSucceeded;
+		Result.ListedLayoutCountBeforeRemove = ListBeforeRemoveResult.Layouts.Num();
+		if (!Result.bListBeforeRemoveSucceeded)
+		{
+			AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+				Result,
+				ListBeforeRemoveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite ClearLayouts repository smoke failed: ListLayouts failed before remove.")
+					: ListBeforeRemoveResult.ErrorMessage);
+		}
+		else
+		{
+			Result.bBothMetadataEntriesFoundBeforeRemove =
+				DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListBeforeRemoveResult.Layouts,
+					FirstDocument.Metadata)
+				&& DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListBeforeRemoveResult.Layouts,
+					SecondDocument.Metadata);
+			if (!Result.bBothMetadataEntriesFoundBeforeRemove)
+			{
+				AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+					Result,
+					TEXT("SQLUI SQLite ClearLayouts repository smoke failed: ListLayouts did not include both saved metadata/tag entries before remove."));
+			}
+		}
+	}
+
+	if (Result.bBothMetadataEntriesFoundBeforeRemove)
+	{
+		const FSQLUILayoutRepositoryRemoveResult RemoveResult =
+			Repository->RemoveLayout(FirstDocument.Metadata.LayoutId);
+		Result.RemovedLayoutId = RemoveResult.RemovedLayoutId;
+		Result.bRemoveSucceeded = RemoveResult.bSucceeded;
+		Result.bRemoved =
+			RemoveResult.bSucceeded
+			&& RemoveResult.bRemoved
+			&& RemoveResult.RemovedLayoutId == FirstDocument.Metadata.LayoutId;
+		if (!Result.bRemoveSucceeded)
+		{
+			AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+				Result,
+				RemoveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite ClearLayouts repository smoke failed: RemoveLayout failed.")
+					: RemoveResult.ErrorMessage);
+		}
+		else if (!Result.bRemoved)
+		{
+			AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+				Result,
+				TEXT("SQLUI SQLite ClearLayouts repository smoke failed: RemoveLayout succeeded but did not report bRemoved=true for the first layout id."));
+		}
+	}
+
+	if (Result.bRemoved)
+	{
+		const FSQLUILayoutRepositoryListResult ListBeforeClearResult =
+			Repository->ListLayouts();
+		Result.bListBeforeClearSucceeded = ListBeforeClearResult.bSucceeded;
+		Result.ListedLayoutCountBeforeClear = ListBeforeClearResult.Layouts.Num();
+		if (!Result.bListBeforeClearSucceeded)
+		{
+			AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+				Result,
+				ListBeforeClearResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite ClearLayouts repository smoke failed: ListLayouts failed before clear.")
+					: ListBeforeClearResult.ErrorMessage);
+		}
+		else
+		{
+			Result.bActiveMetadataPreservedBeforeClear =
+				DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListBeforeClearResult.Layouts,
+					SecondDocument.Metadata);
+			Result.bRemovedMetadataAbsentBeforeClear =
+				!DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListBeforeClearResult.Layouts,
+					FirstDocument.Metadata);
+			if (!Result.bActiveMetadataPreservedBeforeClear)
+			{
+				AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+					Result,
+					TEXT("SQLUI SQLite ClearLayouts repository smoke failed: active metadata was not preserved before clear."));
+			}
+			if (!Result.bRemovedMetadataAbsentBeforeClear)
+			{
+				AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+					Result,
+					TEXT("SQLUI SQLite ClearLayouts repository smoke failed: removed metadata was still listed before clear."));
+			}
+		}
+	}
+
+	if (Result.bListBeforeClearSucceeded)
+	{
+		const FSQLUILayoutRepositoryClearResult ClearResult = Repository->ClearLayouts();
+		Result.bClearSucceeded = ClearResult.bSucceeded;
+		Result.ClearRemovedCount = ClearResult.RemovedCount;
+		Result.bRemovedCountMatchedExpected =
+			ClearResult.bSucceeded
+			&& ClearResult.RemovedCount == 2;
+		if (!Result.bClearSucceeded)
+		{
+			AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+				Result,
+				ClearResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite ClearLayouts repository smoke failed: ClearLayouts failed.")
+					: ClearResult.ErrorMessage);
+		}
+		else if (!Result.bRemovedCountMatchedExpected)
+		{
+			AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite ClearLayouts repository smoke failed: ClearLayouts removed %d layout rows, expected 2."),
+					ClearResult.RemovedCount));
+		}
+	}
+
+	if (Result.bClearSucceeded)
+	{
+		const FSQLUILayoutRepositoryListResult ListAfterClearResult =
+			Repository->ListLayouts();
+		Result.bListAfterClearSucceeded = ListAfterClearResult.bSucceeded;
+		Result.ListedLayoutCountAfterClear = ListAfterClearResult.Layouts.Num();
+		Result.bEmptyAfterClear =
+			ListAfterClearResult.bSucceeded
+			&& ListAfterClearResult.Layouts.Num() == 0;
+		if (!Result.bListAfterClearSucceeded)
+		{
+			AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+				Result,
+				ListAfterClearResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite ClearLayouts repository smoke failed: ListLayouts failed after clear.")
+					: ListAfterClearResult.ErrorMessage);
+		}
+		else if (!Result.bEmptyAfterClear)
+		{
+			AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite ClearLayouts repository smoke failed: ListLayouts returned %d layout(s) after clear."),
+					ListAfterClearResult.Layouts.Num()));
+		}
+
+		const FSQLUILayoutLoadResult FirstLoadAfterClearResult =
+			LoadSQLUISampleLayoutFromRepository(
+				Repository,
+				TEXT("SQLite ClearLayouts repository after clear first layout"),
+				FirstDocument.Metadata.LayoutId);
+		const FSQLUILayoutLoadResult SecondLoadAfterClearResult =
+			LoadSQLUISampleLayoutFromRepository(
+				Repository,
+				TEXT("SQLite ClearLayouts repository after clear second layout"),
+				SecondDocument.Metadata.LayoutId);
+		Result.bLoadsAfterClearFailedAsExpected =
+			!FirstLoadAfterClearResult.bSucceeded
+			&& !FirstLoadAfterClearResult.bBackendUnavailable
+			&& !FirstLoadAfterClearResult.ErrorMessage.IsEmpty()
+			&& !SecondLoadAfterClearResult.bSucceeded
+			&& !SecondLoadAfterClearResult.bBackendUnavailable
+			&& !SecondLoadAfterClearResult.ErrorMessage.IsEmpty();
+		if (!Result.bLoadsAfterClearFailedAsExpected)
+		{
+			AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite ClearLayouts repository smoke failed: LoadLayout after clear did not fail as ordinary not-found results. FirstSucceeded=%s FirstBackendUnavailable=%s FirstError='%s' SecondSucceeded=%s SecondBackendUnavailable=%s SecondError='%s'."),
+					FirstLoadAfterClearResult.bSucceeded ? TEXT("true") : TEXT("false"),
+					FirstLoadAfterClearResult.bBackendUnavailable ? TEXT("true") : TEXT("false"),
+					*FirstLoadAfterClearResult.ErrorMessage,
+					SecondLoadAfterClearResult.bSucceeded ? TEXT("true") : TEXT("false"),
+					SecondLoadAfterClearResult.bBackendUnavailable ? TEXT("true") : TEXT("false"),
+					*SecondLoadAfterClearResult.ErrorMessage));
+		}
+
+		FString RowCountErrorMessage;
+		const bool bRowCountsQueried = FSQLUISQLiteLayoutReadProbe::CountLayoutSchemaRows(
+			Result.DatabasePath,
+			Result.TableRowCountsAfterClear,
+			RowCountErrorMessage);
+		Result.bTablesEmptyAfterClear =
+			bRowCountsQueried
+			&& Result.TableRowCountsAfterClear.Layouts == 0
+			&& Result.TableRowCountsAfterClear.LayoutRevisions == 0
+			&& Result.TableRowCountsAfterClear.LayoutTags == 0
+			&& Result.TableRowCountsAfterClear.LayoutCheckpoints == 0
+			&& Result.TableRowCountsAfterClear.LayoutPreviews == 0;
+		if (!Result.bTablesEmptyAfterClear)
+		{
+			AppendSQLUISampleSQLiteClearLayoutsRepositoryError(
+				Result,
+				RowCountErrorMessage.IsEmpty()
+					? FString::Printf(
+						TEXT("SQLUI SQLite ClearLayouts repository smoke failed: schema rows remained after clear. Layouts=%d Revisions=%d Tags=%d Checkpoints=%d Previews=%d."),
+						Result.TableRowCountsAfterClear.Layouts,
+						Result.TableRowCountsAfterClear.LayoutRevisions,
+						Result.TableRowCountsAfterClear.LayoutTags,
+						Result.TableRowCountsAfterClear.LayoutCheckpoints,
+						Result.TableRowCountsAfterClear.LayoutPreviews)
+					: RowCountErrorMessage);
+		}
+	}
+
+	Result.bDatabaseRemoved =
+		DeleteSQLUISampleSQLiteClearLayoutsRepositoryFiles(Result.DatabasePath, Result);
+
+	Result.bSucceeded =
+		Result.bDatabasePrepared
+		&& Result.bFirstSaveSucceeded
+		&& Result.bSecondSaveSucceeded
+		&& Result.bListBeforeRemoveSucceeded
+		&& Result.bBothMetadataEntriesFoundBeforeRemove
+		&& Result.bRemoveSucceeded
+		&& Result.bRemoved
+		&& Result.bListBeforeClearSucceeded
+		&& Result.bActiveMetadataPreservedBeforeClear
+		&& Result.bRemovedMetadataAbsentBeforeClear
+		&& Result.bClearSucceeded
+		&& Result.bRemovedCountMatchedExpected
+		&& Result.bListAfterClearSucceeded
+		&& Result.bEmptyAfterClear
+		&& Result.bLoadsAfterClearFailedAsExpected
+		&& Result.bTablesEmptyAfterClear
+		&& Result.bDatabaseRemoved;
+
+	return Result;
+}
+
 FSQLUISampleSmokeTestLayoutResult ResolveSQLUISampleSmokeTestLayoutDocument(
 	UObject* Outer,
 	const FSQLUISampleSmokeTestRequest& Request)
@@ -2248,6 +2667,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.SQLiteRemoveLayoutRepository.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI SQLite RemoveLayout repository smoke failed.")
 					: Result.SQLiteRemoveLayoutRepository.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseSQLiteClearLayoutsRepository)
+	{
+		Result.bUsedSQLiteClearLayoutsRepository = true;
+		Result.SQLiteClearLayoutsRepository =
+			RunSQLUISampleSQLiteClearLayoutsRepositorySmoke(Outer);
+		if (!Result.SQLiteClearLayoutsRepository.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.SQLiteClearLayoutsRepository.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite ClearLayouts repository smoke failed.")
+					: Result.SQLiteClearLayoutsRepository.ErrorMessage);
 		}
 	}
 
