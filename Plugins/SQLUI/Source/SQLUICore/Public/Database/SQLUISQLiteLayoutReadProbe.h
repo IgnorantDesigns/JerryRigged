@@ -57,4 +57,10 @@ public:
 	static FSQLUISQLiteLayoutReadProbeResult RunProbe(
 		const FString& DatabasePath = FString(),
 		bool bRemoveDatabaseAfterClose = true);
+
+	static bool CountLayoutRevisions(
+		const FString& DatabasePath,
+		const FString& LayoutId,
+		int32& OutRevisionCount,
+		FString& OutErrorMessage);
 };

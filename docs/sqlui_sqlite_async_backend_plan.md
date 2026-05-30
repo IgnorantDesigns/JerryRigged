@@ -1,6 +1,6 @@
 # SQLUI SQLite Async Backend Plan
 
-This document drafts the async and backend boundary for a future SQLite-backed SQLUI layout repository. The original plan was documentation-only. The current proof work includes minimal `SQLiteCore` availability and open/close probes, a SQLUICore-owned async boundary/probe that runs plain database-style work on a background task and delivers the result back through a game-thread callback, a smoke-only migration-runner probe, a planned layout schema migration probe, a read/list/load mapping probe, a read-only `USQLUISQLiteLayoutRepository` proof, and a writable `SaveLayout` repository proof. It still does not add SQLite repository factory selection, SQLite `RemoveLayout`, SQLite `ClearLayouts`, async SQLite workers, widgets, maps, assets, CI, or persistent database files.
+This document drafts the async and backend boundary for a future SQLite-backed SQLUI layout repository. The original plan was documentation-only. The current proof work includes minimal `SQLiteCore` availability and open/close probes, a SQLUICore-owned async boundary/probe that runs plain database-style work on a background task and delivers the result back through a game-thread callback, a smoke-only migration-runner probe, a planned layout schema migration probe, a read/list/load mapping probe, a read-only `USQLUISQLiteLayoutRepository` proof, a writable `SaveLayout` repository proof, and a soft-delete `RemoveLayout` repository proof. It still does not add SQLite repository factory selection, SQLite `ClearLayouts`, async SQLite workers, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -18,11 +18,11 @@ The schema itself is drafted separately in [`sqlui_sqlite_layout_schema.md`](sql
 
 ## Non-Goals
 
-- Do not implement writable SQLite layout persistence in this step.
+- Do not treat the current writable SQLite repository proofs as complete durable SQLite layout persistence.
 - Do not choose a concrete SQLite plugin or library beyond the already-proven engine `SQLiteCore` candidate.
 - Do not add new SQLite module dependencies or modify `Build.cs`.
 - Do not add persistent database files.
-- Do not implement SQLite `SaveLayout`, `RemoveLayout`, or `ClearLayouts`.
+- Do not implement SQLite `ClearLayouts`.
 - Do not expand the async scaffold beyond a small proof that can run plain background work and marshal a result safely.
 - Do not expose SQL, table names, database paths, worker objects, or SQLite connection details to `SQLUI.Widgets`.
 - Do not change existing smoke-test behavior unless an optional probe flag is explicitly passed.
@@ -280,9 +280,11 @@ The optional SQLite layout schema migration probe applies the planned initial la
 
 The optional SQLite layout read probe applies the planned initial layout schema to a temporary database under `Saved/SQLUI/SmokeTests/LayoutReadProbe`, seeds one valid probe-only layout document, reads list-style metadata, loads the current revision document JSON, deserializes and validates it, closes the database, and removes the file. It proves read/list/load mapping only; repository callbacks, worker execution, writes, remove/clear behavior, and factory selection remain deferred.
 
-The optional SQLite read-only layout repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, points `USQLUISQLiteLayoutRepository` at it, verifies `ListLayouts` metadata and tags, verifies `LoadLayout` deserializes and validates the current document JSON, verifies unsupported `SaveLayout`, `RemoveLayout`, and `ClearLayouts` calls are rejected without mutating the prepared database, closes all database handles, and removes the file. It proves the repository-shaped read path and read-only rejection behavior only; worker execution, writable remove/clear operations, and factory selection remain deferred.
+The optional SQLite read-only layout repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, points `USQLUISQLiteLayoutRepository` at it, verifies `ListLayouts` metadata and tags, verifies `LoadLayout` deserializes and validates the current document JSON, verifies unsupported `SaveLayout`, `RemoveLayout`, and `ClearLayouts` calls are rejected without mutating the prepared database, closes all database handles, and removes the file. It proves the repository-shaped read path and read-only rejection behavior only; worker execution, writable clear behavior, and factory selection remain deferred.
 
-The optional SQLite SaveLayout repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteSaveLayoutRepository`, points `USQLUISQLiteLayoutRepository` at it with `bReadOnly = false`, verifies `SaveLayout`, verifies `ListLayouts` and `LoadLayout`, saves the same layout id again with updated metadata, verifies the latest revision is loaded, closes all database handles, and removes the file. It proves the first writable repository operation only; worker execution, `RemoveLayout`, `ClearLayouts`, and factory selection remain deferred.
+The optional SQLite SaveLayout repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteSaveLayoutRepository`, points `USQLUISQLiteLayoutRepository` at it with `bReadOnly = false`, verifies `SaveLayout`, verifies `ListLayouts` and `LoadLayout`, saves the same layout id again with updated metadata, verifies the latest revision is loaded, closes all database handles, and removes the file. It proves the first writable repository operation only; worker execution, `ClearLayouts`, and factory selection remain deferred.
+
+The optional SQLite RemoveLayout repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteRemoveLayoutRepository`, points `USQLUISQLiteLayoutRepository` at it with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, `LoadLayout`, and soft-delete `RemoveLayout`, verifies removed layouts disappear from list/load while revision history remains preserved, closes all database handles, and removes the file. It proves soft-delete repository semantics only; worker execution, `ClearLayouts`, and factory selection remain deferred.
 
 When the SQLite backend is added later, smoke coverage should prove:
 
@@ -354,7 +356,7 @@ The first read-only repository proof now implements `LoadLayout` and `ListLayout
 
 ### Phase 5: Write Repository Operations
 
-Implement `SaveLayout`, `RemoveLayout`, and `ClearLayouts`, including transaction ownership, revision creation, soft-delete behavior, tag updates, and clear-count semantics.
+Move `SaveLayout` and `RemoveLayout` behind the production async database boundary, and implement `ClearLayouts`, including transaction ownership, revision creation, soft-delete behavior, tag updates, and clear-count semantics.
 
 ### Phase 6: Smoke Coverage
 

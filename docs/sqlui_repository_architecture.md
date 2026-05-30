@@ -63,7 +63,7 @@ This repository is suitable for lightweight runtime persistence and local develo
 
 ### `USQLUISQLiteLayoutRepository`
 
-`USQLUISQLiteLayoutRepository` is the first repository-shaped SQLite implementation in SQLUICore. It supports read operations and the first writable operation, `SaveLayout`, when explicitly configured writable.
+`USQLUISQLiteLayoutRepository` is the first repository-shaped SQLite implementation in SQLUICore. It supports read operations, writable `SaveLayout`, and soft-delete `RemoveLayout` when explicitly configured writable.
 
 The repository is configured with `FSQLUISQLiteLayoutRepositorySettings`, including a `DatabasePath` and `bReadOnly`. It opens the configured database for each operation. It does not create a database, create schema tables, run migrations, seed data, or select itself through the repository factory.
 
@@ -76,8 +76,10 @@ Current supported behavior:
 - `LoadLayout` deserializes with `FSQLUILayoutJson` and validates after load.
 - `SaveLayout` works only when `bReadOnly = false`, `DatabasePath` is configured, and the database already exists with the planned layout schema.
 - `SaveLayout` validates the document, serializes canonical JSON, computes the next revision from `layout_revisions`, upserts `layouts`, inserts an immutable `layout_revisions` row, replaces `layout_tags`, and commits the transaction.
+- `RemoveLayout` works only when `bReadOnly = false`, `DatabasePath` is configured, and the database already exists with the planned layout schema.
+- `RemoveLayout` soft-deletes active rows by setting `layouts.b_deleted = 1`; revisions, tags, checkpoints, and previews remain intact.
 
-Unsupported behavior remains explicit. `SaveLayout` returns a clear read-only failure when `bReadOnly = true`; `RemoveLayout` and `ClearLayouts` still return clear unsupported/read-only failures. This repository is not selected by `USQLUILayoutRepositoryFactory` yet and should not be treated as complete durable SQLite layout persistence.
+Unsupported behavior remains explicit. `SaveLayout` and `RemoveLayout` return clear read-only failures when `bReadOnly = true`; `ClearLayouts` still returns a clear unsupported/read-only failure. This repository is not selected by `USQLUILayoutRepositoryFactory` yet and should not be treated as complete durable SQLite layout persistence.
 
 ## Result Types
 
@@ -149,12 +151,13 @@ Current paths are:
 - Unavailable repository selection: repository smoke paths also select `Unavailable` and verify load/save report `bBackendUnavailable` cleanly.
 - SQLite read-only repository proof: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, instantiates `USQLUISQLiteLayoutRepository` directly, verifies `ListLayouts` metadata and tags, verifies `LoadLayout` deserializes and validates the document, verifies unsupported `SaveLayout`, `RemoveLayout`, and `ClearLayouts` calls are rejected without mutating the prepared database, removes the database, and passes the default layout through the widget pipeline.
 - SQLite SaveLayout repository proof: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteSaveLayoutRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, and `LoadLayout`, saves the same layout id a second time, verifies the latest revision and updated metadata are read back, removes the database, and passes the default layout through the widget pipeline.
+- SQLite RemoveLayout repository proof: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteRemoveLayoutRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, `LoadLayout`, and soft-delete `RemoveLayout`, verifies the removed layout disappears from list/load while revisions remain preserved, removes the database, and passes the default layout through the widget pipeline.
 
 The default, JSON fixture, in-memory, JSON file, and unavailable paths do not use SQLite. SQLite smoke paths are optional and write only under their `Saved/SQLUI/SmokeTests/...` directories. No smoke path uses Content, maps, viewport attachment, or durable project assets.
 
 ## Future SQLite Repository Direction
 
-The SQLite repository proof now sits behind the same repository shape for `ListLayouts`, `LoadLayout`, and writable `SaveLayout`, but full SQLite persistence remains future work. Callers should eventually be able to request, save, list, remove, and clear layouts without knowing whether the backing store is in memory, JSON files, or SQLite.
+The SQLite repository proof now sits behind the same repository shape for `ListLayouts`, `LoadLayout`, writable `SaveLayout`, and soft-delete `RemoveLayout`, but full SQLite persistence remains future work. Callers should eventually be able to request, save, list, remove, and clear layouts without knowing whether the backing store is in memory, JSON files, or SQLite.
 
 The proposed SQLite schema is drafted in [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md). That document defines the planned tables, keys, indexes, revision/history behavior, soft-delete semantics for normal remove operations, destructive clear behavior for scoped cleanup, migration/versioning expectations, validation boundaries, threading expectations, and repository-operation mapping.
 
@@ -172,7 +175,7 @@ The SQLite implementation should:
 - Preserve the current document validation boundary before saving and after loading.
 - Use `Saved/SQLUI/...` for writable runtime database state, with any seed-copy behavior handled before mutation.
 
-SQLite persistence is still incomplete. Factory selection, soft-delete `RemoveLayout`, destructive scoped `ClearLayouts`, production migration integration, async database execution, and packaged-build validation should happen in later implementation work.
+SQLite persistence is still incomplete. Factory selection, destructive scoped `ClearLayouts`, production migration integration, async database execution, and packaged-build validation should happen in later implementation work.
 
 ## Suggested Next Steps
 
