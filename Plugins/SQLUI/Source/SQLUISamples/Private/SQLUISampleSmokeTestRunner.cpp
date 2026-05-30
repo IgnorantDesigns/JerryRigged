@@ -5,6 +5,7 @@
 #include "Database/SQLUISQLiteMigrationRunner.h"
 #include "Database/SQLUISQLiteProbe.h"
 #include "Async/TaskGraphInterfaces.h"
+#include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
 #include "HAL/PlatformTime.h"
 #include "Layout/ISQLUILayoutRepository.h"
@@ -12,6 +13,7 @@
 #include "Layout/SQLUIJsonFileLayoutRepository.h"
 #include "Layout/SQLUILayoutJson.h"
 #include "Layout/SQLUILayoutRepositoryFactory.h"
+#include "Layout/SQLUISQLiteLayoutRepository.h"
 #include "Layout/SQLUILayoutTypes.h"
 #include "Misc/Paths.h"
 #include "Runtime/SQLUIRuntimeContext.h"
@@ -276,6 +278,46 @@ bool DoesSQLUISampleLayoutMetadataMatch(
 		&& Candidate.DisplayName == Expected.DisplayName
 		&& Candidate.Description == Expected.Description
 		&& Candidate.CreatedBy == Expected.CreatedBy;
+}
+
+bool DoSQLUISampleTagSetsMatch(
+	const TArray<FString>& CandidateTags,
+	const TArray<FString>& ExpectedTags)
+{
+	TSet<FString> CandidateTagSet;
+	for (const FString& Tag : CandidateTags)
+	{
+		CandidateTagSet.Add(Tag);
+	}
+
+	TSet<FString> ExpectedTagSet;
+	for (const FString& Tag : ExpectedTags)
+	{
+		ExpectedTagSet.Add(Tag);
+	}
+
+	if (CandidateTagSet.Num() != ExpectedTagSet.Num())
+	{
+		return false;
+	}
+
+	for (const FString& ExpectedTag : ExpectedTagSet)
+	{
+		if (!CandidateTagSet.Contains(ExpectedTag))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool DoesSQLUISampleLayoutMetadataAndTagsMatch(
+	const FSQLUILayoutMetadata& Candidate,
+	const FSQLUILayoutMetadata& Expected)
+{
+	return DoesSQLUISampleLayoutMetadataMatch(Candidate, Expected)
+		&& DoSQLUISampleTagSetsMatch(Candidate.Tags, Expected.Tags);
 }
 
 bool DoesSQLUISampleLayoutMetadataListContain(
@@ -553,6 +595,196 @@ FString MakeSQLUISampleJsonFileLayoutRepositoryBaseDirectory()
 		TEXT("Layouts"));
 	FPaths::NormalizeDirectoryName(BaseDirectory);
 	return BaseDirectory;
+}
+
+void AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+	FSQLUISampleSQLiteReadOnlyLayoutRepositorySmokeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleSQLiteReadOnlyLayoutRepositoryDatabasePath()
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("SQLiteReadOnlyRepository"),
+		TEXT("SQLiteReadOnlyRepository.db"));
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+bool DeleteSQLUISampleSQLiteReadOnlyLayoutRepositoryFiles(
+	const FString& DatabasePath,
+	FSQLUISampleSQLiteReadOnlyLayoutRepositorySmokeResult& Result)
+{
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite read-only layout repository smoke failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+bool DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+	const TArray<FSQLUILayoutMetadata>& Layouts,
+	const FSQLUILayoutMetadata& Expected)
+{
+	for (const FSQLUILayoutMetadata& Layout : Layouts)
+	{
+		if (DoesSQLUISampleLayoutMetadataAndTagsMatch(Layout, Expected))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+FSQLUISampleSQLiteReadOnlyLayoutRepositorySmokeResult RunSQLUISampleSQLiteReadOnlyLayoutRepositorySmoke(
+	UObject* Outer)
+{
+	FSQLUISampleSQLiteReadOnlyLayoutRepositorySmokeResult Result;
+	Result.DatabasePath = MakeSQLUISampleSQLiteReadOnlyLayoutRepositoryDatabasePath();
+
+	const FSQLUISQLiteLayoutReadProbeResult PrepareResult =
+		FSQLUISQLiteLayoutReadProbe::RunProbe(Result.DatabasePath, false);
+	Result.SeedLayoutId = PrepareResult.SeedLayoutId;
+	Result.bPreparedDatabase =
+		PrepareResult.bSucceeded
+		&& PrepareResult.bSchemaMigrationSucceeded
+		&& PrepareResult.bSeedInserted
+		&& PrepareResult.bListSucceeded
+		&& PrepareResult.bLoadSucceeded
+		&& PrepareResult.bLoadedDocumentValid;
+
+	if (!Result.bPreparedDatabase)
+	{
+		AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+			Result,
+			PrepareResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite read-only layout repository smoke failed: could not prepare probe database.")
+				: PrepareResult.ErrorMessage);
+		Result.bDatabaseRemoved =
+			DeleteSQLUISampleSQLiteReadOnlyLayoutRepositoryFiles(Result.DatabasePath, Result);
+		return Result;
+	}
+
+	USQLUISQLiteLayoutRepository* Repository =
+		NewObject<USQLUISQLiteLayoutRepository>(IsValid(Outer) ? Outer : GetTransientPackage());
+	if (!IsValid(Repository))
+	{
+		AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite read-only layout repository smoke failed: could not create repository object."));
+		Result.bDatabaseRemoved =
+			DeleteSQLUISampleSQLiteReadOnlyLayoutRepositoryFiles(Result.DatabasePath, Result);
+		return Result;
+	}
+
+	FSQLUISQLiteLayoutRepositorySettings RepositorySettings;
+	RepositorySettings.DatabasePath = Result.DatabasePath;
+	RepositorySettings.bReadOnly = true;
+	Repository->Configure(RepositorySettings);
+
+	const FSQLUILayoutRepositoryListResult ListResult = Repository->ListLayouts();
+	Result.bListSucceeded = ListResult.bSucceeded;
+	Result.ListedLayoutCount = ListResult.Layouts.Num();
+	if (!Result.bListSucceeded)
+	{
+		AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+			Result,
+			ListResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite read-only layout repository smoke failed: ListLayouts failed.")
+				: ListResult.ErrorMessage);
+	}
+
+	const FSQLUILayoutLoadResult LoadResult = LoadSQLUISampleLayoutFromRepository(
+		Repository,
+		TEXT("SQLite read-only layout repository"),
+		Result.SeedLayoutId);
+	Result.bLoadSucceeded = LoadResult.bSucceeded;
+	Result.LoadedLayoutId = LoadResult.Document.Metadata.LayoutId;
+	Result.bLoadedDocumentValid =
+		LoadResult.bSucceeded
+		&& LoadResult.Validation.bIsValid
+		&& Result.LoadedLayoutId == Result.SeedLayoutId;
+
+	if (!Result.bLoadSucceeded)
+	{
+		AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+			Result,
+			LoadResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite read-only layout repository smoke failed: LoadLayout failed.")
+				: LoadResult.ErrorMessage);
+	}
+	else if (!Result.bLoadedDocumentValid)
+	{
+		AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite read-only layout repository smoke failed: loaded layout id '%s' did not match seed layout id '%s' or validation failed."),
+				*Result.LoadedLayoutId,
+				*Result.SeedLayoutId));
+	}
+
+	if (Result.bListSucceeded && Result.bLoadedDocumentValid)
+	{
+		Result.bListedMetadataFound =
+			DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+				ListResult.Layouts,
+				LoadResult.Document.Metadata);
+		if (!Result.bListedMetadataFound)
+		{
+			AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite read-only layout repository smoke failed: ListLayouts did not include loaded metadata and tags for layout id '%s'."),
+					*Result.SeedLayoutId));
+		}
+	}
+
+	Result.bDatabaseRemoved =
+		DeleteSQLUISampleSQLiteReadOnlyLayoutRepositoryFiles(Result.DatabasePath, Result);
+
+	Result.bSucceeded =
+		Result.bPreparedDatabase
+		&& Result.bListSucceeded
+		&& Result.bListedMetadataFound
+		&& Result.bLoadSucceeded
+		&& Result.bLoadedDocumentValid
+		&& Result.bDatabaseRemoved;
+
+	return Result;
 }
 
 FSQLUISampleSmokeTestLayoutResult ResolveSQLUISampleSmokeTestLayoutDocument(
@@ -1214,6 +1446,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result,
 				MakeSQLUISampleSQLiteLayoutReadProbeFailureMessage(
 					Result.SQLiteLayoutReadProbe));
+		}
+	}
+
+	if (Request.bUseSQLiteReadOnlyLayoutRepository)
+	{
+		Result.bUsedSQLiteReadOnlyLayoutRepository = true;
+		Result.SQLiteReadOnlyLayoutRepository =
+			RunSQLUISampleSQLiteReadOnlyLayoutRepositorySmoke(Outer);
+		if (!Result.SQLiteReadOnlyLayoutRepository.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.SQLiteReadOnlyLayoutRepository.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite read-only layout repository smoke failed.")
+					: Result.SQLiteReadOnlyLayoutRepository.ErrorMessage);
 		}
 	}
 

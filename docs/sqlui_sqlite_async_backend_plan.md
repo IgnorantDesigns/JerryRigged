@@ -1,6 +1,6 @@
 # SQLUI SQLite Async Backend Plan
 
-This document drafts the async and backend boundary for a future SQLite-backed SQLUI layout repository. The original plan was documentation-only. The current proof work includes minimal `SQLiteCore` availability and open/close probes, a SQLUICore-owned async boundary/probe that runs plain database-style work on a background task and delivers the result back through a game-thread callback, a smoke-only migration-runner probe, a planned layout schema migration probe, and a read/list/load mapping probe. It still does not add SQLite layout persistence, SQLite repository selection, widgets, maps, assets, CI, or persistent database files.
+This document drafts the async and backend boundary for a future SQLite-backed SQLUI layout repository. The original plan was documentation-only. The current proof work includes minimal `SQLiteCore` availability and open/close probes, a SQLUICore-owned async boundary/probe that runs plain database-style work on a background task and delivers the result back through a game-thread callback, a smoke-only migration-runner probe, a planned layout schema migration probe, a read/list/load mapping probe, and a read-only `USQLUISQLiteLayoutRepository` proof. It still does not add SQLite writes, SQLite repository factory selection, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -18,10 +18,11 @@ The schema itself is drafted separately in [`sqlui_sqlite_layout_schema.md`](sql
 
 ## Non-Goals
 
-- Do not implement SQLite layout persistence in this step.
+- Do not implement writable SQLite layout persistence in this step.
 - Do not choose a concrete SQLite plugin or library beyond the already-proven engine `SQLiteCore` candidate.
 - Do not add new SQLite module dependencies or modify `Build.cs`.
-- Do not add SQLite repository C++ code or persistent database files.
+- Do not add persistent database files.
+- Do not implement SQLite `SaveLayout`, `RemoveLayout`, or `ClearLayouts`.
 - Do not expand the async scaffold beyond a small proof that can run plain background work and marshal a result safely.
 - Do not expose SQL, table names, database paths, worker objects, or SQLite connection details to `SQLUI.Widgets`.
 - Do not change existing smoke-test behavior unless an optional probe flag is explicitly passed.
@@ -279,6 +280,8 @@ The optional SQLite layout schema migration probe applies the planned initial la
 
 The optional SQLite layout read probe applies the planned initial layout schema to a temporary database under `Saved/SQLUI/SmokeTests/LayoutReadProbe`, seeds one valid probe-only layout document, reads list-style metadata, loads the current revision document JSON, deserializes and validates it, closes the database, and removes the file. It proves read/list/load mapping only; repository callbacks, worker execution, writes, remove/clear behavior, and factory selection remain deferred.
 
+The optional SQLite read-only layout repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, points `USQLUISQLiteLayoutRepository` at it, verifies `ListLayouts` metadata and tags, verifies `LoadLayout` deserializes and validates the current document JSON, closes all database handles, and removes the file. It proves the repository-shaped read path only; worker execution, writes, remove/clear behavior, and factory selection remain deferred.
+
 When the SQLite backend is added later, smoke coverage should prove:
 
 - Repository factory selection creates the SQLite repository only when the backend is available.
@@ -345,7 +348,7 @@ Build on the smoke-only migration-runner proof and layout schema migration proof
 
 ### Phase 4: Read-Only Repository Operations
 
-Implement read-only SQLite repository behavior for `LoadLayout` and `ListLayouts`, including deserialization and validation after load.
+The first read-only repository proof now implements `LoadLayout` and `ListLayouts` synchronously against a prepared database. The production phase should move those reads behind the async database boundary and keep the same result semantics.
 
 ### Phase 5: Write Repository Operations
 

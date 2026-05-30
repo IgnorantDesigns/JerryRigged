@@ -654,6 +654,86 @@ void LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteReadOnlyLayoutRepositoryResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteReadOnlyLayoutRepository)
+	{
+		return;
+	}
+
+	const FSQLUISampleSQLiteReadOnlyLayoutRepositorySmokeResult& RepositoryResult =
+		Result.SQLiteReadOnlyLayoutRepository;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite read-only layout repository database path: '%s'"),
+		*RepositoryResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite read-only layout repository prepared database: %s"),
+		RepositoryResult.bPreparedDatabase ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite read-only layout repository list succeeded: %s"),
+		RepositoryResult.bListSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite read-only layout repository listed metadata found: %s"),
+		RepositoryResult.bListedMetadataFound ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite read-only layout repository listed layout count: %d"),
+		RepositoryResult.ListedLayoutCount);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite read-only layout repository load succeeded: %s"),
+		RepositoryResult.bLoadSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite read-only layout repository loaded document valid: %s"),
+		RepositoryResult.bLoadedDocumentValid ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite read-only layout repository seed layout id: '%s' loaded layout id: '%s'"),
+		*RepositoryResult.SeedLayoutId,
+		*RepositoryResult.LoadedLayoutId);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite read-only layout repository database removed: %s"),
+		RepositoryResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (RepositoryResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite read-only layout repository succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite read-only layout repository failed: %s"),
+			*RepositoryResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -695,6 +775,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(Result);
+	LogSQLUISampleSmokeTestSQLiteReadOnlyLayoutRepositoryResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -779,6 +860,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteLayoutReadProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteLayoutReadProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteLayoutReadProbe"));
+	const bool bUseSQLiteReadOnlyLayoutRepository =
+		FParse::Param(*Params, TEXT("UseSQLiteReadOnlyLayoutRepository"))
+		|| FParse::Param(*Params, TEXT("SQLiteReadOnlyLayoutRepository"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -828,6 +912,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite layout read probe selected: true"));
 	}
 
+	if (bUseSQLiteReadOnlyLayoutRepository)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite read-only layout repository selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -849,6 +938,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteMigrationProbe = bUseSQLiteMigrationProbe;
 		Request.bUseSQLiteLayoutSchemaMigrationProbe = bUseSQLiteLayoutSchemaMigrationProbe;
 		Request.bUseSQLiteLayoutReadProbe = bUseSQLiteLayoutReadProbe;
+		Request.bUseSQLiteReadOnlyLayoutRepository = bUseSQLiteReadOnlyLayoutRepository;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 
