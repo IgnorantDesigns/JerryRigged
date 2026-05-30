@@ -670,6 +670,13 @@ bool DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
 	return false;
 }
 
+bool IsSQLUISampleSQLiteReadOnlyWriteRejectionMessage(const FString& ErrorMessage)
+{
+	return !ErrorMessage.IsEmpty()
+		&& (ErrorMessage.Contains(TEXT("read-only"), ESearchCase::IgnoreCase)
+			|| ErrorMessage.Contains(TEXT("unsupported"), ESearchCase::IgnoreCase));
+}
+
 FSQLUISampleSQLiteReadOnlyLayoutRepositorySmokeResult RunSQLUISampleSQLiteReadOnlyLayoutRepositorySmoke(
 	UObject* Outer)
 {
@@ -773,6 +780,114 @@ FSQLUISampleSQLiteReadOnlyLayoutRepositorySmokeResult RunSQLUISampleSQLiteReadOn
 		}
 	}
 
+	if (Result.bLoadedDocumentValid)
+	{
+		const FSQLUILayoutSaveResult SaveResult = SaveSQLUISampleLayoutToRepository(
+			Repository,
+			TEXT("SQLite read-only layout repository"),
+			LoadResult.Document);
+		Result.bSaveRejected =
+			!SaveResult.bSucceeded
+			&& IsSQLUISampleSQLiteReadOnlyWriteRejectionMessage(SaveResult.ErrorMessage);
+		if (!Result.bSaveRejected)
+		{
+			AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite read-only layout repository smoke failed: SaveLayout was not clearly rejected. bSucceeded=%s Error='%s'."),
+					SaveResult.bSucceeded ? TEXT("true") : TEXT("false"),
+					*SaveResult.ErrorMessage));
+		}
+
+		const FSQLUILayoutRepositoryRemoveResult RemoveResult =
+			Repository->RemoveLayout(Result.SeedLayoutId);
+		Result.bRemoveRejected =
+			!RemoveResult.bSucceeded
+			&& !RemoveResult.bRemoved
+			&& IsSQLUISampleSQLiteReadOnlyWriteRejectionMessage(RemoveResult.ErrorMessage);
+		if (!Result.bRemoveRejected)
+		{
+			AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite read-only layout repository smoke failed: RemoveLayout was not clearly rejected. bSucceeded=%s bRemoved=%s Error='%s'."),
+					RemoveResult.bSucceeded ? TEXT("true") : TEXT("false"),
+					RemoveResult.bRemoved ? TEXT("true") : TEXT("false"),
+					*RemoveResult.ErrorMessage));
+		}
+
+		const FSQLUILayoutRepositoryClearResult ClearResult = Repository->ClearLayouts();
+		Result.bClearRejected =
+			!ClearResult.bSucceeded
+			&& ClearResult.RemovedCount == 0
+			&& IsSQLUISampleSQLiteReadOnlyWriteRejectionMessage(ClearResult.ErrorMessage);
+		if (!Result.bClearRejected)
+		{
+			AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite read-only layout repository smoke failed: ClearLayouts was not clearly rejected. bSucceeded=%s RemovedCount=%d Error='%s'."),
+					ClearResult.bSucceeded ? TEXT("true") : TEXT("false"),
+					ClearResult.RemovedCount,
+					*ClearResult.ErrorMessage));
+		}
+
+		const FSQLUILayoutRepositoryListResult ListAfterRejectedWritesResult =
+			Repository->ListLayouts();
+		Result.bListAfterRejectedWritesSucceeded = ListAfterRejectedWritesResult.bSucceeded;
+		if (!Result.bListAfterRejectedWritesSucceeded)
+		{
+			AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+				Result,
+				ListAfterRejectedWritesResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite read-only layout repository smoke failed: ListLayouts failed after rejected write attempts.")
+					: ListAfterRejectedWritesResult.ErrorMessage);
+		}
+		else
+		{
+			Result.bListedMetadataFoundAfterRejectedWrites =
+				DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListAfterRejectedWritesResult.Layouts,
+					LoadResult.Document.Metadata);
+			if (!Result.bListedMetadataFoundAfterRejectedWrites)
+			{
+				AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+					Result,
+					FString::Printf(
+						TEXT("SQLUI SQLite read-only layout repository smoke failed: ListLayouts after rejected write attempts did not include loaded metadata and tags for layout id '%s'."),
+						*Result.SeedLayoutId));
+			}
+		}
+
+		const FSQLUILayoutLoadResult LoadAfterRejectedWritesResult =
+			LoadSQLUISampleLayoutFromRepository(
+				Repository,
+				TEXT("SQLite read-only layout repository after rejected write attempts"),
+				Result.SeedLayoutId);
+		Result.bLoadAfterRejectedWritesSucceeded = LoadAfterRejectedWritesResult.bSucceeded;
+		Result.bLoadedDocumentValidAfterRejectedWrites =
+			LoadAfterRejectedWritesResult.bSucceeded
+			&& LoadAfterRejectedWritesResult.Validation.bIsValid
+			&& LoadAfterRejectedWritesResult.Document.Metadata.LayoutId == Result.SeedLayoutId;
+		if (!Result.bLoadAfterRejectedWritesSucceeded)
+		{
+			AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+				Result,
+				LoadAfterRejectedWritesResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite read-only layout repository smoke failed: LoadLayout failed after rejected write attempts.")
+					: LoadAfterRejectedWritesResult.ErrorMessage);
+		}
+		else if (!Result.bLoadedDocumentValidAfterRejectedWrites)
+		{
+			AppendSQLUISampleSQLiteReadOnlyLayoutRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite read-only layout repository smoke failed: loaded layout id '%s' after rejected write attempts did not match seed layout id '%s' or validation failed."),
+					*LoadAfterRejectedWritesResult.Document.Metadata.LayoutId,
+					*Result.SeedLayoutId));
+		}
+	}
+
 	Result.bDatabaseRemoved =
 		DeleteSQLUISampleSQLiteReadOnlyLayoutRepositoryFiles(Result.DatabasePath, Result);
 
@@ -782,6 +897,13 @@ FSQLUISampleSQLiteReadOnlyLayoutRepositorySmokeResult RunSQLUISampleSQLiteReadOn
 		&& Result.bListedMetadataFound
 		&& Result.bLoadSucceeded
 		&& Result.bLoadedDocumentValid
+		&& Result.bSaveRejected
+		&& Result.bRemoveRejected
+		&& Result.bClearRejected
+		&& Result.bListAfterRejectedWritesSucceeded
+		&& Result.bListedMetadataFoundAfterRejectedWrites
+		&& Result.bLoadAfterRejectedWritesSucceeded
+		&& Result.bLoadedDocumentValidAfterRejectedWrites
 		&& Result.bDatabaseRemoved;
 
 	return Result;

@@ -199,7 +199,7 @@ The read-only repository proof:
 - Reads metadata from `layouts`, tags from `layout_tags`, and current document JSON from `layout_revisions`.
 - Deserializes and validates loaded documents with existing SQLUI layout JSON helpers.
 - Keeps `SaveLayout`, `RemoveLayout`, and `ClearLayouts` explicitly unsupported with read-only errors.
-- Is available through an optional smoke-test flag that prepares and removes a temporary database under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`.
+- Is available through an optional smoke-test flag that prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, verifies read-only write rejection, verifies the layout remains readable afterward, and removes the database.
 
 The read-only repository proof does not:
 
@@ -216,7 +216,7 @@ Remaining blockers before SQLite layout persistence:
 - Production migration integration behind the future SQLite repository.
 - Repository write/remove/clear implementation.
 - Repository factory selection.
-- Full SQLite repository lifecycle smoke coverage.
+- Full writable SQLite repository lifecycle smoke coverage.
 
 ## Evaluation Criteria
 

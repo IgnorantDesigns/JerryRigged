@@ -710,6 +710,36 @@ void LogSQLUISampleSmokeTestSQLiteReadOnlyLayoutRepositoryResult(
 	UE_LOG(
 		LogSQLUISamples,
 		Log,
+		TEXT("SQLUI SQLite read-only layout repository save rejected: %s"),
+		RepositoryResult.bSaveRejected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite read-only layout repository remove rejected: %s"),
+		RepositoryResult.bRemoveRejected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite read-only layout repository clear rejected: %s"),
+		RepositoryResult.bClearRejected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite read-only layout repository list after rejected writes succeeded: %s"),
+		RepositoryResult.bListAfterRejectedWritesSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite read-only layout repository load after rejected writes succeeded: %s"),
+		RepositoryResult.bLoadAfterRejectedWritesSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
 		TEXT("SQLUI SQLite read-only layout repository seed layout id: '%s' loaded layout id: '%s'"),
 		*RepositoryResult.SeedLayoutId,
 		*RepositoryResult.LoadedLayoutId);

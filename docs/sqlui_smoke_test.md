@@ -162,7 +162,7 @@ This path is a read/list/load mapping proof only. It does not implement SQLite l
 
 ## Run The SQLite Read-Only Layout Repository Smoke Test
 
-The SQLite read-only layout repository path keeps the same transient commandlet flow, prepares a temporary database under `Saved\SQLUI\SmokeTests\SQLiteReadOnlyRepository`, instantiates `USQLUISQLiteLayoutRepository` directly against that database, verifies `ListLayouts` metadata and tags, verifies `LoadLayout` deserializes and validates the current document JSON, removes the probe database file, and then runs the same default runtime widget pipeline:
+The SQLite read-only layout repository path keeps the same transient commandlet flow, prepares a temporary database under `Saved\SQLUI\SmokeTests\SQLiteReadOnlyRepository`, instantiates `USQLUISQLiteLayoutRepository` directly against that database, verifies `ListLayouts` metadata and tags, verifies `LoadLayout` deserializes and validates the current document JSON, verifies `SaveLayout`, `RemoveLayout`, and `ClearLayouts` are rejected as read-only operations, verifies the seeded layout remains readable afterward, removes the probe database file, and then runs the same default runtime widget pipeline:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteReadOnlyLayoutRepository
@@ -170,7 +170,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-SQLiteReadOnlyLayoutRepository` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
-This path is a read-only repository proof only. It does not add `ESQLUILayoutRepositoryBackend::SQLite`, repository factory selection, SQLite `SaveLayout`, SQLite `RemoveLayout`, SQLite `ClearLayouts`, Content changes, map edits, or persistent database files.
+This path is a read-only repository proof only. It does not add `ESQLUILayoutRepositoryBackend::SQLite`, repository factory selection, writable SQLite `SaveLayout`, SQLite `RemoveLayout`, SQLite `ClearLayouts`, Content changes, map edits, or persistent database files.
 
 ## Expected Results
 
@@ -330,6 +330,11 @@ SQLUI SQLite read-only layout repository list succeeded: true
 SQLUI SQLite read-only layout repository listed metadata found: true
 SQLUI SQLite read-only layout repository load succeeded: true
 SQLUI SQLite read-only layout repository loaded document valid: true
+SQLUI SQLite read-only layout repository save rejected: true
+SQLUI SQLite read-only layout repository remove rejected: true
+SQLUI SQLite read-only layout repository clear rejected: true
+SQLUI SQLite read-only layout repository list after rejected writes succeeded: true
+SQLUI SQLite read-only layout repository load after rejected writes succeeded: true
 SQLUI SQLite read-only layout repository database removed: true
 SQLUI SQLite read-only layout repository succeeded.
 SQLUI sample smoke test commandlet succeeded.
