@@ -63,9 +63,9 @@ This repository is suitable for lightweight runtime persistence and local develo
 
 ### `USQLUISQLiteLayoutRepository`
 
-`USQLUISQLiteLayoutRepository` is the first repository-shaped SQLite proof in SQLUICore. It is intentionally read-only in this implementation slice.
+`USQLUISQLiteLayoutRepository` is the first repository-shaped SQLite implementation in SQLUICore. It supports read operations and the first writable operation, `SaveLayout`, when explicitly configured writable.
 
-The repository is configured with `FSQLUISQLiteLayoutRepositorySettings`, including a `DatabasePath` and `bReadOnly = true`. It opens the configured database in SQLiteCore read-only mode for each read operation. It does not create a database, create schema tables, run migrations, seed data, or write files.
+The repository is configured with `FSQLUISQLiteLayoutRepositorySettings`, including a `DatabasePath` and `bReadOnly`. It opens the configured database for each operation. It does not create a database, create schema tables, run migrations, seed data, or select itself through the repository factory.
 
 Current supported behavior:
 
@@ -74,8 +74,10 @@ Current supported behavior:
 - `ListLayouts` preserves the planned ordering by `display_name COLLATE NOCASE ASC, layout_id COLLATE NOCASE ASC`.
 - `LoadLayout` reads the current revision document JSON by joining `layouts.current_revision` to `layout_revisions.revision`.
 - `LoadLayout` deserializes with `FSQLUILayoutJson` and validates after load.
+- `SaveLayout` works only when `bReadOnly = false`, `DatabasePath` is configured, and the database already exists with the planned layout schema.
+- `SaveLayout` validates the document, serializes canonical JSON, computes the next revision from `layout_revisions`, upserts `layouts`, inserts an immutable `layout_revisions` row, replaces `layout_tags`, and commits the transaction.
 
-Unsupported write behavior is explicit. `SaveLayout`, `RemoveLayout`, and `ClearLayouts` return failure results with a clear read-only message. This repository is not selected by `USQLUILayoutRepositoryFactory` yet and should not be treated as durable writable SQLite layout persistence.
+Unsupported behavior remains explicit. `SaveLayout` returns a clear read-only failure when `bReadOnly = true`; `RemoveLayout` and `ClearLayouts` still return clear unsupported/read-only failures. This repository is not selected by `USQLUILayoutRepositoryFactory` yet and should not be treated as complete durable SQLite layout persistence.
 
 ## Result Types
 
@@ -146,12 +148,13 @@ Current paths are:
 - JSON file repository round trip: the factory selects `JsonFile`, the JSON fixture is saved into `USQLUIJsonFileLayoutRepository`, loaded back by layout id, removed from `Saved/SQLUI/SmokeTests/Layouts`, and passed into the widget pipeline.
 - Unavailable repository selection: repository smoke paths also select `Unavailable` and verify load/save report `bBackendUnavailable` cleanly.
 - SQLite read-only repository proof: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, instantiates `USQLUISQLiteLayoutRepository` directly, verifies `ListLayouts` metadata and tags, verifies `LoadLayout` deserializes and validates the document, verifies unsupported `SaveLayout`, `RemoveLayout`, and `ClearLayouts` calls are rejected without mutating the prepared database, removes the database, and passes the default layout through the widget pipeline.
+- SQLite SaveLayout repository proof: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteSaveLayoutRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, and `LoadLayout`, saves the same layout id a second time, verifies the latest revision and updated metadata are read back, removes the database, and passes the default layout through the widget pipeline.
 
 The default, JSON fixture, in-memory, JSON file, and unavailable paths do not use SQLite. SQLite smoke paths are optional and write only under their `Saved/SQLUI/SmokeTests/...` directories. No smoke path uses Content, maps, viewport attachment, or durable project assets.
 
 ## Future SQLite Repository Direction
 
-The read-only SQLite proof now sits behind the same repository shape for `ListLayouts` and `LoadLayout`, but writable SQLite persistence remains future work. Callers should eventually be able to request, save, list, remove, and clear layouts without knowing whether the backing store is in memory, JSON files, or SQLite.
+The SQLite repository proof now sits behind the same repository shape for `ListLayouts`, `LoadLayout`, and writable `SaveLayout`, but full SQLite persistence remains future work. Callers should eventually be able to request, save, list, remove, and clear layouts without knowing whether the backing store is in memory, JSON files, or SQLite.
 
 The proposed SQLite schema is drafted in [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md). That document defines the planned tables, keys, indexes, revision/history behavior, soft-delete semantics for normal remove operations, destructive clear behavior for scoped cleanup, migration/versioning expectations, validation boundaries, threading expectations, and repository-operation mapping.
 
@@ -169,7 +172,7 @@ The SQLite implementation should:
 - Preserve the current document validation boundary before saving and after loading.
 - Use `Saved/SQLUI/...` for writable runtime database state, with any seed-copy behavior handled before mutation.
 
-SQLite write persistence is intentionally not implemented yet. Factory selection, writable `SaveLayout`, soft-delete `RemoveLayout`, destructive scoped `ClearLayouts`, production migration integration, async database execution, and packaged-build validation should happen in later implementation work.
+SQLite persistence is still incomplete. Factory selection, soft-delete `RemoveLayout`, destructive scoped `ClearLayouts`, production migration integration, async database execution, and packaged-build validation should happen in later implementation work.
 
 ## Suggested Next Steps
 

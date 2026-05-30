@@ -130,6 +130,66 @@ struct SQLUISAMPLES_API FSQLUISampleSQLiteReadOnlyLayoutRepositorySmokeResult
 };
 
 USTRUCT(BlueprintType)
+struct SQLUISAMPLES_API FSQLUISampleSQLiteSaveLayoutRepositorySmokeResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bDatabasePrepared = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bFirstSaveSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bListAfterSaveSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bListedSavedMetadataFound = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bLoadAfterSaveSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bLoadedDocumentValid = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSecondSaveSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bListAfterSecondSaveSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bListedUpdatedMetadataFound = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bLoadAfterSecondSaveSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bLatestRevisionLoaded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bDatabaseRemoved = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	int32 ListedLayoutCount = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FString SavedLayoutId;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FString LoadedLayoutId;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FString DatabasePath;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FString ErrorMessage;
+};
+
+USTRUCT(BlueprintType)
 struct SQLUISAMPLES_API FSQLUISampleSmokeTestRequest
 {
 	GENERATED_BODY()
@@ -178,6 +238,9 @@ struct SQLUISAMPLES_API FSQLUISampleSmokeTestRequest
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bUseSQLiteReadOnlyLayoutRepository = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bUseSQLiteSaveLayoutRepository = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	FString SampleFilterText = TEXT("Smoke test");
@@ -313,6 +376,12 @@ struct SQLUISAMPLES_API FSQLUISampleSmokeTestResult
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	FSQLUISampleSQLiteReadOnlyLayoutRepositorySmokeResult SQLiteReadOnlyLayoutRepository;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bUsedSQLiteSaveLayoutRepository = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FSQLUISampleSQLiteSaveLayoutRepositorySmokeResult SQLiteSaveLayoutRepository;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	TArray<FString> Errors;

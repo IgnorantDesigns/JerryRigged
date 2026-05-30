@@ -1,6 +1,6 @@
 # SQLUI SQLite Backend Evaluation
 
-This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, an optional smoke-safe open/close probe under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`, a minimal SQLUICore async-boundary probe, an optional smoke-only migration-runner probe under `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`, an optional planned layout schema migration probe under `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, an optional read/list/load mapping probe under `Saved/SQLUI/SmokeTests/LayoutReadProbe`, and a read-only `USQLUISQLiteLayoutRepository` proof under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`; it does not add SQLite writes, SQLite repository factory selection, widgets, maps, assets, CI, or persistent database files.
+This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, an optional smoke-safe open/close probe under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`, a minimal SQLUICore async-boundary probe, an optional smoke-only migration-runner probe under `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`, an optional planned layout schema migration probe under `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, an optional read/list/load mapping probe under `Saved/SQLUI/SmokeTests/LayoutReadProbe`, a read-only `USQLUISQLiteLayoutRepository` proof under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, and a writable `SaveLayout` repository proof under `Saved/SQLUI/SmokeTests/SQLiteSaveLayoutRepository`; it does not add SQLite repository factory selection, SQLite `RemoveLayout`, SQLite `ClearLayouts`, async SQLite workers, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -15,13 +15,13 @@ This evaluation compares backend options before implementation work starts. The 
 
 ## Non-Goals
 
-- Do not implement writable SQLite layout persistence in this step.
+- Do not treat the current SQLite `SaveLayout` proof as complete writable SQLite layout persistence.
 - Do not add `ESQLUILayoutRepositoryBackend::SQLite` or select SQLite in repository factory behavior.
 - Do not add dependencies beyond the minimal engine `SQLiteCore` plugin/module wiring used for the compile proof.
 - Do not add Marketplace dependencies, third-party Unreal plugins, or vendored third-party source.
-- Do not implement SQLite `SaveLayout`, `RemoveLayout`, or `ClearLayouts`.
+- Do not implement SQLite `RemoveLayout` or `ClearLayouts`.
 - Do not modify widgets, CI, assets, maps, or persistent database files.
-- Do not open, create, or write SQLite databases outside the optional smoke-safe probe paths under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`, `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`, `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, `Saved/SQLUI/SmokeTests/LayoutReadProbe`, and `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`.
+- Do not open, create, or write SQLite databases outside the optional smoke-safe probe paths under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`, `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`, `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, `Saved/SQLUI/SmokeTests/LayoutReadProbe`, `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, and `Saved/SQLUI/SmokeTests/SQLiteSaveLayoutRepository`.
 - Do not treat this evaluation as proof that packaged builds work. Packaging still needs implementation-time validation.
 
 ## Local Verification
@@ -189,23 +189,27 @@ The layout read proof does not:
 - Add async SQLite database workers.
 - Modify widgets or default smoke-test behavior.
 
-SQLUICore also includes a read-only SQLite layout repository proof.
+SQLUICore also includes a SQLite layout repository proof.
 
-The read-only repository proof:
+The repository proof:
 
 - Adds `USQLUISQLiteLayoutRepository` in SQLUICore.
-- Opens an already-prepared SQLite database with `SQLiteCore` read-only.
+- Opens an already-prepared SQLite database with `SQLiteCore`.
 - Implements repository-shaped `ListLayouts` and `LoadLayout` reads.
+- Implements `SaveLayout` when configured with `bReadOnly = false`.
 - Reads metadata from `layouts`, tags from `layout_tags`, and current document JSON from `layout_revisions`.
+- Saves validated documents by upserting `layouts`, inserting immutable `layout_revisions`, replacing `layout_tags`, and committing a transaction.
 - Deserializes and validates loaded documents with existing SQLUI layout JSON helpers.
-- Keeps `SaveLayout`, `RemoveLayout`, and `ClearLayouts` explicitly unsupported with read-only errors.
+- Keeps `SaveLayout` explicitly rejected when configured read-only.
+- Keeps `RemoveLayout` and `ClearLayouts` explicitly unsupported with read-only errors.
 - Is available through an optional smoke-test flag that prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, verifies read-only write rejection, verifies the layout remains readable afterward, and removes the database.
+- Is available through a second optional smoke-test flag that prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteSaveLayoutRepository`, verifies `SaveLayout`, verifies `ListLayouts` and `LoadLayout`, saves the same layout id again, verifies the latest revision and updated metadata are read back, and removes the database.
 
-The read-only repository proof does not:
+The repository proof does not:
 
 - Add `ESQLUILayoutRepositoryBackend::SQLite`.
 - Change `USQLUILayoutRepositoryFactory`.
-- Implement SQLite writes.
+- Implement SQLite `RemoveLayout` or `ClearLayouts`.
 - Add async SQLite database workers.
 - Modify widgets or default smoke-test behavior.
 
@@ -214,7 +218,7 @@ Remaining blockers before SQLite layout persistence:
 - Packaged-build validation.
 - Production SQLite worker boundary and shutdown policy.
 - Production migration integration behind the future SQLite repository.
-- Repository write/remove/clear implementation.
+- Repository remove/clear implementation.
 - Repository factory selection.
 - Full writable SQLite repository lifecycle smoke coverage.
 

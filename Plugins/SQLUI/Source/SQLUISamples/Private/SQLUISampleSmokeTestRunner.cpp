@@ -2,6 +2,7 @@
 
 #include "Database/SQLUIDatabaseAsyncRunner.h"
 #include "Database/SQLUISQLiteLayoutReadProbe.h"
+#include "Database/SQLUISQLiteLayoutSchemaMigration.h"
 #include "Database/SQLUISQLiteMigrationRunner.h"
 #include "Database/SQLUISQLiteProbe.h"
 #include "Async/TaskGraphInterfaces.h"
@@ -909,6 +910,322 @@ FSQLUISampleSQLiteReadOnlyLayoutRepositorySmokeResult RunSQLUISampleSQLiteReadOn
 	return Result;
 }
 
+void AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+	FSQLUISampleSQLiteSaveLayoutRepositorySmokeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleSQLiteSaveLayoutRepositoryDatabasePath()
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("SQLiteSaveLayoutRepository"),
+		TEXT("SQLiteSaveLayoutRepository.db"));
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+bool DeleteSQLUISampleSQLiteSaveLayoutRepositoryFiles(
+	const FString& DatabasePath,
+	FSQLUISampleSQLiteSaveLayoutRepositorySmokeResult& Result)
+{
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite SaveLayout repository smoke failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+FSQLUILayoutDocument MakeSQLUISampleSQLiteSaveLayoutRepositoryDocument()
+{
+	FSQLUILayoutDocument Document;
+	Document.Version.SchemaVersion = 1;
+	Document.Version.Revision = 1;
+	Document.Version.Label = TEXT("SQLite SaveLayout Repository Probe");
+	Document.Metadata.LayoutId = TEXT("sqlui.smoke.sqlite-save-layout-repository");
+	Document.Metadata.DisplayName = TEXT("SQLUI SQLite SaveLayout Repository Probe");
+	Document.Metadata.Description = TEXT("Smoke/probe layout for SQLite SaveLayout repository mapping.");
+	Document.Metadata.CreatedBy = TEXT("SQLUISamples");
+	Document.Metadata.CreatedAtUtc = TEXT("2026-05-30T00:00:00Z");
+	Document.Metadata.UpdatedAtUtc = Document.Metadata.CreatedAtUtc;
+	Document.Metadata.Tags.Add(TEXT("sqlite"));
+	Document.Metadata.Tags.Add(TEXT("smoke"));
+	Document.Metadata.Tags.Add(TEXT("save-layout"));
+	Document.Metadata.SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteSaveLayoutRepository"));
+	Document.RootWidgetId = TEXT("SQLUI.SQLite.SaveLayoutRepository.Root");
+
+	FSQLUILayoutNode RootNode;
+	RootNode.WidgetId = Document.RootWidgetId;
+	RootNode.WidgetTypeKey = TEXT("SQLUI.ProbeRoot");
+	RootNode.Properties.Add(TEXT("Text"), Document.Metadata.DisplayName);
+	RootNode.Tags.Add(TEXT("sqlite"));
+	RootNode.Tags.Add(TEXT("save-layout"));
+	RootNode.SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteSaveLayoutRepository"));
+
+	Document.Nodes.Add(RootNode);
+	return Document;
+}
+
+FSQLUILayoutDocument MakeSQLUISampleSQLiteSaveLayoutRepositoryUpdatedDocument(
+	const FSQLUILayoutDocument& OriginalDocument)
+{
+	FSQLUILayoutDocument UpdatedDocument = OriginalDocument;
+	UpdatedDocument.Version.Label = TEXT("SQLite SaveLayout Repository Probe Updated");
+	UpdatedDocument.Metadata.DisplayName = TEXT("SQLUI SQLite SaveLayout Repository Probe Updated");
+	UpdatedDocument.Metadata.Description = TEXT("Updated smoke/probe layout for SQLite SaveLayout repository mapping.");
+	UpdatedDocument.Metadata.UpdatedAtUtc = TEXT("2026-05-30T00:01:00Z");
+	UpdatedDocument.Metadata.Tags.Add(TEXT("updated"));
+	if (UpdatedDocument.Nodes.Num() > 0)
+	{
+		UpdatedDocument.Nodes[0].Properties.Add(TEXT("Text"), UpdatedDocument.Metadata.DisplayName);
+	}
+	return UpdatedDocument;
+}
+
+FSQLUISampleSQLiteSaveLayoutRepositorySmokeResult RunSQLUISampleSQLiteSaveLayoutRepositorySmoke(
+	UObject* Outer)
+{
+	FSQLUISampleSQLiteSaveLayoutRepositorySmokeResult Result;
+	Result.DatabasePath = MakeSQLUISampleSQLiteSaveLayoutRepositoryDatabasePath();
+
+	const FSQLUISQLiteLayoutSchemaMigrationProbeResult SchemaResult =
+		FSQLUISQLiteLayoutSchemaMigration::RunProbe(Result.DatabasePath, false);
+	Result.bDatabasePrepared = SchemaResult.bSucceeded && SchemaResult.bMigrationSucceeded;
+	if (!Result.bDatabasePrepared)
+	{
+		AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+			Result,
+			SchemaResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite SaveLayout repository smoke failed: could not prepare probe database.")
+				: SchemaResult.ErrorMessage);
+		Result.bDatabaseRemoved =
+			DeleteSQLUISampleSQLiteSaveLayoutRepositoryFiles(Result.DatabasePath, Result);
+		return Result;
+	}
+
+	USQLUISQLiteLayoutRepository* Repository =
+		NewObject<USQLUISQLiteLayoutRepository>(IsValid(Outer) ? Outer : GetTransientPackage());
+	if (!IsValid(Repository))
+	{
+		AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite SaveLayout repository smoke failed: could not create repository object."));
+		Result.bDatabaseRemoved =
+			DeleteSQLUISampleSQLiteSaveLayoutRepositoryFiles(Result.DatabasePath, Result);
+		return Result;
+	}
+
+	FSQLUISQLiteLayoutRepositorySettings RepositorySettings;
+	RepositorySettings.DatabasePath = Result.DatabasePath;
+	RepositorySettings.bReadOnly = false;
+	Repository->Configure(RepositorySettings);
+
+	const FSQLUILayoutDocument FirstDocument =
+		MakeSQLUISampleSQLiteSaveLayoutRepositoryDocument();
+	const FSQLUILayoutSaveResult FirstSaveResult = SaveSQLUISampleLayoutToRepository(
+		Repository,
+		TEXT("SQLite SaveLayout repository"),
+		FirstDocument);
+	Result.SavedLayoutId = FirstSaveResult.SavedLayoutId;
+	Result.bFirstSaveSucceeded =
+		FirstSaveResult.bSucceeded
+		&& FirstSaveResult.SavedLayoutId == FirstDocument.Metadata.LayoutId
+		&& FirstSaveResult.Validation.bIsValid;
+	if (!Result.bFirstSaveSucceeded)
+	{
+		AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+			Result,
+			FirstSaveResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite SaveLayout repository smoke failed: first SaveLayout failed.")
+				: FirstSaveResult.ErrorMessage);
+	}
+
+	if (Result.bFirstSaveSucceeded)
+	{
+		const FSQLUILayoutRepositoryListResult ListAfterSaveResult =
+			Repository->ListLayouts();
+		Result.bListAfterSaveSucceeded = ListAfterSaveResult.bSucceeded;
+		Result.ListedLayoutCount = ListAfterSaveResult.Layouts.Num();
+		if (!Result.bListAfterSaveSucceeded)
+		{
+			AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+				Result,
+				ListAfterSaveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite SaveLayout repository smoke failed: ListLayouts failed after first save.")
+					: ListAfterSaveResult.ErrorMessage);
+		}
+		else
+		{
+			Result.bListedSavedMetadataFound =
+				DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListAfterSaveResult.Layouts,
+					FirstDocument.Metadata);
+			if (!Result.bListedSavedMetadataFound)
+			{
+				AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+					Result,
+					TEXT("SQLUI SQLite SaveLayout repository smoke failed: ListLayouts did not include saved metadata and tags after first save."));
+			}
+		}
+
+		const FSQLUILayoutLoadResult LoadAfterSaveResult =
+			LoadSQLUISampleLayoutFromRepository(
+				Repository,
+				TEXT("SQLite SaveLayout repository after first save"),
+				FirstDocument.Metadata.LayoutId);
+		Result.bLoadAfterSaveSucceeded = LoadAfterSaveResult.bSucceeded;
+		Result.LoadedLayoutId = LoadAfterSaveResult.Document.Metadata.LayoutId;
+		Result.bLoadedDocumentValid =
+			LoadAfterSaveResult.bSucceeded
+			&& LoadAfterSaveResult.Validation.bIsValid
+			&& LoadAfterSaveResult.Document.Metadata.LayoutId == FirstDocument.Metadata.LayoutId
+			&& LoadAfterSaveResult.Document.Version.Revision == 1;
+		if (!Result.bLoadAfterSaveSucceeded)
+		{
+			AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+				Result,
+				LoadAfterSaveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite SaveLayout repository smoke failed: LoadLayout failed after first save.")
+					: LoadAfterSaveResult.ErrorMessage);
+		}
+		else if (!Result.bLoadedDocumentValid)
+		{
+			AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+				Result,
+				TEXT("SQLUI SQLite SaveLayout repository smoke failed: loaded document after first save was invalid or not revision 1."));
+		}
+	}
+
+	const FSQLUILayoutDocument UpdatedDocument =
+		MakeSQLUISampleSQLiteSaveLayoutRepositoryUpdatedDocument(FirstDocument);
+	if (Result.bLoadedDocumentValid)
+	{
+		const FSQLUILayoutSaveResult SecondSaveResult = SaveSQLUISampleLayoutToRepository(
+			Repository,
+			TEXT("SQLite SaveLayout repository second save"),
+			UpdatedDocument);
+		Result.bSecondSaveSucceeded =
+			SecondSaveResult.bSucceeded
+			&& SecondSaveResult.SavedLayoutId == UpdatedDocument.Metadata.LayoutId
+			&& SecondSaveResult.Validation.bIsValid;
+		if (!Result.bSecondSaveSucceeded)
+		{
+			AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+				Result,
+				SecondSaveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite SaveLayout repository smoke failed: second SaveLayout failed.")
+					: SecondSaveResult.ErrorMessage);
+		}
+	}
+
+	if (Result.bSecondSaveSucceeded)
+	{
+		const FSQLUILayoutRepositoryListResult ListAfterSecondSaveResult =
+			Repository->ListLayouts();
+		Result.bListAfterSecondSaveSucceeded = ListAfterSecondSaveResult.bSucceeded;
+		if (!Result.bListAfterSecondSaveSucceeded)
+		{
+			AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+				Result,
+				ListAfterSecondSaveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite SaveLayout repository smoke failed: ListLayouts failed after second save.")
+					: ListAfterSecondSaveResult.ErrorMessage);
+		}
+		else
+		{
+			Result.bListedUpdatedMetadataFound =
+				DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListAfterSecondSaveResult.Layouts,
+					UpdatedDocument.Metadata);
+			if (!Result.bListedUpdatedMetadataFound)
+			{
+				AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+					Result,
+					TEXT("SQLUI SQLite SaveLayout repository smoke failed: ListLayouts did not include updated metadata and tags after second save."));
+			}
+		}
+
+		const FSQLUILayoutLoadResult LoadAfterSecondSaveResult =
+			LoadSQLUISampleLayoutFromRepository(
+				Repository,
+				TEXT("SQLite SaveLayout repository after second save"),
+				UpdatedDocument.Metadata.LayoutId);
+		Result.bLoadAfterSecondSaveSucceeded = LoadAfterSecondSaveResult.bSucceeded;
+		Result.LoadedLayoutId = LoadAfterSecondSaveResult.Document.Metadata.LayoutId;
+		Result.bLatestRevisionLoaded =
+			LoadAfterSecondSaveResult.bSucceeded
+			&& LoadAfterSecondSaveResult.Validation.bIsValid
+			&& LoadAfterSecondSaveResult.Document.Metadata.LayoutId == UpdatedDocument.Metadata.LayoutId
+			&& LoadAfterSecondSaveResult.Document.Metadata.DisplayName == UpdatedDocument.Metadata.DisplayName
+			&& LoadAfterSecondSaveResult.Document.Version.Revision == 2;
+		if (!Result.bLoadAfterSecondSaveSucceeded)
+		{
+			AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+				Result,
+				LoadAfterSecondSaveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite SaveLayout repository smoke failed: LoadLayout failed after second save.")
+					: LoadAfterSecondSaveResult.ErrorMessage);
+		}
+		else if (!Result.bLatestRevisionLoaded)
+		{
+			AppendSQLUISampleSQLiteSaveLayoutRepositoryError(
+				Result,
+				TEXT("SQLUI SQLite SaveLayout repository smoke failed: LoadLayout did not return the latest saved revision."));
+		}
+	}
+
+	Result.bDatabaseRemoved =
+		DeleteSQLUISampleSQLiteSaveLayoutRepositoryFiles(Result.DatabasePath, Result);
+
+	Result.bSucceeded =
+		Result.bDatabasePrepared
+		&& Result.bFirstSaveSucceeded
+		&& Result.bListAfterSaveSucceeded
+		&& Result.bListedSavedMetadataFound
+		&& Result.bLoadAfterSaveSucceeded
+		&& Result.bLoadedDocumentValid
+		&& Result.bSecondSaveSucceeded
+		&& Result.bListAfterSecondSaveSucceeded
+		&& Result.bListedUpdatedMetadataFound
+		&& Result.bLoadAfterSecondSaveSucceeded
+		&& Result.bLatestRevisionLoaded
+		&& Result.bDatabaseRemoved;
+
+	return Result;
+}
+
 FSQLUISampleSmokeTestLayoutResult ResolveSQLUISampleSmokeTestLayoutDocument(
 	UObject* Outer,
 	const FSQLUISampleSmokeTestRequest& Request)
@@ -1584,6 +1901,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.SQLiteReadOnlyLayoutRepository.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI SQLite read-only layout repository smoke failed.")
 					: Result.SQLiteReadOnlyLayoutRepository.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseSQLiteSaveLayoutRepository)
+	{
+		Result.bUsedSQLiteSaveLayoutRepository = true;
+		Result.SQLiteSaveLayoutRepository =
+			RunSQLUISampleSQLiteSaveLayoutRepositorySmoke(Outer);
+		if (!Result.SQLiteSaveLayoutRepository.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.SQLiteSaveLayoutRepository.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite SaveLayout repository smoke failed.")
+					: Result.SQLiteSaveLayoutRepository.ErrorMessage);
 		}
 	}
 
