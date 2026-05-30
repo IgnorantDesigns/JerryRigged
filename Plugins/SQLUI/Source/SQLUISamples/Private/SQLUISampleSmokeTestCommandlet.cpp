@@ -764,6 +764,116 @@ void LogSQLUISampleSmokeTestSQLiteReadOnlyLayoutRepositoryResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteSaveLayoutRepositoryResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteSaveLayoutRepository)
+	{
+		return;
+	}
+
+	const FSQLUISampleSQLiteSaveLayoutRepositorySmokeResult& RepositoryResult =
+		Result.SQLiteSaveLayoutRepository;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository database path: '%s'"),
+		*RepositoryResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository database prepared: %s"),
+		RepositoryResult.bDatabasePrepared ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository first save succeeded: %s"),
+		RepositoryResult.bFirstSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository list after save succeeded: %s"),
+		RepositoryResult.bListAfterSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository listed saved metadata found: %s"),
+		RepositoryResult.bListedSavedMetadataFound ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository load after save succeeded: %s"),
+		RepositoryResult.bLoadAfterSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository loaded document valid: %s"),
+		RepositoryResult.bLoadedDocumentValid ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository second save succeeded: %s"),
+		RepositoryResult.bSecondSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository list after second save succeeded: %s"),
+		RepositoryResult.bListAfterSecondSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository listed updated metadata found: %s"),
+		RepositoryResult.bListedUpdatedMetadataFound ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository load after second save succeeded: %s"),
+		RepositoryResult.bLoadAfterSecondSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository latest revision loaded: %s"),
+		RepositoryResult.bLatestRevisionLoaded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository saved layout id: '%s' loaded layout id: '%s'"),
+		*RepositoryResult.SavedLayoutId,
+		*RepositoryResult.LoadedLayoutId);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite SaveLayout repository database removed: %s"),
+		RepositoryResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (RepositoryResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite SaveLayout repository succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite SaveLayout repository failed: %s"),
+			*RepositoryResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -806,6 +916,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteReadOnlyLayoutRepositoryResult(Result);
+	LogSQLUISampleSmokeTestSQLiteSaveLayoutRepositoryResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -893,6 +1004,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteReadOnlyLayoutRepository =
 		FParse::Param(*Params, TEXT("UseSQLiteReadOnlyLayoutRepository"))
 		|| FParse::Param(*Params, TEXT("SQLiteReadOnlyLayoutRepository"));
+	const bool bUseSQLiteSaveLayoutRepository =
+		FParse::Param(*Params, TEXT("UseSQLiteSaveLayoutRepository"))
+		|| FParse::Param(*Params, TEXT("SQLiteSaveLayoutRepository"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -947,6 +1061,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite read-only layout repository selected: true"));
 	}
 
+	if (bUseSQLiteSaveLayoutRepository)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite SaveLayout repository selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -969,6 +1088,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteLayoutSchemaMigrationProbe = bUseSQLiteLayoutSchemaMigrationProbe;
 		Request.bUseSQLiteLayoutReadProbe = bUseSQLiteLayoutReadProbe;
 		Request.bUseSQLiteReadOnlyLayoutRepository = bUseSQLiteReadOnlyLayoutRepository;
+		Request.bUseSQLiteSaveLayoutRepository = bUseSQLiteSaveLayoutRepository;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 

@@ -24,6 +24,8 @@ param(
 
 	[switch]$UseSQLiteReadOnlyLayoutRepository,
 
+	[switch]$UseSQLiteSaveLayoutRepository,
+
 	[Alias('?')]
 	[switch]$Help
 )
@@ -80,6 +82,9 @@ Parameters:
   -UseSQLiteReadOnlyLayoutRepository
       Run the optional SQLUICore SQLite read-only layout repository smoke path.
 
+  -UseSQLiteSaveLayoutRepository
+      Run the optional SQLUICore SQLite SaveLayout repository smoke path.
+
   -Help, -?
       Show this help.
 
@@ -94,6 +99,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteLayoutSchemaMigrationProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteLayoutReadProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteReadOnlyLayoutRepository
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteSaveLayoutRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -UnrealEditorCmdPath "C:\UE\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -ProjectPath ".\JerryRigged.uproject"
 '@
@@ -243,6 +249,11 @@ if ($UseSQLiteLayoutReadProbe)
 if ($UseSQLiteReadOnlyLayoutRepository)
 {
 	$CommandletArgs += '-SQLiteReadOnlyLayoutRepository'
+}
+
+if ($UseSQLiteSaveLayoutRepository)
+{
+	$CommandletArgs += '-SQLiteSaveLayoutRepository'
 }
 
 $PrintableCommandParts = @($ResolvedUnrealEditorCmdPath) + $CommandletArgs
