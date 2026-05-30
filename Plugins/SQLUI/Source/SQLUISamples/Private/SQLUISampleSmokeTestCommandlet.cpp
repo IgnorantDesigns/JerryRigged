@@ -874,6 +874,118 @@ void LogSQLUISampleSmokeTestSQLiteSaveLayoutRepositoryResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteRemoveLayoutRepositoryResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteRemoveLayoutRepository)
+	{
+		return;
+	}
+
+	const FSQLUISampleSQLiteRemoveLayoutRepositorySmokeResult& RepositoryResult =
+		Result.SQLiteRemoveLayoutRepository;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository database path: '%s'"),
+		*RepositoryResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository database prepared: %s"),
+		RepositoryResult.bDatabasePrepared ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository save succeeded: %s"),
+		RepositoryResult.bSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository list before remove succeeded: %s"),
+		RepositoryResult.bListBeforeRemoveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository listed metadata found before remove: %s"),
+		RepositoryResult.bListedMetadataFoundBeforeRemove ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository load before remove succeeded: %s"),
+		RepositoryResult.bLoadBeforeRemoveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository remove succeeded: %s"),
+		RepositoryResult.bRemoveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository removed: %s"),
+		RepositoryResult.bRemoved ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository list after remove succeeded: %s"),
+		RepositoryResult.bListAfterRemoveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository metadata absent after remove: %s"),
+		RepositoryResult.bMetadataAbsentAfterRemove ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository load after remove failed as expected: %s"),
+		RepositoryResult.bLoadAfterRemoveFailedAsExpected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository revisions preserved: %s"),
+		RepositoryResult.bRevisionsPreserved ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository saved layout id: '%s' removed layout id: '%s' loaded layout id: '%s' revision count after remove: %d"),
+		*RepositoryResult.SavedLayoutId,
+		*RepositoryResult.RemovedLayoutId,
+		*RepositoryResult.LoadedLayoutId,
+		RepositoryResult.RevisionCountAfterRemove);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite RemoveLayout repository database removed: %s"),
+		RepositoryResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (RepositoryResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite RemoveLayout repository succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite RemoveLayout repository failed: %s"),
+			*RepositoryResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -917,6 +1029,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteReadOnlyLayoutRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteSaveLayoutRepositoryResult(Result);
+	LogSQLUISampleSmokeTestSQLiteRemoveLayoutRepositoryResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -1007,6 +1120,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteSaveLayoutRepository =
 		FParse::Param(*Params, TEXT("UseSQLiteSaveLayoutRepository"))
 		|| FParse::Param(*Params, TEXT("SQLiteSaveLayoutRepository"));
+	const bool bUseSQLiteRemoveLayoutRepository =
+		FParse::Param(*Params, TEXT("UseSQLiteRemoveLayoutRepository"))
+		|| FParse::Param(*Params, TEXT("SQLiteRemoveLayoutRepository"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -1066,6 +1182,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite SaveLayout repository selected: true"));
 	}
 
+	if (bUseSQLiteRemoveLayoutRepository)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite RemoveLayout repository selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -1089,6 +1210,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteLayoutReadProbe = bUseSQLiteLayoutReadProbe;
 		Request.bUseSQLiteReadOnlyLayoutRepository = bUseSQLiteReadOnlyLayoutRepository;
 		Request.bUseSQLiteSaveLayoutRepository = bUseSQLiteSaveLayoutRepository;
+		Request.bUseSQLiteRemoveLayoutRepository = bUseSQLiteRemoveLayoutRepository;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 

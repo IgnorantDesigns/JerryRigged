@@ -88,6 +88,18 @@ FSQLUILayoutRepositoryRemoveResult MakeSQLUISQLiteLayoutReadOnlyRemoveFailure(
 	return Result;
 }
 
+FSQLUILayoutRepositoryRemoveResult MakeSQLUISQLiteLayoutRemoveFailure(
+	const FString& LayoutId,
+	const FString& ErrorMessage)
+{
+	FSQLUILayoutRepositoryRemoveResult Result;
+	Result.bSucceeded = false;
+	Result.RemovedLayoutId = LayoutId;
+	Result.bRemoved = false;
+	Result.ErrorMessage = ErrorMessage;
+	return Result;
+}
+
 FSQLUILayoutRepositoryClearResult MakeSQLUISQLiteLayoutReadOnlyClearFailure()
 {
 	FSQLUILayoutRepositoryClearResult Result;
@@ -352,6 +364,59 @@ bool TryQuerySQLUISQLiteLayoutNextRevision(
 	return true;
 }
 
+bool TryQuerySQLUISQLiteLayoutActiveRowCount(
+	FSQLiteDatabase& Database,
+	const FString& LayoutId,
+	int32& OutActiveRowCount,
+	FString& OutErrorMessage)
+{
+	OutActiveRowCount = 0;
+	OutErrorMessage.Empty();
+
+	FSQLitePreparedStatement Statement = Database.PrepareStatement(
+		TEXT("SELECT COUNT(*) ")
+		TEXT("FROM layouts ")
+		TEXT("WHERE layout_id = ? AND b_deleted = 0;"));
+
+	if (!Statement.IsValid())
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout repository could not prepare active-row query for layout id '%s'. SQLiteCore error: %s"),
+			*LayoutId,
+			*Database.GetLastError());
+		return false;
+	}
+
+	if (!Statement.SetBindingValueByIndex(1, LayoutId))
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout repository could not bind active-row query for layout id '%s'. SQLiteCore error: %s"),
+			*LayoutId,
+			*Database.GetLastError());
+		return false;
+	}
+
+	const int64 RowCount = Statement.Execute(
+		[&OutActiveRowCount](const FSQLitePreparedStatement& Row)
+		{
+			return Row.GetColumnValueByIndex(0, OutActiveRowCount)
+				? ESQLitePreparedStatementExecuteRowResult::Continue
+				: ESQLitePreparedStatementExecuteRowResult::Error;
+		});
+
+	if (RowCount != 1)
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout repository active-row query failed for layout id '%s'. RowCount=%lld SQLiteCore error: %s"),
+			*LayoutId,
+			RowCount,
+			*Database.GetLastError());
+		return false;
+	}
+
+	return true;
+}
+
 bool TryUpsertSQLUISQLiteLayoutRow(
 	FSQLiteDatabase& Database,
 	const FSQLUILayoutDocument& Document,
@@ -558,6 +623,79 @@ bool TrySaveSQLUISQLiteLayoutDocument(
 		Database,
 		TEXT("COMMIT;"),
 		TEXT("commit SaveLayout transaction"),
+		OutErrorMessage))
+	{
+		Database.Execute(TEXT("ROLLBACK;"));
+		return false;
+	}
+
+	return true;
+}
+
+bool TrySoftDeleteSQLUISQLiteLayout(
+	FSQLiteDatabase& Database,
+	const FString& LayoutId,
+	bool& bOutRemoved,
+	FString& OutErrorMessage)
+{
+	bOutRemoved = false;
+	OutErrorMessage.Empty();
+
+	if (!TryExecuteSQLUISQLiteLayoutStatement(
+		Database,
+		TEXT("BEGIN TRANSACTION;"),
+		TEXT("begin RemoveLayout transaction"),
+		OutErrorMessage))
+	{
+		return false;
+	}
+
+	int32 ActiveRowCount = 0;
+	if (!TryQuerySQLUISQLiteLayoutActiveRowCount(
+		Database,
+		LayoutId,
+		ActiveRowCount,
+		OutErrorMessage))
+	{
+		Database.Execute(TEXT("ROLLBACK;"));
+		return false;
+	}
+
+	if (ActiveRowCount > 0)
+	{
+		FSQLitePreparedStatement Statement = Database.PrepareStatement(
+			TEXT("UPDATE layouts ")
+			TEXT("SET b_deleted = 1 ")
+			TEXT("WHERE layout_id = ? AND b_deleted = 0;"));
+
+		if (!Statement.IsValid())
+		{
+			OutErrorMessage = FString::Printf(
+				TEXT("SQLUI SQLite layout repository could not prepare soft-delete statement for layout id '%s'. SQLiteCore error: %s"),
+				*LayoutId,
+				*Database.GetLastError());
+			Database.Execute(TEXT("ROLLBACK;"));
+			return false;
+		}
+
+		if (!Statement.SetBindingValueByIndex(1, LayoutId)
+			|| !Statement.Execute())
+		{
+			OutErrorMessage = FString::Printf(
+				TEXT("SQLUI SQLite layout repository could not soft-delete layout id '%s'. SQLiteCore error: %s"),
+				*LayoutId,
+				*Database.GetLastError());
+			Database.Execute(TEXT("ROLLBACK;"));
+			return false;
+		}
+
+		bOutRemoved = true;
+	}
+
+	if (!TryExecuteSQLUISQLiteLayoutStatement(
+		Database,
+		TEXT("COMMIT;"),
+		TEXT("commit RemoveLayout transaction"),
 		OutErrorMessage))
 	{
 		Database.Execute(TEXT("ROLLBACK;"));
@@ -939,7 +1077,52 @@ FSQLUILayoutRepositoryListResult USQLUISQLiteLayoutRepository::ListLayouts() con
 FSQLUILayoutRepositoryRemoveResult USQLUISQLiteLayoutRepository::RemoveLayout(
 	const FString& LayoutId)
 {
-	return MakeSQLUISQLiteLayoutReadOnlyRemoveFailure(LayoutId);
+	if (Settings.bReadOnly)
+	{
+		return MakeSQLUISQLiteLayoutReadOnlyRemoveFailure(LayoutId);
+	}
+
+	if (LayoutId.IsEmpty())
+	{
+		return MakeSQLUISQLiteLayoutRemoveFailure(
+			LayoutId,
+			SQLUISQLiteLayoutRepositoryEmptyLayoutIdMessage);
+	}
+
+	const FString DatabasePath = GetResolvedDatabasePath();
+	FString ErrorMessage;
+	FSQLiteDatabase Database;
+	if (!TryOpenSQLUISQLiteLayoutWriteDatabase(
+		DatabasePath,
+		TEXT("remove layout"),
+		Database,
+		ErrorMessage))
+	{
+		return MakeSQLUISQLiteLayoutRemoveFailure(LayoutId, ErrorMessage);
+	}
+
+	bool bRemoved = false;
+	const bool bRemoveSucceeded = TrySoftDeleteSQLUISQLiteLayout(
+		Database,
+		LayoutId,
+		bRemoved,
+		ErrorMessage);
+
+	if (!TryCloseSQLUISQLiteLayoutDatabase(Database, TEXT("remove layout"), ErrorMessage))
+	{
+		return MakeSQLUISQLiteLayoutRemoveFailure(LayoutId, ErrorMessage);
+	}
+
+	if (!bRemoveSucceeded)
+	{
+		return MakeSQLUISQLiteLayoutRemoveFailure(LayoutId, ErrorMessage);
+	}
+
+	FSQLUILayoutRepositoryRemoveResult Result;
+	Result.bSucceeded = true;
+	Result.RemovedLayoutId = LayoutId;
+	Result.bRemoved = bRemoved;
+	return Result;
 }
 
 FSQLUILayoutRepositoryClearResult USQLUISQLiteLayoutRepository::ClearLayouts()

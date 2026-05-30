@@ -601,3 +601,100 @@ FSQLUISQLiteLayoutReadProbeResult FSQLUISQLiteLayoutReadProbe::RunProbe(
 
 	return Result;
 }
+
+bool FSQLUISQLiteLayoutReadProbe::CountLayoutRevisions(
+	const FString& DatabasePath,
+	const FString& LayoutId,
+	int32& OutRevisionCount,
+	FString& OutErrorMessage)
+{
+	OutRevisionCount = 0;
+	OutErrorMessage.Empty();
+
+	if (DatabasePath.IsEmpty())
+	{
+		OutErrorMessage = TEXT("SQLUI SQLite layout read probe could not count revisions: database path is empty.");
+		return false;
+	}
+
+	const FString ResolvedDatabasePath = NormalizeSQLUILayoutReadProbePath(DatabasePath);
+
+	if (LayoutId.IsEmpty())
+	{
+		OutErrorMessage = TEXT("SQLUI SQLite layout read probe could not count revisions: layout id is empty.");
+		return false;
+	}
+
+	if (!FPaths::FileExists(ResolvedDatabasePath))
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout read probe could not count revisions: database '%s' does not exist."),
+			*ResolvedDatabasePath);
+		return false;
+	}
+
+	FSQLiteDatabase Database;
+	if (!Database.Open(*ResolvedDatabasePath, ESQLiteDatabaseOpenMode::ReadOnly))
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout read probe could not count revisions: failed to open database '%s' read-only. SQLiteCore error: %s"),
+			*ResolvedDatabasePath,
+			*Database.GetLastError());
+		return false;
+	}
+
+	bool bSucceeded = true;
+	{
+		FSQLitePreparedStatement Statement = Database.PrepareStatement(
+			TEXT("SELECT COUNT(*) ")
+			TEXT("FROM layout_revisions ")
+			TEXT("WHERE layout_id = ?;"));
+
+		if (!Statement.IsValid())
+		{
+			OutErrorMessage = FString::Printf(
+				TEXT("SQLUI SQLite layout read probe could not prepare revision count query for layout id '%s'. SQLiteCore error: %s"),
+				*LayoutId,
+				*Database.GetLastError());
+			bSucceeded = false;
+		}
+		else if (!Statement.SetBindingValueByIndex(1, LayoutId))
+		{
+			OutErrorMessage = FString::Printf(
+				TEXT("SQLUI SQLite layout read probe could not bind revision count query for layout id '%s'. SQLiteCore error: %s"),
+				*LayoutId,
+				*Database.GetLastError());
+			bSucceeded = false;
+		}
+		else
+		{
+			const int64 RowCount = Statement.Execute(
+				[&OutRevisionCount](const FSQLitePreparedStatement& Row)
+				{
+					return Row.GetColumnValueByIndex(0, OutRevisionCount)
+						? ESQLitePreparedStatementExecuteRowResult::Continue
+						: ESQLitePreparedStatementExecuteRowResult::Error;
+				});
+
+			if (RowCount != 1)
+			{
+				OutErrorMessage = FString::Printf(
+					TEXT("SQLUI SQLite layout read probe revision count query failed for layout id '%s'. RowCount=%lld SQLiteCore error: %s"),
+					*LayoutId,
+					RowCount,
+					*Database.GetLastError());
+				bSucceeded = false;
+			}
+		}
+	}
+
+	if (!Database.Close())
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout read probe could not close database after revision count query. SQLiteCore error: %s"),
+			*Database.GetLastError());
+		return false;
+	}
+
+	return bSucceeded;
+}
