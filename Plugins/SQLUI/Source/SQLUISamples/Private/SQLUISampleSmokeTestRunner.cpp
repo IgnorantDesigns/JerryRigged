@@ -1,6 +1,7 @@
 #include "SQLUISampleSmokeTestRunner.h"
 
 #include "Database/SQLUIDatabaseAsyncRunner.h"
+#include "Database/SQLUISQLiteLayoutReadProbe.h"
 #include "Database/SQLUISQLiteMigrationRunner.h"
 #include "Database/SQLUISQLiteProbe.h"
 #include "Async/TaskGraphInterfaces.h"
@@ -867,6 +868,38 @@ FString MakeSQLUISampleSQLiteLayoutSchemaMigrationProbeFailureMessage(
 		Result.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
 }
 
+bool DidSQLUISampleSQLiteLayoutReadProbeSucceed(
+	const FSQLUISQLiteLayoutReadProbeResult& Result)
+{
+	return Result.bSucceeded
+		&& Result.bSchemaMigrationSucceeded
+		&& Result.bSeedInserted
+		&& Result.bListSucceeded
+		&& Result.bListedMetadataFound
+		&& Result.bLoadSucceeded
+		&& Result.bLoadedDocumentValid
+		&& Result.bDatabaseRemoved;
+}
+
+FString MakeSQLUISampleSQLiteLayoutReadProbeFailureMessage(
+	const FSQLUISQLiteLayoutReadProbeResult& Result)
+{
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		return Result.ErrorMessage;
+	}
+
+	return FString::Printf(
+		TEXT("SQLUI SQLite layout read probe failed. SchemaMigrationSucceeded=%s SeedInserted=%s ListSucceeded=%s ListedMetadataFound=%s LoadSucceeded=%s LoadedDocumentValid=%s DatabaseRemoved=%s"),
+		Result.bSchemaMigrationSucceeded ? TEXT("true") : TEXT("false"),
+		Result.bSeedInserted ? TEXT("true") : TEXT("false"),
+		Result.bListSucceeded ? TEXT("true") : TEXT("false"),
+		Result.bListedMetadataFound ? TEXT("true") : TEXT("false"),
+		Result.bLoadSucceeded ? TEXT("true") : TEXT("false"),
+		Result.bLoadedDocumentValid ? TEXT("true") : TEXT("false"),
+		Result.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+}
+
 struct FSQLUISampleDatabaseAsyncProbeState
 {
 	FSQLUIDatabaseAsyncResult Result;
@@ -1167,6 +1200,20 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result,
 				MakeSQLUISampleSQLiteLayoutSchemaMigrationProbeFailureMessage(
 					Result.SQLiteLayoutSchemaMigrationProbe));
+		}
+	}
+
+	if (Request.bUseSQLiteLayoutReadProbe)
+	{
+		Result.bUsedSQLiteLayoutReadProbe = true;
+		Result.SQLiteLayoutReadProbe = FSQLUISQLiteLayoutReadProbe::RunProbe();
+		if (!DidSQLUISampleSQLiteLayoutReadProbeSucceed(Result.SQLiteLayoutReadProbe))
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				MakeSQLUISampleSQLiteLayoutReadProbeFailureMessage(
+					Result.SQLiteLayoutReadProbe));
 		}
 	}
 

@@ -568,6 +568,92 @@ void LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteLayoutReadProbe)
+	{
+		return;
+	}
+
+	const FSQLUISQLiteLayoutReadProbeResult& ProbeResult =
+		Result.SQLiteLayoutReadProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout read probe database path: '%s'"),
+		*ProbeResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout read probe schema migration succeeded: %s"),
+		ProbeResult.bSchemaMigrationSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout read probe seed inserted: %s"),
+		ProbeResult.bSeedInserted ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout read probe list succeeded: %s"),
+		ProbeResult.bListSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout read probe listed metadata found: %s"),
+		ProbeResult.bListedMetadataFound ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout read probe listed layout count: %d"),
+		ProbeResult.ListedLayoutCount);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout read probe load succeeded: %s"),
+		ProbeResult.bLoadSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout read probe loaded document valid: %s"),
+		ProbeResult.bLoadedDocumentValid ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout read probe seed layout id: '%s' loaded layout id: '%s'"),
+		*ProbeResult.SeedLayoutId,
+		*ProbeResult.LoadedLayoutId);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite layout read probe database removed: %s"),
+		ProbeResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite layout read probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite layout read probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -608,6 +694,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestDatabaseAsyncProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(Result);
+	LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -689,6 +776,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteLayoutSchemaMigrationProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteLayoutSchemaMigrationProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteLayoutSchemaMigrationProbe"));
+	const bool bUseSQLiteLayoutReadProbe =
+		FParse::Param(*Params, TEXT("UseSQLiteLayoutReadProbe"))
+		|| FParse::Param(*Params, TEXT("SQLiteLayoutReadProbe"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -733,6 +823,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite layout schema migration probe selected: true"));
 	}
 
+	if (bUseSQLiteLayoutReadProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite layout read probe selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -753,6 +848,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseDatabaseAsyncProbe = bUseDatabaseAsyncProbe;
 		Request.bUseSQLiteMigrationProbe = bUseSQLiteMigrationProbe;
 		Request.bUseSQLiteLayoutSchemaMigrationProbe = bUseSQLiteLayoutSchemaMigrationProbe;
+		Request.bUseSQLiteLayoutReadProbe = bUseSQLiteLayoutReadProbe;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 

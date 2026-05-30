@@ -18,9 +18,11 @@ The optional SQLite migration probe opens a temporary SQLite database under `Sav
 
 The optional SQLite layout schema migration probe opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe`, applies the planned initial layout schema through the SQLUICore migration runner, verifies the expected layout tables and indexes exist, closes the database, and removes the probe database file. This proves the schema DDL can apply locally without adding a SQLite layout repository or repository factory selection.
 
+The optional SQLite layout read probe opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\LayoutReadProbe`, applies the planned initial layout schema, seeds one probe-only layout document into `layouts`, `layout_revisions`, and `layout_tags`, verifies list-style metadata and current-revision document load queries, deserializes and validates the loaded JSON, closes the database, and removes the probe database file. This proves read/list/load mapping against the schema without adding a SQLite layout repository or repository factory selection.
+
 This is a local developer workflow only. It is not CI yet, and it does not assume Unreal Engine is installed on GitHub Actions or any build agent.
 
-The smoke test does not edit maps, levels, Content, persistent database files, or the viewport. It does not add SQLite layout repository behavior or attach widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory. The SQLiteCore probe writes only under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe` and removes `SQLiteCoreProbe.db` after the check. The SQLite migration probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe` and removes `SQLiteMigrationProbe.db` after the check. The SQLite layout schema migration probe writes only under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe` and removes `LayoutSchemaMigrationProbe.db` after the check. The database async probe does not perform file I/O.
+The smoke test does not edit maps, levels, Content, persistent database files, or the viewport. It does not add SQLite layout repository behavior or attach widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory. The SQLiteCore probe writes only under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe` and removes `SQLiteCoreProbe.db` after the check. The SQLite migration probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe` and removes `SQLiteMigrationProbe.db` after the check. The SQLite layout schema migration probe writes only under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe` and removes `LayoutSchemaMigrationProbe.db` after the check. The SQLite layout read probe writes only under `Saved\SQLUI\SmokeTests\LayoutReadProbe` and removes `LayoutReadProbe.db` after the check. The database async probe does not perform file I/O.
 
 ## Build JerryRiggedEditor
 
@@ -143,6 +145,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 The commandlet also accepts `-SQLiteLayoutSchemaMigrationProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
 This path is a layout-schema migration proof only. It does not implement SQLite layout persistence, add repository factory selection, modify Content, edit maps, or leave persistent database files behind.
+
+## Run The SQLite Layout Read Probe
+
+The SQLite layout read probe keeps the same transient commandlet flow, applies the planned initial layout schema to a temporary database under `Saved\SQLUI\SmokeTests\LayoutReadProbe`, seeds one probe-only layout document, verifies list-style metadata and current-revision load queries, deserializes and validates the loaded document JSON, removes the probe database file, and then runs the same default runtime widget pipeline:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteLayoutReadProbe
+```
+
+The commandlet also accepts `-SQLiteLayoutReadProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
+
+This path is a read/list/load mapping proof only. It does not implement SQLite layout repository persistence, repository callbacks, repository factory selection, `SaveLayout`, `RemoveLayout`, `ClearLayouts`, Content changes, map edits, or persistent database files.
 
 ## Expected Results
 
@@ -273,6 +287,25 @@ SQLUI sample smoke test created widget count: 1
 ```
 
 After the probe succeeds, `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe\LayoutSchemaMigrationProbe.db` should not exist.
+
+For the SQLite layout read probe, also look for:
+
+```text
+SQLUI SQLite layout read probe selected: true
+SQLUI SQLite layout read probe schema migration succeeded: true
+SQLUI SQLite layout read probe seed inserted: true
+SQLUI SQLite layout read probe list succeeded: true
+SQLUI SQLite layout read probe listed metadata found: true
+SQLUI SQLite layout read probe load succeeded: true
+SQLUI SQLite layout read probe loaded document valid: true
+SQLUI SQLite layout read probe database removed: true
+SQLUI SQLite layout read probe succeeded.
+SQLUI sample smoke test commandlet succeeded.
+SQLUI sample smoke test root widget valid: true
+SQLUI sample smoke test created widget count: 1
+```
+
+After the probe succeeds, `Saved\SQLUI\SmokeTests\LayoutReadProbe\LayoutReadProbe.db` should not exist.
 
 Some optional pipeline steps may log `Skipped` depending on the current sample request. Failures are logged with `SQLUI sample smoke test commandlet failed.` and the script returns a non-zero exit code.
 

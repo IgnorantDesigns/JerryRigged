@@ -1,6 +1,6 @@
 # SQLUI SQLite Async Backend Plan
 
-This document drafts the async and backend boundary for a future SQLite-backed SQLUI layout repository. The original plan was documentation-only. The current proof work includes minimal `SQLiteCore` availability and open/close probes, a SQLUICore-owned async boundary/probe that runs plain database-style work on a background task and delivers the result back through a game-thread callback, a smoke-only migration-runner probe, and a planned layout schema migration probe. It still does not add SQLite layout persistence, SQLite repository selection, widgets, maps, assets, CI, or persistent database files.
+This document drafts the async and backend boundary for a future SQLite-backed SQLUI layout repository. The original plan was documentation-only. The current proof work includes minimal `SQLiteCore` availability and open/close probes, a SQLUICore-owned async boundary/probe that runs plain database-style work on a background task and delivers the result back through a game-thread callback, a smoke-only migration-runner probe, a planned layout schema migration probe, and a read/list/load mapping probe. It still does not add SQLite layout persistence, SQLite repository selection, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -276,6 +276,8 @@ The optional database async probe exercises the minimal SQLUICore async boundary
 The optional SQLite migration probe exercises only a smoke-safe migration-runner slice. It opens a temporary database under `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`, creates and records a probe migration in `sqlui_schema_migrations`, verifies the row, closes the database, and removes the file. That probe is intentionally separate from the real layout schema migration and does not change repository factory selection or implement SQLite layout persistence.
 
 The optional SQLite layout schema migration probe applies the planned initial layout schema to a temporary database under `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, verifies the expected tables and indexes, closes the database, and removes the file. It proves schema DDL readiness only; repository operations and factory selection remain deferred.
+
+The optional SQLite layout read probe applies the planned initial layout schema to a temporary database under `Saved/SQLUI/SmokeTests/LayoutReadProbe`, seeds one valid probe-only layout document, reads list-style metadata, loads the current revision document JSON, deserializes and validates it, closes the database, and removes the file. It proves read/list/load mapping only; repository callbacks, worker execution, writes, remove/clear behavior, and factory selection remain deferred.
 
 When the SQLite backend is added later, smoke coverage should prove:
 

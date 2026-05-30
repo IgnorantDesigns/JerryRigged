@@ -1,6 +1,6 @@
 # SQLUI SQLite Backend Evaluation
 
-This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, an optional smoke-safe open/close probe under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`, a minimal SQLUICore async-boundary probe, an optional smoke-only migration-runner probe under `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`, and an optional planned layout schema migration probe under `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`; it does not add SQLite layout persistence, SQLite repository selection, widgets, maps, assets, CI, or persistent database files.
+This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, an optional smoke-safe open/close probe under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`, a minimal SQLUICore async-boundary probe, an optional smoke-only migration-runner probe under `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`, an optional planned layout schema migration probe under `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, and an optional read/list/load mapping probe under `Saved/SQLUI/SmokeTests/LayoutReadProbe`; it does not add SQLite layout persistence, SQLite repository selection, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -20,7 +20,7 @@ This evaluation compares backend options before implementation work starts. The 
 - Do not add dependencies beyond the minimal engine `SQLiteCore` plugin/module wiring used for the compile proof.
 - Do not add Marketplace dependencies, third-party Unreal plugins, or vendored third-party source.
 - Do not modify repository C++ code, widgets, CI, assets, maps, or persistent database files.
-- Do not open, create, or write SQLite databases outside the optional smoke-safe probe paths under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`, `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`, and `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`.
+- Do not open, create, or write SQLite databases outside the optional smoke-safe probe paths under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`, `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`, `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, and `Saved/SQLUI/SmokeTests/LayoutReadProbe`.
 - Do not treat this evaluation as proof that packaged builds work. Packaging still needs implementation-time validation.
 
 ## Local Verification
@@ -165,12 +165,36 @@ The layout schema migration proof does not:
 - Add async SQLite database workers.
 - Modify widgets or default smoke-test behavior.
 
+SQLUICore also includes an optional layout read proof.
+
+The layout read proof:
+
+- Resolves a runtime-writable probe database path under `Saved/SQLUI/SmokeTests/LayoutReadProbe`.
+- Applies the planned initial layout schema through the existing schema migration helper.
+- Seeds one valid probe-only layout document into `layouts`, `layout_revisions`, and `layout_tags`.
+- Reads list-style metadata for non-deleted layouts.
+- Loads the current revision document JSON by layout id.
+- Deserializes and validates the loaded SQLUI layout document.
+- Closes the database and removes the probe database file by default after the check.
+- Is available only through the optional smoke-test flag.
+
+The layout read proof does not:
+
+- Add a SQLite layout repository.
+- Add `ESQLUILayoutRepositoryBackend::SQLite`.
+- Change `USQLUILayoutRepositoryFactory`.
+- Implement repository callbacks for SQLite.
+- Implement `SaveLayout`, `RemoveLayout`, or `ClearLayouts` against SQLite.
+- Add async SQLite database workers.
+- Modify widgets or default smoke-test behavior.
+
 Remaining blockers before SQLite layout persistence:
 
 - Packaged-build validation.
 - Production SQLite worker boundary and shutdown policy.
 - Production migration integration behind the future SQLite repository.
-- Repository implementation.
+- Repository write/remove/clear implementation.
+- Repository factory selection.
 - SQLite repository smoke coverage.
 
 ## Evaluation Criteria

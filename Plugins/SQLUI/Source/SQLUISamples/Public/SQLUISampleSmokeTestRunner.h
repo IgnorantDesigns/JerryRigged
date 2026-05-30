@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Database/SQLUIDatabaseAsyncTypes.h"
+#include "Database/SQLUISQLiteLayoutReadProbe.h"
 #include "Database/SQLUISQLiteLayoutSchemaMigration.h"
 #include "Database/SQLUISQLiteMigrationTypes.h"
 #include "Database/SQLUISQLiteProbe.h"
@@ -108,6 +109,9 @@ struct SQLUISAMPLES_API FSQLUISampleSmokeTestRequest
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bUseSQLiteLayoutSchemaMigrationProbe = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bUseSQLiteLayoutReadProbe = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	FString SampleFilterText = TEXT("Smoke test");
@@ -231,6 +235,12 @@ struct SQLUISAMPLES_API FSQLUISampleSmokeTestResult
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	FSQLUISQLiteLayoutSchemaMigrationProbeResult SQLiteLayoutSchemaMigrationProbe;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bUsedSQLiteLayoutReadProbe = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FSQLUISQLiteLayoutReadProbeResult SQLiteLayoutReadProbe;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	TArray<FString> Errors;
