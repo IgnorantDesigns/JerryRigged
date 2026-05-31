@@ -179,6 +179,8 @@ The default, JSON fixture, in-memory, JSON file, and unavailable paths do not us
 
 The current SQLite runtime status is consolidated in [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md). In short, SQLite is explicitly selectable through the repository factory, supports the current layout repository lifecycle, can opt into schema initialization, and can opt into async execution for callback-style `LoadLayout` and `SaveLayout`. SQLite is still not the default backend, the factory still passes settings only, and production packaging, full async service behavior, and migration upgrades beyond the initial schema remain open.
 
+Local packaged-build validation is documented in [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md). That script is a local `RunUAT BuildCookRun` scaffold for checking project packaging compatibility with SQLUI and SQLiteCore wiring; it does not add CI or packaged runtime SQLite lifecycle smoke automation.
+
 The SQLite schema is documented in [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md). That document defines the current planned tables, keys, indexes, revision/history behavior, soft-delete semantics for normal remove operations, destructive clear behavior for scoped cleanup, migration/versioning expectations, validation boundaries, threading expectations, and repository-operation mapping.
 
 The async/backend implementation plan is documented in [`sqlui_sqlite_async_backend_plan.md`](sqlui_sqlite_async_backend_plan.md). That document defines the intended game-thread and worker-thread responsibilities, callback delivery rules, UObject lifetime and shutdown safety, database connection and transaction ownership, migration and seed-copy timing, result mapping, unavailable-backend behavior, logging expectations, smoke-test implications, repository factory fit, and remaining production async work.
@@ -201,7 +203,7 @@ SQLite repository smoke coverage is broad enough for the current local lifecycle
 
 Near-term implementation work can stay small and repository-focused:
 
-1. Validate the `SQLiteCore` path in packaged builds for the target platforms.
+1. Run and expand packaged-build validation for the `SQLiteCore` path on target platforms.
 2. Extend the async database boundary beyond callback-style `LoadLayout` and `SaveLayout` before using SQLite for normal runtime persistence.
 3. Keep SQLite factory selection explicitly configured and unavailable when required settings are missing.
 4. Harden migration versioning, upgrade behavior, and database file handling in SQLUICore, not in widgets.
