@@ -65,9 +65,9 @@ This repository is suitable for lightweight runtime persistence and local develo
 
 `USQLUISQLiteLayoutRepository` is the first repository-shaped SQLite implementation in SQLUICore. It supports read operations, writable `SaveLayout`, soft-delete `RemoveLayout`, and destructive scoped `ClearLayouts` when explicitly configured writable.
 
-The repository is configured with `FSQLUISQLiteLayoutRepositorySettings`, including a `DatabasePath` and `bReadOnly`. It opens the configured database for each operation. It does not create a database, create schema tables, run migrations, seed data, or select itself through the repository factory.
+The repository is configured with `FSQLUISQLiteLayoutRepositorySettings`, including a `DatabasePath`, `bReadOnly`, and the opt-in `bRunCallbackOperationsAsync` flag. It opens the configured database for each operation. It does not create a database, create schema tables, run migrations, seed data, or select itself through the repository factory.
 
-SQLite database operation logic lives in the non-UObject `FSQLUISQLiteLayoutRepositoryWorker` helper. The helper accepts plain settings/request data and returns plain repository result structs, which keeps SQLite paths, connection handling, SQL statements, transactions, validation, and serialization outside the UObject wrapper. `USQLUISQLiteLayoutRepository` still calls the helper synchronously in this implementation slice; a later async PR can run the same helper behind the SQLUI database worker boundary and marshal results back before invoking repository callbacks.
+SQLite database operation logic lives in the non-UObject `FSQLUISQLiteLayoutRepositoryWorker` helper. The helper accepts plain settings/request data and returns plain repository result structs, which keeps SQLite paths, connection handling, SQL statements, transactions, validation, and serialization outside the UObject wrapper. `USQLUISQLiteLayoutRepository` calls the helper synchronously by default. When `bRunCallbackOperationsAsync = true`, only the callback-style `LoadLayout` and `SaveLayout` methods run the worker helper through the SQLUI database async boundary and marshal results back to the game thread before invoking callbacks. Direct return-value methods remain synchronous.
 
 Current supported behavior:
 
@@ -83,6 +83,8 @@ Current supported behavior:
 - `ClearLayouts` works only when `bReadOnly = false`, `DatabasePath` is configured, and the database already exists with the planned layout schema.
 - `ClearLayouts` destructively deletes previews, checkpoints, tags, revisions, and layouts for the configured database scope.
 - `ClearLayouts` counts rows in `layouts` before deletion and returns that count as `RemovedCount`, including active and soft-deleted layout rows.
+- `bRunCallbackOperationsAsync` defaults to `false` and preserves the existing immediate callback behavior unless explicitly enabled.
+- Async callback execution currently covers only `LoadLayout` and `SaveLayout`; `LoadLayoutById`, `ListLayouts`, `RemoveLayout`, and `ClearLayouts` remain synchronous.
 
 Unsupported behavior remains explicit. `SaveLayout`, `RemoveLayout`, and `ClearLayouts` return clear read-only failures when `bReadOnly = true`. This repository is not selected by `USQLUILayoutRepositoryFactory` yet and should not be treated as complete durable SQLite layout persistence.
 
@@ -159,12 +161,13 @@ Current paths are:
 - SQLite RemoveLayout repository proof: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteRemoveLayoutRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, `LoadLayout`, and soft-delete `RemoveLayout`, verifies the removed layout disappears from list/load while revisions remain preserved, removes the database, and passes the default layout through the widget pipeline.
 - SQLite ClearLayouts repository proof: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteClearLayoutsRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false`, verifies `SaveLayout`, soft-delete `RemoveLayout`, `ListLayouts`, `LoadLayout`, and destructive scoped `ClearLayouts`, verifies active and soft-deleted layout rows plus dependent schema rows are removed, removes the database, and passes the default layout through the widget pipeline.
 - SQLite full lifecycle repository proof: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteFullLifecycleRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, `LoadLayout`, revision 2 update behavior, soft-delete `RemoveLayout`, revision preservation, destructive scoped `ClearLayouts`, empty schema tables after clear, removes the database, and passes the default layout through the widget pipeline.
+- SQLite async callback repository proof: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteAsyncCallbackRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false` and `bRunCallbackOperationsAsync = true`, verifies callback-style `SaveLayout` and `LoadLayout` complete through the async boundary with callbacks delivered on the game thread, verifies synchronous `ListLayouts` metadata and tags afterward, removes the database, and passes the default layout through the widget pipeline.
 
 The default, JSON fixture, in-memory, JSON file, and unavailable paths do not use SQLite. SQLite smoke paths are optional and write only under their `Saved/SQLUI/SmokeTests/...` directories. No smoke path uses Content, maps, viewport attachment, or durable project assets.
 
 ## Future SQLite Repository Direction
 
-The SQLite repository proof now sits behind the same repository shape for `ListLayouts`, `LoadLayout`, writable `SaveLayout`, soft-delete `RemoveLayout`, and destructive scoped `ClearLayouts`, and a combined full lifecycle smoke path exercises those currently supported operations in one workflow. SQLite database work is separated into a non-UObject worker-safe helper, but repository calls remain synchronous for now. Full SQLite persistence remains future work. Callers should eventually be able to request, save, list, remove, and clear layouts without knowing whether the backing store is in memory, JSON files, or SQLite.
+The SQLite repository proof now sits behind the same repository shape for `ListLayouts`, `LoadLayout`, writable `SaveLayout`, soft-delete `RemoveLayout`, and destructive scoped `ClearLayouts`, and a combined full lifecycle smoke path exercises those currently supported operations in one workflow. SQLite database work is separated into a non-UObject worker-safe helper. Callback-style `LoadLayout` and `SaveLayout` can opt into async execution; direct methods and the remaining repository operations stay synchronous for now. Full SQLite persistence remains future work. Callers should eventually be able to request, save, list, remove, and clear layouts without knowing whether the backing store is in memory, JSON files, or SQLite.
 
 The proposed SQLite schema is drafted in [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md). That document defines the planned tables, keys, indexes, revision/history behavior, soft-delete semantics for normal remove operations, destructive clear behavior for scoped cleanup, migration/versioning expectations, validation boundaries, threading expectations, and repository-operation mapping.
 
@@ -189,7 +192,7 @@ SQLite persistence is still incomplete. Factory selection, production migration 
 Near-term implementation work can stay small and repository-focused:
 
 1. Choose a SQLite backend only after the schema, async boundaries, backend selection criteria, and backend evaluation blockers are resolved.
-2. Move the SQLite repository behind the planned async database boundary before using it for runtime persistence.
+2. Extend the async database boundary beyond callback-style `LoadLayout` and `SaveLayout` before using SQLite for normal runtime persistence.
 3. Extend repository selection with a SQLite backend setting only when the repository is ready for normal runtime use.
 4. Add executable migrations and database file handling in SQLUICore, not in widgets.
 5. Extend lifecycle features through repository contracts instead of exposing storage details to widgets.

@@ -1346,6 +1346,105 @@ void LogSQLUISampleSmokeTestSQLiteFullLifecycleRepositoryResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteAsyncCallbackRepositoryResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteAsyncCallbackRepository)
+	{
+		return;
+	}
+
+	const FSQLUISampleSQLiteAsyncCallbackRepositorySmokeResult& RepositoryResult =
+		Result.SQLiteAsyncCallbackRepository;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite async callback repository database path: '%s'"),
+		*RepositoryResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite async callback repository database prepared: %s"),
+		RepositoryResult.bDatabasePrepared ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite async callback repository save callback delivered: %s"),
+		RepositoryResult.bSaveCallbackDelivered ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite async callback repository save succeeded: %s"),
+		RepositoryResult.bSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite async callback repository load callback delivered: %s"),
+		RepositoryResult.bLoadCallbackDelivered ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite async callback repository load succeeded: %s"),
+		RepositoryResult.bLoadSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite async callback repository loaded document valid: %s"),
+		RepositoryResult.bLoadedDocumentValid ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite async callback repository list after callbacks succeeded: %s"),
+		RepositoryResult.bListAfterAsyncCallbacksSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite async callback repository listed metadata found: %s"),
+		RepositoryResult.bListedMetadataFound ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite async callback repository callbacks delivered on game thread: %s"),
+		RepositoryResult.bCallbacksDeliveredOnGameThread ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite async callback repository saved layout id: '%s' loaded layout id: '%s' listed layout count: %d"),
+		*RepositoryResult.SavedLayoutId,
+		*RepositoryResult.LoadedLayoutId,
+		RepositoryResult.ListedLayoutCount);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite async callback repository database removed: %s"),
+		RepositoryResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (RepositoryResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite async callback repository succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite async callback repository failed: %s"),
+			*RepositoryResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -1392,6 +1491,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteRemoveLayoutRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteClearLayoutsRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteFullLifecycleRepositoryResult(Result);
+	LogSQLUISampleSmokeTestSQLiteAsyncCallbackRepositoryResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -1491,6 +1591,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteFullLifecycleRepository =
 		FParse::Param(*Params, TEXT("UseSQLiteFullLifecycleRepository"))
 		|| FParse::Param(*Params, TEXT("SQLiteFullLifecycleRepository"));
+	const bool bUseSQLiteAsyncCallbackRepository =
+		FParse::Param(*Params, TEXT("UseSQLiteAsyncCallbackRepository"))
+		|| FParse::Param(*Params, TEXT("SQLiteAsyncCallbackRepository"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -1565,6 +1668,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite full lifecycle repository selected: true"));
 	}
 
+	if (bUseSQLiteAsyncCallbackRepository)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite async callback repository selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -1591,6 +1699,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteRemoveLayoutRepository = bUseSQLiteRemoveLayoutRepository;
 		Request.bUseSQLiteClearLayoutsRepository = bUseSQLiteClearLayoutsRepository;
 		Request.bUseSQLiteFullLifecycleRepository = bUseSQLiteFullLifecycleRepository;
+		Request.bUseSQLiteAsyncCallbackRepository = bUseSQLiteAsyncCallbackRepository;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 

@@ -2595,6 +2595,324 @@ FSQLUISampleSQLiteFullLifecycleRepositorySmokeResult RunSQLUISampleSQLiteFullLif
 	return Result;
 }
 
+void AppendSQLUISampleSQLiteAsyncCallbackRepositoryError(
+	FSQLUISampleSQLiteAsyncCallbackRepositorySmokeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleSQLiteAsyncCallbackRepositoryDatabasePath()
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("SQLiteAsyncCallbackRepository"),
+		TEXT("SQLiteAsyncCallbackRepository.db"));
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+bool DeleteSQLUISampleSQLiteAsyncCallbackRepositoryFiles(
+	const FString& DatabasePath,
+	FSQLUISampleSQLiteAsyncCallbackRepositorySmokeResult& Result)
+{
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleSQLiteAsyncCallbackRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite async callback repository smoke failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+FSQLUILayoutDocument MakeSQLUISampleSQLiteAsyncCallbackRepositoryDocument()
+{
+	FSQLUILayoutDocument Document = MakeSQLUISampleSQLiteSaveLayoutRepositoryDocument();
+	Document.Version.Label = TEXT("SQLite Async Callback Repository Probe");
+	Document.Metadata.LayoutId = TEXT("sqlui.smoke.sqlite-async-callback-repository");
+	Document.Metadata.DisplayName = TEXT("SQLUI SQLite Async Callback Repository Probe");
+	Document.Metadata.Description = TEXT("Smoke/probe layout for SQLite async callback repository mapping.");
+	Document.Metadata.Tags.Reset();
+	Document.Metadata.Tags.Add(TEXT("sqlite"));
+	Document.Metadata.Tags.Add(TEXT("smoke"));
+	Document.Metadata.Tags.Add(TEXT("async-callback"));
+	Document.Metadata.SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteAsyncCallbackRepository"));
+	Document.RootWidgetId = TEXT("SQLUI.SQLite.AsyncCallbackRepository.Root");
+
+	if (Document.Nodes.Num() > 0)
+	{
+		Document.Nodes[0].WidgetId = Document.RootWidgetId;
+		Document.Nodes[0].Properties.Add(TEXT("Text"), Document.Metadata.DisplayName);
+		Document.Nodes[0].Tags.Reset();
+		Document.Nodes[0].Tags.Add(TEXT("sqlite"));
+		Document.Nodes[0].Tags.Add(TEXT("async-callback"));
+		Document.Nodes[0].SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteAsyncCallbackRepository"));
+	}
+
+	return Document;
+}
+
+bool WaitForSQLUISampleSmokeCallback(TFunctionRef<bool()> IsCallbackDelivered)
+{
+	const double TimeoutSeconds = 5.0;
+	const double StartSeconds = FPlatformTime::Seconds();
+
+	while (!IsCallbackDelivered() && (FPlatformTime::Seconds() - StartSeconds) < TimeoutSeconds)
+	{
+		FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread);
+		if (!IsCallbackDelivered())
+		{
+			FPlatformProcess::Sleep(0.01f);
+		}
+	}
+
+	FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread);
+	return IsCallbackDelivered();
+}
+
+struct FSQLUISampleSQLiteAsyncCallbackSaveState
+{
+	FSQLUILayoutSaveResult Result;
+	bool bCallbackDelivered = false;
+	bool bDeliveredOnGameThread = false;
+};
+
+struct FSQLUISampleSQLiteAsyncCallbackLoadState
+{
+	FSQLUILayoutLoadResult Result;
+	bool bCallbackDelivered = false;
+	bool bDeliveredOnGameThread = false;
+};
+
+FSQLUISampleSQLiteAsyncCallbackRepositorySmokeResult RunSQLUISampleSQLiteAsyncCallbackRepositorySmoke(
+	UObject* Outer)
+{
+	FSQLUISampleSQLiteAsyncCallbackRepositorySmokeResult Result;
+	Result.DatabasePath = MakeSQLUISampleSQLiteAsyncCallbackRepositoryDatabasePath();
+
+	const FSQLUISQLiteLayoutSchemaMigrationProbeResult SchemaResult =
+		FSQLUISQLiteLayoutSchemaMigration::RunProbe(Result.DatabasePath, false);
+	Result.bDatabasePrepared = SchemaResult.bSucceeded && SchemaResult.bMigrationSucceeded;
+	if (!Result.bDatabasePrepared)
+	{
+		AppendSQLUISampleSQLiteAsyncCallbackRepositoryError(
+			Result,
+			SchemaResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite async callback repository smoke failed: could not prepare probe database.")
+				: SchemaResult.ErrorMessage);
+		Result.bDatabaseRemoved =
+			DeleteSQLUISampleSQLiteAsyncCallbackRepositoryFiles(Result.DatabasePath, Result);
+		return Result;
+	}
+
+	USQLUISQLiteLayoutRepository* Repository =
+		NewObject<USQLUISQLiteLayoutRepository>(IsValid(Outer) ? Outer : GetTransientPackage());
+	if (!IsValid(Repository))
+	{
+		AppendSQLUISampleSQLiteAsyncCallbackRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite async callback repository smoke failed: could not create repository object."));
+		Result.bDatabaseRemoved =
+			DeleteSQLUISampleSQLiteAsyncCallbackRepositoryFiles(Result.DatabasePath, Result);
+		return Result;
+	}
+
+	FSQLUISQLiteLayoutRepositorySettings RepositorySettings;
+	RepositorySettings.DatabasePath = Result.DatabasePath;
+	RepositorySettings.bReadOnly = false;
+	RepositorySettings.bRunCallbackOperationsAsync = true;
+	Repository->Configure(RepositorySettings);
+
+	const FSQLUILayoutDocument Document =
+		MakeSQLUISampleSQLiteAsyncCallbackRepositoryDocument();
+
+	TSharedRef<FSQLUISampleSQLiteAsyncCallbackSaveState, ESPMode::ThreadSafe> SaveState =
+		MakeShared<FSQLUISampleSQLiteAsyncCallbackSaveState, ESPMode::ThreadSafe>();
+	SaveState->Result.SavedLayoutId = Document.Metadata.LayoutId;
+	Repository->SaveLayout(
+		Document,
+		FSQLUILayoutSaveCompleteDelegate::CreateLambda(
+			[SaveState](const FSQLUILayoutSaveResult& InSaveResult)
+			{
+				SaveState->Result = InSaveResult;
+				SaveState->bDeliveredOnGameThread = IsInGameThread();
+				SaveState->bCallbackDelivered = true;
+			}));
+
+	Result.bSaveCallbackDelivered =
+		WaitForSQLUISampleSmokeCallback(
+			[SaveState]()
+			{
+				return SaveState->bCallbackDelivered;
+			});
+	if (!Result.bSaveCallbackDelivered)
+	{
+		SaveState->Result.bSucceeded = false;
+		SaveState->Result.ErrorMessage =
+			TEXT("SQLUI SQLite async callback repository smoke failed: SaveLayout callback timed out.");
+		AppendSQLUISampleSQLiteAsyncCallbackRepositoryError(
+			Result,
+			SaveState->Result.ErrorMessage);
+	}
+
+	Result.SavedLayoutId = SaveState->Result.SavedLayoutId;
+	Result.bSaveSucceeded =
+		Result.bSaveCallbackDelivered
+		&& SaveState->Result.bSucceeded
+		&& SaveState->Result.SavedLayoutId == Document.Metadata.LayoutId
+		&& SaveState->Result.Validation.bIsValid;
+	if (Result.bSaveCallbackDelivered && !Result.bSaveSucceeded)
+	{
+		AppendSQLUISampleSQLiteAsyncCallbackRepositoryError(
+			Result,
+			SaveState->Result.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite async callback repository smoke failed: async SaveLayout failed.")
+				: SaveState->Result.ErrorMessage);
+	}
+
+	TSharedRef<FSQLUISampleSQLiteAsyncCallbackLoadState, ESPMode::ThreadSafe> LoadState =
+		MakeShared<FSQLUISampleSQLiteAsyncCallbackLoadState, ESPMode::ThreadSafe>();
+	LoadState->Result.Document.Metadata.LayoutId = Document.Metadata.LayoutId;
+	if (Result.bSaveSucceeded)
+	{
+		Repository->LoadLayout(
+			Document.Metadata.LayoutId,
+			FSQLUILayoutLoadCompleteDelegate::CreateLambda(
+				[LoadState](const FSQLUILayoutLoadResult& InLoadResult)
+				{
+					LoadState->Result = InLoadResult;
+					LoadState->bDeliveredOnGameThread = IsInGameThread();
+					LoadState->bCallbackDelivered = true;
+				}));
+
+		Result.bLoadCallbackDelivered =
+			WaitForSQLUISampleSmokeCallback(
+				[LoadState]()
+				{
+					return LoadState->bCallbackDelivered;
+				});
+		if (!Result.bLoadCallbackDelivered)
+		{
+			LoadState->Result.bSucceeded = false;
+			LoadState->Result.ErrorMessage =
+				TEXT("SQLUI SQLite async callback repository smoke failed: LoadLayout callback timed out.");
+			AppendSQLUISampleSQLiteAsyncCallbackRepositoryError(
+				Result,
+				LoadState->Result.ErrorMessage);
+		}
+
+		Result.bLoadSucceeded =
+			Result.bLoadCallbackDelivered
+			&& LoadState->Result.bSucceeded;
+		Result.LoadedLayoutId = LoadState->Result.Document.Metadata.LayoutId;
+		Result.bLoadedDocumentValid =
+			Result.bLoadSucceeded
+			&& LoadState->Result.Validation.bIsValid
+			&& LoadState->Result.Document.Metadata.LayoutId == Document.Metadata.LayoutId;
+		if (Result.bLoadCallbackDelivered && !Result.bLoadSucceeded)
+		{
+			AppendSQLUISampleSQLiteAsyncCallbackRepositoryError(
+				Result,
+				LoadState->Result.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite async callback repository smoke failed: async LoadLayout failed.")
+					: LoadState->Result.ErrorMessage);
+		}
+		else if (Result.bLoadSucceeded && !Result.bLoadedDocumentValid)
+		{
+			AppendSQLUISampleSQLiteAsyncCallbackRepositoryError(
+				Result,
+				TEXT("SQLUI SQLite async callback repository smoke failed: loaded document was invalid or did not match the saved layout id."));
+		}
+	}
+
+	Result.bCallbacksDeliveredOnGameThread =
+		Result.bSaveCallbackDelivered
+		&& SaveState->bDeliveredOnGameThread
+		&& Result.bLoadCallbackDelivered
+		&& LoadState->bDeliveredOnGameThread;
+	if ((Result.bSaveCallbackDelivered || Result.bLoadCallbackDelivered)
+		&& !Result.bCallbacksDeliveredOnGameThread)
+	{
+		AppendSQLUISampleSQLiteAsyncCallbackRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite async callback repository smoke failed: callbacks were not delivered on the game thread."));
+	}
+
+	if (Result.bLoadedDocumentValid)
+	{
+		const FSQLUILayoutRepositoryListResult ListAfterCallbacksResult =
+			Repository->ListLayouts();
+		Result.bListAfterAsyncCallbacksSucceeded = ListAfterCallbacksResult.bSucceeded;
+		Result.ListedLayoutCount = ListAfterCallbacksResult.Layouts.Num();
+		if (!Result.bListAfterAsyncCallbacksSucceeded)
+		{
+			AppendSQLUISampleSQLiteAsyncCallbackRepositoryError(
+				Result,
+				ListAfterCallbacksResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite async callback repository smoke failed: ListLayouts failed after async callbacks.")
+					: ListAfterCallbacksResult.ErrorMessage);
+		}
+		else
+		{
+			Result.bListedMetadataFound =
+				DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListAfterCallbacksResult.Layouts,
+					Document.Metadata);
+			if (!Result.bListedMetadataFound)
+			{
+				AppendSQLUISampleSQLiteAsyncCallbackRepositoryError(
+					Result,
+					TEXT("SQLUI SQLite async callback repository smoke failed: ListLayouts did not include saved metadata and tags after async callbacks."));
+			}
+		}
+	}
+
+	Result.bDatabaseRemoved =
+		DeleteSQLUISampleSQLiteAsyncCallbackRepositoryFiles(Result.DatabasePath, Result);
+
+	Result.bSucceeded =
+		Result.bDatabasePrepared
+		&& Result.bSaveCallbackDelivered
+		&& Result.bSaveSucceeded
+		&& Result.bLoadCallbackDelivered
+		&& Result.bLoadSucceeded
+		&& Result.bLoadedDocumentValid
+		&& Result.bListAfterAsyncCallbacksSucceeded
+		&& Result.bListedMetadataFound
+		&& Result.bCallbacksDeliveredOnGameThread
+		&& Result.bDatabaseRemoved;
+
+	return Result;
+}
+
 FSQLUISampleSmokeTestLayoutResult ResolveSQLUISampleSmokeTestLayoutDocument(
 	UObject* Outer,
 	const FSQLUISampleSmokeTestRequest& Request)
@@ -3334,6 +3652,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.SQLiteFullLifecycleRepository.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI SQLite full lifecycle repository smoke failed.")
 					: Result.SQLiteFullLifecycleRepository.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseSQLiteAsyncCallbackRepository)
+	{
+		Result.bUsedSQLiteAsyncCallbackRepository = true;
+		Result.SQLiteAsyncCallbackRepository =
+			RunSQLUISampleSQLiteAsyncCallbackRepositorySmoke(Outer);
+		if (!Result.SQLiteAsyncCallbackRepository.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.SQLiteAsyncCallbackRepository.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite async callback repository smoke failed.")
+					: Result.SQLiteAsyncCallbackRepository.ErrorMessage);
 		}
 	}
 

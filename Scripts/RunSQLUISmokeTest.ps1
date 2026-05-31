@@ -32,6 +32,8 @@ param(
 
 	[switch]$UseSQLiteFullLifecycleRepository,
 
+	[switch]$UseSQLiteAsyncCallbackRepository,
+
 	[Alias('?')]
 	[switch]$Help
 )
@@ -100,6 +102,9 @@ Parameters:
   -UseSQLiteFullLifecycleRepository
       Run the optional SQLUICore SQLite full lifecycle repository smoke path.
 
+  -UseSQLiteAsyncCallbackRepository
+      Run the optional SQLUICore SQLite async callback repository smoke path.
+
   -Help, -?
       Show this help.
 
@@ -118,6 +123,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteRemoveLayoutRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteClearLayoutsRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteFullLifecycleRepository
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteAsyncCallbackRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -UnrealEditorCmdPath "C:\UE\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -ProjectPath ".\JerryRigged.uproject"
 '@
@@ -287,6 +293,11 @@ if ($UseSQLiteClearLayoutsRepository)
 if ($UseSQLiteFullLifecycleRepository)
 {
 	$CommandletArgs += '-SQLiteFullLifecycleRepository'
+}
+
+if ($UseSQLiteAsyncCallbackRepository)
+{
+	$CommandletArgs += '-SQLiteAsyncCallbackRepository'
 }
 
 $PrintableCommandParts = @($ResolvedUnrealEditorCmdPath) + $CommandletArgs

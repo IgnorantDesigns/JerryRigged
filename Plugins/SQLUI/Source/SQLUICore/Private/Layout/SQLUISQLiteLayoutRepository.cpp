@@ -1,5 +1,6 @@
 #include "Layout/SQLUISQLiteLayoutRepository.h"
 
+#include "Database/SQLUIDatabaseAsyncRunner.h"
 #include "Layout/SQLUISQLiteLayoutRepositoryWorker.h"
 
 namespace
@@ -17,6 +18,26 @@ void USQLUISQLiteLayoutRepository::LoadLayout(
 	const FString& LayoutId,
 	FSQLUILayoutLoadCompleteDelegate Callback)
 {
+	if (Settings.bRunCallbackOperationsAsync)
+	{
+		const FSQLUISQLiteLayoutRepositoryWorkerSettings WorkerSettings =
+			MakeSQLUISQLiteLayoutRepositoryWorkerSettings(Settings);
+		const FString LayoutIdCopy = LayoutId;
+
+		FSQLUIDatabaseAsyncRunner::RunResultAsync<FSQLUILayoutLoadResult>(
+			[WorkerSettings, LayoutIdCopy]()
+			{
+				return FSQLUISQLiteLayoutRepositoryWorker::LoadLayoutById(
+					WorkerSettings,
+					LayoutIdCopy);
+			},
+			[Callback](const FSQLUILayoutLoadResult& Result) mutable
+			{
+				Callback.ExecuteIfBound(Result);
+			});
+		return;
+	}
+
 	Callback.ExecuteIfBound(LoadLayoutById(LayoutId));
 }
 
@@ -24,6 +45,33 @@ void USQLUISQLiteLayoutRepository::SaveLayout(
 	const FSQLUILayoutDocument& Document,
 	FSQLUILayoutSaveCompleteDelegate Callback)
 {
+	if (Settings.bRunCallbackOperationsAsync)
+	{
+		const FSQLUISQLiteLayoutRepositoryWorkerSettings WorkerSettings =
+			MakeSQLUISQLiteLayoutRepositoryWorkerSettings(Settings);
+		const FSQLUILayoutDocument DocumentCopy = Document;
+		const bool bReadOnly = Settings.bReadOnly;
+
+		FSQLUIDatabaseAsyncRunner::RunResultAsync<FSQLUILayoutSaveResult>(
+			[WorkerSettings, DocumentCopy, bReadOnly]()
+			{
+				if (bReadOnly)
+				{
+					return FSQLUISQLiteLayoutRepositoryWorker::MakeReadOnlySaveFailure(
+						DocumentCopy.Metadata.LayoutId);
+				}
+
+				return FSQLUISQLiteLayoutRepositoryWorker::SaveLayout(
+					WorkerSettings,
+					DocumentCopy);
+			},
+			[Callback](const FSQLUILayoutSaveResult& Result) mutable
+			{
+				Callback.ExecuteIfBound(Result);
+			});
+		return;
+	}
+
 	if (Settings.bReadOnly)
 	{
 		Callback.ExecuteIfBound(
