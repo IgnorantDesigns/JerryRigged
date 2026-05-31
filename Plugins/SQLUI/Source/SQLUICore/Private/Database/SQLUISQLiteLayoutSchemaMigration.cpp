@@ -401,6 +401,67 @@ bool QuerySQLUILayoutSchemaInitialMigrationRecorded(
 	return true;
 }
 
+bool QuerySQLUILayoutSchemaInitialMigrationRecordCount(
+	FSQLiteDatabase& Database,
+	int32& OutRecordCount,
+	FString& OutErrorMessage)
+{
+	OutRecordCount = 0;
+	OutErrorMessage.Empty();
+
+	int32 MigrationTableCount = 0;
+	if (!QuerySQLUILayoutSchemaSQLiteObjectCount(
+		Database,
+		TEXT("table"),
+		TEXT("sqlui_schema_migrations"),
+		MigrationTableCount,
+		OutErrorMessage))
+	{
+		return false;
+	}
+
+	if (MigrationTableCount == 0)
+	{
+		return true;
+	}
+
+	FSQLitePreparedStatement Statement = Database.PrepareStatement(
+		TEXT("SELECT COUNT(*) FROM sqlui_schema_migrations WHERE migration_id = ?;"));
+	if (!Statement.IsValid())
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout schema initialization failed: could not prepare initial migration row-count query. SQLiteCore error: %s"),
+			*Database.GetLastError());
+		return false;
+	}
+
+	if (!Statement.SetBindingValueByIndex(1, SQLUILayoutSchemaMigrationId))
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout schema initialization failed: could not bind initial migration row-count query. SQLiteCore error: %s"),
+			*Database.GetLastError());
+		return false;
+	}
+
+	const int64 RowCount = Statement.Execute(
+		[&OutRecordCount](const FSQLitePreparedStatement& Row)
+		{
+			return Row.GetColumnValueByIndex(0, OutRecordCount)
+				? ESQLitePreparedStatementExecuteRowResult::Continue
+				: ESQLitePreparedStatementExecuteRowResult::Error;
+		});
+
+	if (RowCount == INDEX_NONE)
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout schema initialization failed: initial migration row-count query failed. SQLiteCore error: %s"),
+			*Database.GetLastError());
+		return false;
+	}
+
+	return true;
+}
+
 bool VerifySQLUILayoutSchemaTables(
 	FSQLiteDatabase& Database,
 	FSQLUISQLiteLayoutSchemaMigrationProbeResult& Result)
@@ -690,6 +751,9 @@ FSQLUISQLiteLayoutSchemaInitializationResult FSQLUISQLiteLayoutSchemaMigration::
 		}
 	}
 
+	// If a database already has the expected schema objects but lacks the
+	// migration row, rerunning the idempotent migration records the initial
+	// schema without dropping, rewriting, or deleting user tables.
 	TArray<FSQLUISQLiteMigrationStep> MigrationSteps;
 	MigrationSteps.Add(MakeSQLUILayoutSchemaInitialMigration());
 
@@ -716,4 +780,126 @@ FSQLUISQLiteLayoutSchemaInitializationResult FSQLUISQLiteLayoutSchemaMigration::
 		&& Result.bSchemaReady;
 
 	return Result;
+}
+
+bool FSQLUISQLiteLayoutSchemaMigration::CountInitialSchemaMigrationRecords(
+	const FString& DatabasePath,
+	int32& OutRecordCount,
+	FString& OutErrorMessage)
+{
+	OutRecordCount = 0;
+	OutErrorMessage.Empty();
+
+	const FString NormalizedDatabasePath = DatabasePath.IsEmpty()
+		? FString()
+		: NormalizeSQLUILayoutSchemaProbePath(DatabasePath);
+	if (NormalizedDatabasePath.IsEmpty())
+	{
+		OutErrorMessage =
+			TEXT("SQLUI SQLite layout schema initialization failed: database path is empty.");
+		return false;
+	}
+
+	if (!FPaths::FileExists(NormalizedDatabasePath))
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout schema initialization failed: database '%s' does not exist."),
+			*NormalizedDatabasePath);
+		return false;
+	}
+
+	FSQLiteDatabase Database;
+	if (!Database.Open(*NormalizedDatabasePath, ESQLiteDatabaseOpenMode::ReadOnly))
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout schema initialization failed: could not open database '%s' read-only for initial migration row count. SQLiteCore error: %s"),
+			*NormalizedDatabasePath,
+			*Database.GetLastError());
+		return false;
+	}
+
+	const bool bCounted = QuerySQLUILayoutSchemaInitialMigrationRecordCount(
+		Database,
+		OutRecordCount,
+		OutErrorMessage);
+
+	if (!Database.Close())
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout schema initialization failed: could not close database '%s' after initial migration row count. SQLiteCore error: %s"),
+			*NormalizedDatabasePath,
+			*Database.GetLastError());
+		return false;
+	}
+
+	return bCounted;
+}
+
+bool FSQLUISQLiteLayoutSchemaMigration::DeleteInitialSchemaMigrationRecordForSmokeTest(
+	const FString& DatabasePath,
+	FString& OutErrorMessage)
+{
+	OutErrorMessage.Empty();
+
+	const FString NormalizedDatabasePath = DatabasePath.IsEmpty()
+		? FString()
+		: NormalizeSQLUILayoutSchemaProbePath(DatabasePath);
+	if (NormalizedDatabasePath.IsEmpty())
+	{
+		OutErrorMessage =
+			TEXT("SQLUI SQLite layout schema initialization failed: database path is empty.");
+		return false;
+	}
+
+	if (!FPaths::FileExists(NormalizedDatabasePath))
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout schema initialization failed: database '%s' does not exist."),
+			*NormalizedDatabasePath);
+		return false;
+	}
+
+	FSQLiteDatabase Database;
+	if (!Database.Open(*NormalizedDatabasePath, ESQLiteDatabaseOpenMode::ReadWrite))
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout schema initialization failed: could not open database '%s' for initial migration row delete. SQLiteCore error: %s"),
+			*NormalizedDatabasePath,
+			*Database.GetLastError());
+		return false;
+	}
+
+	{
+		FSQLitePreparedStatement Statement = Database.PrepareStatement(
+			TEXT("DELETE FROM sqlui_schema_migrations WHERE migration_id = ?;"));
+		if (!Statement.IsValid())
+		{
+			OutErrorMessage = FString::Printf(
+				TEXT("SQLUI SQLite layout schema initialization failed: could not prepare initial migration row delete. SQLiteCore error: %s"),
+				*Database.GetLastError());
+			Database.Close();
+			return false;
+		}
+
+		if (!Statement.SetBindingValueByIndex(1, SQLUILayoutSchemaMigrationId)
+			|| !Statement.Execute())
+		{
+			OutErrorMessage = FString::Printf(
+				TEXT("SQLUI SQLite layout schema initialization failed: could not delete initial migration row. SQLiteCore error: %s"),
+				*Database.GetLastError());
+			Database.Close();
+			return false;
+		}
+	}
+
+	if (!Database.Close())
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout schema initialization failed: could not close database '%s' after initial migration row delete. SQLiteCore error: %s"),
+			*NormalizedDatabasePath,
+			*Database.GetLastError());
+		return false;
+	}
+
+	return true;
 }

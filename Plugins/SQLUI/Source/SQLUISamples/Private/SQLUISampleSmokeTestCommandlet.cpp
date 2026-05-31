@@ -1702,6 +1702,115 @@ void LogSQLUISampleSmokeTestSQLiteFactorySchemaInitRepositoryResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteSchemaInitHardeningResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteSchemaInitHardening)
+	{
+		return;
+	}
+
+	const FSQLUISampleSQLiteSchemaInitHardeningSmokeResult& HardeningResult =
+		Result.SQLiteSchemaInitHardening;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening missing DB create disabled failed: %s"),
+		HardeningResult.bMissingDbCreateDisabledFailed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening missing DB create disabled not created: %s"),
+		HardeningResult.bMissingDbCreateDisabledNotCreated ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening empty DB create enabled succeeded: %s"),
+		HardeningResult.bEmptyDbCreateEnabledSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening empty DB schema ready: %s"),
+		HardeningResult.bEmptyDbSchemaReady ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening already initialized succeeded: %s"),
+		HardeningResult.bAlreadyInitializedSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening already initialized detected: %s"),
+		HardeningResult.bAlreadyInitializedDetected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening migration row not duplicated: %s"),
+		HardeningResult.bMigrationRowNotDuplicated ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening complete schema missing migration succeeded: %s"),
+		HardeningResult.bCompleteSchemaMissingMigrationSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening complete schema missing migration recorded: %s"),
+		HardeningResult.bCompleteSchemaMissingMigrationRecorded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening partial schema failed clearly: %s"),
+		HardeningResult.bPartialSchemaFailedClearly ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening partial schema reported missing objects: %s"),
+		HardeningResult.bPartialSchemaReportedMissingObjects ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening read-only init blocked: %s"),
+		HardeningResult.bReadOnlyInitBlocked ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening read-only init did not create DB: %s"),
+		HardeningResult.bReadOnlyInitDidNotCreateDb ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite schema init hardening database files removed: %s"),
+		HardeningResult.bDatabaseFilesRemoved ? TEXT("true") : TEXT("false"));
+
+	if (HardeningResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite schema init hardening succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite schema init hardening failed: %s"),
+			*HardeningResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -1751,6 +1860,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteAsyncCallbackRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteFactoryLayoutRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteFactorySchemaInitRepositoryResult(Result);
+	LogSQLUISampleSmokeTestSQLiteSchemaInitHardeningResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -1859,6 +1969,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteFactorySchemaInitRepository =
 		FParse::Param(*Params, TEXT("UseSQLiteFactorySchemaInitRepository"))
 		|| FParse::Param(*Params, TEXT("SQLiteFactorySchemaInitRepository"));
+	const bool bUseSQLiteSchemaInitHardening =
+		FParse::Param(*Params, TEXT("UseSQLiteSchemaInitHardening"))
+		|| FParse::Param(*Params, TEXT("SQLiteSchemaInitHardening"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -1948,6 +2061,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite factory schema init repository selected: true"));
 	}
 
+	if (bUseSQLiteSchemaInitHardening)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite schema init hardening selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -1977,6 +2095,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteAsyncCallbackRepository = bUseSQLiteAsyncCallbackRepository;
 		Request.bUseSQLiteFactoryLayoutRepository = bUseSQLiteFactoryLayoutRepository;
 		Request.bUseSQLiteFactorySchemaInitRepository = bUseSQLiteFactorySchemaInitRepository;
+		Request.bUseSQLiteSchemaInitHardening = bUseSQLiteSchemaInitHardening;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 

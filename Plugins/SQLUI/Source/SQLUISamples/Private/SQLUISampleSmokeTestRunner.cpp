@@ -3678,6 +3678,430 @@ FSQLUISampleSQLiteFactorySchemaInitRepositorySmokeResult RunSQLUISampleSQLiteFac
 	return Result;
 }
 
+void AppendSQLUISampleSQLiteSchemaInitHardeningError(
+	FSQLUISampleSQLiteSchemaInitHardeningSmokeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePath(const TCHAR* DatabaseFileName)
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("SQLiteSchemaInitHardening"),
+		DatabaseFileName);
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+TArray<FString> MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePaths()
+{
+	TArray<FString> DatabasePaths;
+	DatabasePaths.Add(MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePath(TEXT("MissingCreateDisabled.db")));
+	DatabasePaths.Add(MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePath(TEXT("EmptyCreateEnabled.db")));
+	DatabasePaths.Add(MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePath(TEXT("AlreadyInitialized.db")));
+	DatabasePaths.Add(MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePath(TEXT("CompleteSchemaMissingMigration.db")));
+	DatabasePaths.Add(MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePath(TEXT("PartialSchema.db")));
+	DatabasePaths.Add(MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePath(TEXT("ReadOnlyInitBlocked.db")));
+	return DatabasePaths;
+}
+
+bool DoSQLUISampleSQLiteSchemaInitHardeningFilesExist(const FString& DatabasePath)
+{
+	const TArray<FString> PathsToCheck = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	for (const FString& PathToCheck : PathsToCheck)
+	{
+		if (FPaths::FileExists(PathToCheck))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DeleteSQLUISampleSQLiteSchemaInitHardeningFiles(
+	const FString& DatabasePath,
+	FSQLUISampleSQLiteSchemaInitHardeningSmokeResult& Result)
+{
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleSQLiteSchemaInitHardeningError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite schema init hardening smoke failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+bool DeleteSQLUISampleSQLiteSchemaInitHardeningFiles(
+	FSQLUISampleSQLiteSchemaInitHardeningSmokeResult& Result)
+{
+	bool bRemoved = true;
+	for (const FString& DatabasePath : MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePaths())
+	{
+		bRemoved =
+			DeleteSQLUISampleSQLiteSchemaInitHardeningFiles(DatabasePath, Result)
+			&& bRemoved;
+	}
+
+	return bRemoved;
+}
+
+bool DoesAnySQLUISampleSQLiteSchemaInitHardeningFileExist()
+{
+	for (const FString& DatabasePath : MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePaths())
+	{
+		if (DoSQLUISampleSQLiteSchemaInitHardeningFilesExist(DatabasePath))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool CountSQLUISampleSQLiteSchemaInitHardeningMigrationRows(
+	const FString& DatabasePath,
+	int32& OutRecordCount,
+	FSQLUISampleSQLiteSchemaInitHardeningSmokeResult& Result)
+{
+	FString ErrorMessage;
+	if (FSQLUISQLiteLayoutSchemaMigration::CountInitialSchemaMigrationRecords(
+		DatabasePath,
+		OutRecordCount,
+		ErrorMessage))
+	{
+		return true;
+	}
+
+	AppendSQLUISampleSQLiteSchemaInitHardeningError(
+		Result,
+		ErrorMessage.IsEmpty()
+			? TEXT("SQLUI SQLite schema init hardening smoke failed: could not count initial schema migration rows.")
+			: ErrorMessage);
+	return false;
+}
+
+bool PrepareSQLUISampleSQLiteSchemaInitHardeningPartialSchema(
+	const FString& DatabasePath,
+	FSQLUISampleSQLiteSchemaInitHardeningSmokeResult& Result)
+{
+	FSQLUISQLiteMigrationStep Step;
+	Step.MigrationId = TEXT("001_initial_layout_schema");
+	Step.Description =
+		TEXT("Smoke-only intentionally partial initial schema for hardening coverage.");
+	Step.Statements.Add(
+		TEXT("CREATE TABLE IF NOT EXISTS layouts (")
+		TEXT("layout_id TEXT PRIMARY KEY, ")
+		TEXT("display_name TEXT NOT NULL, ")
+		TEXT("schema_version INTEGER NOT NULL, ")
+		TEXT("b_deleted INTEGER NOT NULL DEFAULT 0")
+		TEXT(");"));
+
+	TArray<FSQLUISQLiteMigrationStep> Steps;
+	Steps.Add(Step);
+	const FSQLUISQLiteMigrationResult MigrationResult =
+		FSQLUISQLiteMigrationRunner::RunMigrations(DatabasePath, Steps, false);
+	if (MigrationResult.bSucceeded)
+	{
+		return true;
+	}
+
+	AppendSQLUISampleSQLiteSchemaInitHardeningError(
+		Result,
+		MigrationResult.ErrorMessage.IsEmpty()
+			? TEXT("SQLUI SQLite schema init hardening smoke failed: could not prepare partial schema database.")
+			: MigrationResult.ErrorMessage);
+	return false;
+}
+
+FSQLUISampleSQLiteSchemaInitHardeningSmokeResult RunSQLUISampleSQLiteSchemaInitHardeningSmoke(
+	UObject* Outer)
+{
+	FSQLUISampleSQLiteSchemaInitHardeningSmokeResult Result;
+	DeleteSQLUISampleSQLiteSchemaInitHardeningFiles(Result);
+
+	const FString MissingCreateDisabledPath =
+		MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePath(TEXT("MissingCreateDisabled.db"));
+	const FSQLUISQLiteLayoutSchemaInitializationResult MissingCreateDisabledResult =
+		FSQLUISQLiteLayoutSchemaMigration::ApplyInitialSchema(MissingCreateDisabledPath, false);
+	Result.bMissingDbCreateDisabledFailed =
+		!MissingCreateDisabledResult.bSucceeded
+		&& !MissingCreateDisabledResult.bSchemaReady
+		&& MissingCreateDisabledResult.ErrorMessage.Contains(TEXT("does not exist"))
+		&& MissingCreateDisabledResult.ErrorMessage.Contains(TEXT("creation is disabled"));
+	Result.bMissingDbCreateDisabledNotCreated =
+		!DoSQLUISampleSQLiteSchemaInitHardeningFilesExist(MissingCreateDisabledPath);
+	if (!Result.bMissingDbCreateDisabledFailed)
+	{
+		AppendSQLUISampleSQLiteSchemaInitHardeningError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite schema init hardening smoke failed: missing DB create disabled did not fail clearly. Succeeded=%s SchemaReady=%s Error='%s'."),
+				MissingCreateDisabledResult.bSucceeded ? TEXT("true") : TEXT("false"),
+				MissingCreateDisabledResult.bSchemaReady ? TEXT("true") : TEXT("false"),
+				*MissingCreateDisabledResult.ErrorMessage));
+	}
+	if (!Result.bMissingDbCreateDisabledNotCreated)
+	{
+		AppendSQLUISampleSQLiteSchemaInitHardeningError(
+			Result,
+			TEXT("SQLUI SQLite schema init hardening smoke failed: missing DB create disabled created a database file."));
+	}
+
+	const FString EmptyCreateEnabledPath =
+		MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePath(TEXT("EmptyCreateEnabled.db"));
+	const FSQLUISQLiteLayoutSchemaInitializationResult EmptyCreateEnabledResult =
+		FSQLUISQLiteLayoutSchemaMigration::ApplyInitialSchema(EmptyCreateEnabledPath, true);
+	Result.bEmptyDbCreateEnabledSucceeded =
+		EmptyCreateEnabledResult.bSucceeded
+		&& EmptyCreateEnabledResult.bMigrationApplied
+		&& FPaths::FileExists(EmptyCreateEnabledPath);
+	Result.bEmptyDbSchemaReady = EmptyCreateEnabledResult.bSchemaReady;
+	if (!Result.bEmptyDbCreateEnabledSucceeded || !Result.bEmptyDbSchemaReady)
+	{
+		AppendSQLUISampleSQLiteSchemaInitHardeningError(
+			Result,
+			EmptyCreateEnabledResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite schema init hardening smoke failed: empty DB create enabled did not initialize schema.")
+				: EmptyCreateEnabledResult.ErrorMessage);
+	}
+
+	const FString AlreadyInitializedPath =
+		MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePath(TEXT("AlreadyInitialized.db"));
+	const FSQLUISQLiteLayoutSchemaInitializationResult AlreadyInitializedFirstResult =
+		FSQLUISQLiteLayoutSchemaMigration::ApplyInitialSchema(AlreadyInitializedPath, true);
+	int32 AlreadyInitializedMigrationRowCountBefore = 0;
+	const bool bCountedAlreadyInitializedBefore =
+		CountSQLUISampleSQLiteSchemaInitHardeningMigrationRows(
+			AlreadyInitializedPath,
+			AlreadyInitializedMigrationRowCountBefore,
+			Result);
+	const FSQLUISQLiteLayoutSchemaInitializationResult AlreadyInitializedSecondResult =
+		FSQLUISQLiteLayoutSchemaMigration::ApplyInitialSchema(AlreadyInitializedPath, true);
+	int32 AlreadyInitializedMigrationRowCountAfter = 0;
+	const bool bCountedAlreadyInitializedAfter =
+		CountSQLUISampleSQLiteSchemaInitHardeningMigrationRows(
+			AlreadyInitializedPath,
+			AlreadyInitializedMigrationRowCountAfter,
+			Result);
+	Result.bAlreadyInitializedSucceeded =
+		AlreadyInitializedFirstResult.bSucceeded
+		&& AlreadyInitializedSecondResult.bSucceeded
+		&& AlreadyInitializedSecondResult.bSchemaReady;
+	Result.bAlreadyInitializedDetected =
+		AlreadyInitializedSecondResult.bMigrationAlreadyApplied;
+	Result.bMigrationRowNotDuplicated =
+		bCountedAlreadyInitializedBefore
+		&& bCountedAlreadyInitializedAfter
+		&& AlreadyInitializedMigrationRowCountBefore == 1
+		&& AlreadyInitializedMigrationRowCountAfter == 1;
+	if (!Result.bAlreadyInitializedSucceeded || !Result.bAlreadyInitializedDetected)
+	{
+		AppendSQLUISampleSQLiteSchemaInitHardeningError(
+			Result,
+			AlreadyInitializedSecondResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite schema init hardening smoke failed: already-initialized DB did not succeed or report already-applied migration.")
+				: AlreadyInitializedSecondResult.ErrorMessage);
+	}
+	if (!Result.bMigrationRowNotDuplicated)
+	{
+		AppendSQLUISampleSQLiteSchemaInitHardeningError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite schema init hardening smoke failed: migration row count was duplicated or unexpected. Before=%d After=%d."),
+				AlreadyInitializedMigrationRowCountBefore,
+				AlreadyInitializedMigrationRowCountAfter));
+	}
+
+	const FString CompleteSchemaMissingMigrationPath =
+		MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePath(TEXT("CompleteSchemaMissingMigration.db"));
+	const FSQLUISQLiteLayoutSchemaInitializationResult CompleteSchemaInitialResult =
+		FSQLUISQLiteLayoutSchemaMigration::ApplyInitialSchema(
+			CompleteSchemaMissingMigrationPath,
+			true);
+	FString DeleteMigrationErrorMessage;
+	const bool bDeletedMigrationRecord =
+		CompleteSchemaInitialResult.bSucceeded
+		&& FSQLUISQLiteLayoutSchemaMigration::DeleteInitialSchemaMigrationRecordForSmokeTest(
+			CompleteSchemaMissingMigrationPath,
+			DeleteMigrationErrorMessage);
+	int32 MissingMigrationRowCountBefore = 0;
+	const bool bCountedMissingMigrationBefore =
+		bDeletedMigrationRecord
+		&& CountSQLUISampleSQLiteSchemaInitHardeningMigrationRows(
+			CompleteSchemaMissingMigrationPath,
+			MissingMigrationRowCountBefore,
+			Result);
+	const FSQLUISQLiteLayoutSchemaInitializationResult CompleteSchemaRepairResult =
+		FSQLUISQLiteLayoutSchemaMigration::ApplyInitialSchema(
+			CompleteSchemaMissingMigrationPath,
+			true);
+	int32 MissingMigrationRowCountAfter = 0;
+	const bool bCountedMissingMigrationAfter =
+		CountSQLUISampleSQLiteSchemaInitHardeningMigrationRows(
+			CompleteSchemaMissingMigrationPath,
+			MissingMigrationRowCountAfter,
+			Result);
+	Result.bCompleteSchemaMissingMigrationSucceeded =
+		CompleteSchemaInitialResult.bSucceeded
+		&& bDeletedMigrationRecord
+		&& bCountedMissingMigrationBefore
+		&& MissingMigrationRowCountBefore == 0
+		&& CompleteSchemaRepairResult.bSucceeded
+		&& CompleteSchemaRepairResult.bSchemaReady;
+	Result.bCompleteSchemaMissingMigrationRecorded =
+		bCountedMissingMigrationAfter
+		&& MissingMigrationRowCountAfter == 1
+		&& CompleteSchemaRepairResult.bMigrationApplied;
+	if (!bDeletedMigrationRecord && !DeleteMigrationErrorMessage.IsEmpty())
+	{
+		AppendSQLUISampleSQLiteSchemaInitHardeningError(Result, DeleteMigrationErrorMessage);
+	}
+	if (!Result.bCompleteSchemaMissingMigrationSucceeded)
+	{
+		AppendSQLUISampleSQLiteSchemaInitHardeningError(
+			Result,
+			CompleteSchemaRepairResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite schema init hardening smoke failed: complete schema missing migration row did not succeed.")
+				: CompleteSchemaRepairResult.ErrorMessage);
+	}
+	if (!Result.bCompleteSchemaMissingMigrationRecorded)
+	{
+		AppendSQLUISampleSQLiteSchemaInitHardeningError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite schema init hardening smoke failed: missing migration row was not restored. Before=%d After=%d MigrationApplied=%s."),
+				MissingMigrationRowCountBefore,
+				MissingMigrationRowCountAfter,
+				CompleteSchemaRepairResult.bMigrationApplied ? TEXT("true") : TEXT("false")));
+	}
+
+	const FString PartialSchemaPath =
+		MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePath(TEXT("PartialSchema.db"));
+	const bool bPartialSchemaPrepared =
+		PrepareSQLUISampleSQLiteSchemaInitHardeningPartialSchema(
+			PartialSchemaPath,
+			Result);
+	const FSQLUISQLiteLayoutSchemaInitializationResult PartialSchemaResult =
+		bPartialSchemaPrepared
+			? FSQLUISQLiteLayoutSchemaMigration::ApplyInitialSchema(PartialSchemaPath, true)
+			: FSQLUISQLiteLayoutSchemaInitializationResult();
+	Result.bPartialSchemaFailedClearly =
+		bPartialSchemaPrepared
+		&& !PartialSchemaResult.bSucceeded
+		&& !PartialSchemaResult.bSchemaReady;
+	Result.bPartialSchemaReportedMissingObjects =
+		Result.bPartialSchemaFailedClearly
+		&& PartialSchemaResult.ErrorMessage.Contains(TEXT("missing expected schema object"));
+	if (!Result.bPartialSchemaFailedClearly || !Result.bPartialSchemaReportedMissingObjects)
+	{
+		AppendSQLUISampleSQLiteSchemaInitHardeningError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite schema init hardening smoke failed: partial schema did not fail clearly. Prepared=%s Succeeded=%s SchemaReady=%s Error='%s'."),
+				bPartialSchemaPrepared ? TEXT("true") : TEXT("false"),
+				PartialSchemaResult.bSucceeded ? TEXT("true") : TEXT("false"),
+				PartialSchemaResult.bSchemaReady ? TEXT("true") : TEXT("false"),
+				*PartialSchemaResult.ErrorMessage));
+	}
+
+	const FString ReadOnlyInitBlockedPath =
+		MakeSQLUISampleSQLiteSchemaInitHardeningDatabasePath(TEXT("ReadOnlyInitBlocked.db"));
+	FSQLUILayoutRepositoryFactorySettings ReadOnlyFactorySettings;
+	ReadOnlyFactorySettings.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	ReadOnlyFactorySettings.SQLiteSettings.DatabasePath = ReadOnlyInitBlockedPath;
+	ReadOnlyFactorySettings.SQLiteSettings.bReadOnly = true;
+	ReadOnlyFactorySettings.SQLiteSettings.bInitializeSchemaIfMissing = true;
+	ReadOnlyFactorySettings.SQLiteSettings.bCreateDatabaseIfMissing = true;
+	USQLUILayoutRepository* ReadOnlyRepository =
+		USQLUILayoutRepositoryFactory::CreateLayoutRepository(Outer, ReadOnlyFactorySettings);
+	const FSQLUILayoutDocument ReadOnlyDocument =
+		MakeSQLUISampleSQLiteFactorySchemaInitRepositoryDocument();
+	const FSQLUILayoutSaveResult ReadOnlySaveResult =
+		SaveSQLUISampleLayoutToRepository(
+			ReadOnlyRepository,
+			TEXT("SQLite schema init hardening read-only repository"),
+			ReadOnlyDocument);
+	Result.bReadOnlyInitBlocked =
+		!ReadOnlySaveResult.bSucceeded
+		&& ReadOnlySaveResult.ErrorMessage.Contains(TEXT("read-only"), ESearchCase::IgnoreCase);
+	Result.bReadOnlyInitDidNotCreateDb =
+		!DoSQLUISampleSQLiteSchemaInitHardeningFilesExist(ReadOnlyInitBlockedPath);
+	if (!Result.bReadOnlyInitBlocked)
+	{
+		AppendSQLUISampleSQLiteSchemaInitHardeningError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite schema init hardening smoke failed: read-only repository did not reject SaveLayout before schema init. SaveSucceeded=%s Error='%s'."),
+				ReadOnlySaveResult.bSucceeded ? TEXT("true") : TEXT("false"),
+				*ReadOnlySaveResult.ErrorMessage));
+	}
+	if (!Result.bReadOnlyInitDidNotCreateDb)
+	{
+		AppendSQLUISampleSQLiteSchemaInitHardeningError(
+			Result,
+			TEXT("SQLUI SQLite schema init hardening smoke failed: read-only schema init created a database file."));
+	}
+
+	Result.bDatabaseFilesRemoved =
+		DeleteSQLUISampleSQLiteSchemaInitHardeningFiles(Result)
+		&& !DoesAnySQLUISampleSQLiteSchemaInitHardeningFileExist();
+
+	Result.bSucceeded =
+		Result.bMissingDbCreateDisabledFailed
+		&& Result.bMissingDbCreateDisabledNotCreated
+		&& Result.bEmptyDbCreateEnabledSucceeded
+		&& Result.bEmptyDbSchemaReady
+		&& Result.bAlreadyInitializedSucceeded
+		&& Result.bAlreadyInitializedDetected
+		&& Result.bMigrationRowNotDuplicated
+		&& Result.bCompleteSchemaMissingMigrationSucceeded
+		&& Result.bCompleteSchemaMissingMigrationRecorded
+		&& Result.bPartialSchemaFailedClearly
+		&& Result.bPartialSchemaReportedMissingObjects
+		&& Result.bReadOnlyInitBlocked
+		&& Result.bReadOnlyInitDidNotCreateDb
+		&& Result.bDatabaseFilesRemoved;
+
+	return Result;
+}
+
 FSQLUISampleSmokeTestLayoutResult ResolveSQLUISampleSmokeTestLayoutDocument(
 	UObject* Outer,
 	const FSQLUISampleSmokeTestRequest& Request)
@@ -4465,6 +4889,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.SQLiteFactorySchemaInitRepository.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI SQLite factory schema init repository smoke failed.")
 					: Result.SQLiteFactorySchemaInitRepository.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseSQLiteSchemaInitHardening)
+	{
+		Result.bUsedSQLiteSchemaInitHardening = true;
+		Result.SQLiteSchemaInitHardening =
+			RunSQLUISampleSQLiteSchemaInitHardeningSmoke(Outer);
+		if (!Result.SQLiteSchemaInitHardening.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.SQLiteSchemaInitHardening.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite schema init hardening smoke failed.")
+					: Result.SQLiteSchemaInitHardening.ErrorMessage);
 		}
 	}
 

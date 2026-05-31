@@ -1,6 +1,6 @@
 # SQLUI SQLite Backend Evaluation
 
-This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, optional smoke-safe database probes under `Saved/SQLUI/SmokeTests`, a non-UObject SQLite repository worker helper, SQLite repository operations for list/load/save/remove/clear, opt-in async callback execution for `LoadLayout` and `SaveLayout`, a combined full lifecycle smoke path, explicit `USQLUILayoutRepositoryFactory` selection through `ESQLUILayoutRepositoryBackend::SQLite` when a database path is configured, and opt-in repository-owned schema initialization settings. SQLite is still not the default backend, and this work still does not add migrations inside the factory, packaged validation, widgets, maps, assets, CI, or persistent database files.
+This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, optional smoke-safe database probes under `Saved/SQLUI/SmokeTests`, a non-UObject SQLite repository worker helper, SQLite repository operations for list/load/save/remove/clear, opt-in async callback execution for `LoadLayout` and `SaveLayout`, a combined full lifecycle smoke path, explicit `USQLUILayoutRepositoryFactory` selection through `ESQLUILayoutRepositoryBackend::SQLite` when a database path is configured, opt-in repository-owned schema initialization settings, and schema-init hardening coverage for edge cases. SQLite is still not the default backend, and this work still does not add migrations inside the factory, packaged validation, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -212,6 +212,7 @@ The repository proof:
 - Has optional smoke coverage for factory-created SQLite repository lifecycle behavior and missing-path unavailable behavior.
 - Supports opt-in schema initialization through repository settings, allowing a writable repository to create and initialize an empty configured database only when `bInitializeSchemaIfMissing` and `bCreateDatabaseIfMissing` are both enabled.
 - Has optional smoke coverage for factory-created SQLite schema initialization and missing-database-without-init failure behavior.
+- Has optional smoke coverage for schema initialization hardening: missing database with creation disabled, empty database with creation enabled, already-initialized database idempotence, complete schema with missing migration record, partial schema failure behavior, and read-only init-blocked protection.
 
 The repository proof does not:
 
@@ -223,7 +224,7 @@ Remaining blockers before SQLite layout persistence:
 
 - Packaged-build validation.
 - Production SQLite worker boundary and shutdown policy.
-- Production migration hardening beyond the first opt-in schema initialization slice.
+- Production migration versioning and upgrade paths beyond the initial schema and hardening smoke slice.
 
 ## Evaluation Criteria
 
@@ -422,7 +423,7 @@ Before any SQLite implementation PR changes project code, confirm:
 
 ## Decision Record
 
-Current status: engine `SQLiteCore` remains the preferred backend candidate. SQLUI now has explicit SQLite repository factory selection for already-prepared databases, but SQLite is not the default backend and packaged-build validation remains open.
+Current status: engine `SQLiteCore` remains the preferred backend candidate. SQLUI now has explicit SQLite repository factory selection and opt-in schema initialization with targeted edge-case hardening, but SQLite is not the default backend and packaged-build validation remains open.
 
 Preferred candidate: engine-provided `SQLiteCore`, wrapped by a small SQLUI Core-owned async database boundary.
 
@@ -446,7 +447,7 @@ Blocking questions:
 Future implementation PRs may still touch:
 
 - A SQLUI Core async database service or wrapper around the chosen backend.
-- Executable migration code for the approved schema.
+- Production migration versioning and upgrade paths for later schema changes.
 - Packaged-build validation and any target-platform fixes.
 - Additional smoke coverage for production migration and async lifecycle behavior.
 - Documentation updates reflecting the implemented path.

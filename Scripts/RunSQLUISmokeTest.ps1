@@ -38,6 +38,8 @@ param(
 
 	[switch]$UseSQLiteFactorySchemaInitRepository,
 
+	[switch]$UseSQLiteSchemaInitHardening,
+
 	[Alias('?')]
 	[switch]$Help
 )
@@ -115,6 +117,9 @@ Parameters:
   -UseSQLiteFactorySchemaInitRepository
       Run the optional SQLUICore SQLite factory schema-init repository smoke path.
 
+  -UseSQLiteSchemaInitHardening
+      Run the optional SQLUICore SQLite schema-init hardening smoke path.
+
   -Help, -?
       Show this help.
 
@@ -136,6 +141,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteAsyncCallbackRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteFactoryLayoutRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteFactorySchemaInitRepository
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteSchemaInitHardening
   .\Scripts\RunSQLUISmokeTest.ps1 -UnrealEditorCmdPath "C:\UE\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -ProjectPath ".\JerryRigged.uproject"
 '@
@@ -320,6 +326,11 @@ if ($UseSQLiteFactoryLayoutRepository)
 if ($UseSQLiteFactorySchemaInitRepository)
 {
 	$CommandletArgs += '-SQLiteFactorySchemaInitRepository'
+}
+
+if ($UseSQLiteSchemaInitHardening)
+{
+	$CommandletArgs += '-SQLiteSchemaInitHardening'
 }
 
 $PrintableCommandParts = @($ResolvedUnrealEditorCmdPath) + $CommandletArgs

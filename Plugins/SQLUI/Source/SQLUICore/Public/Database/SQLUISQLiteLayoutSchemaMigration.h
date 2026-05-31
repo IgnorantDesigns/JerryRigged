@@ -82,4 +82,14 @@ public:
 	static FSQLUISQLiteLayoutSchemaInitializationResult ApplyInitialSchema(
 		const FString& DatabasePath,
 		bool bCreateDatabaseIfMissing);
+
+	static bool CountInitialSchemaMigrationRecords(
+		const FString& DatabasePath,
+		int32& OutRecordCount,
+		FString& OutErrorMessage);
+
+	// Smoke-test helper for preparing a complete-schema/missing-record edge case.
+	static bool DeleteInitialSchemaMigrationRecordForSmokeTest(
+		const FString& DatabasePath,
+		FString& OutErrorMessage);
 };

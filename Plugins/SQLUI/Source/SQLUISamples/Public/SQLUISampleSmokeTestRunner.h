@@ -685,6 +685,60 @@ struct SQLUISAMPLES_API FSQLUISampleSQLiteFactorySchemaInitRepositorySmokeResult
 };
 
 USTRUCT(BlueprintType)
+struct SQLUISAMPLES_API FSQLUISampleSQLiteSchemaInitHardeningSmokeResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bMissingDbCreateDisabledFailed = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bMissingDbCreateDisabledNotCreated = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bEmptyDbCreateEnabledSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bEmptyDbSchemaReady = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bAlreadyInitializedSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bAlreadyInitializedDetected = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bMigrationRowNotDuplicated = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bCompleteSchemaMissingMigrationSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bCompleteSchemaMissingMigrationRecorded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPartialSchemaFailedClearly = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPartialSchemaReportedMissingObjects = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bReadOnlyInitBlocked = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bReadOnlyInitDidNotCreateDb = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bDatabaseFilesRemoved = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FString ErrorMessage;
+};
+
+USTRUCT(BlueprintType)
 struct SQLUISAMPLES_API FSQLUISampleSmokeTestRequest
 {
 	GENERATED_BODY()
@@ -754,6 +808,9 @@ struct SQLUISAMPLES_API FSQLUISampleSmokeTestRequest
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bUseSQLiteFactorySchemaInitRepository = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bUseSQLiteSchemaInitHardening = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	FString SampleFilterText = TEXT("Smoke test");
@@ -931,6 +988,12 @@ struct SQLUISAMPLES_API FSQLUISampleSmokeTestResult
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	FSQLUISampleSQLiteFactorySchemaInitRepositorySmokeResult SQLiteFactorySchemaInitRepository;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bUsedSQLiteSchemaInitHardening = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FSQLUISampleSQLiteSchemaInitHardeningSmokeResult SQLiteSchemaInitHardening;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	TArray<FString> Errors;
