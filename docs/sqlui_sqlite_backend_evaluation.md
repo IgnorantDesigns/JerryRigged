@@ -1,6 +1,6 @@
 # SQLUI SQLite Backend Evaluation
 
-This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, optional smoke-safe database probes under `Saved/SQLUI/SmokeTests`, a non-UObject SQLite repository worker helper, SQLite repository operations for list/load/save/remove/clear, opt-in async callback execution for `LoadLayout` and `SaveLayout`, a combined full lifecycle smoke path, and explicit `USQLUILayoutRepositoryFactory` selection through `ESQLUILayoutRepositoryBackend::SQLite` when a database path is configured. SQLite is still not the default backend, and this work still does not add migrations inside the factory, packaged validation, widgets, maps, assets, CI, or persistent database files.
+This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, optional smoke-safe database probes under `Saved/SQLUI/SmokeTests`, a non-UObject SQLite repository worker helper, SQLite repository operations for list/load/save/remove/clear, opt-in async callback execution for `LoadLayout` and `SaveLayout`, a combined full lifecycle smoke path, explicit `USQLUILayoutRepositoryFactory` selection through `ESQLUILayoutRepositoryBackend::SQLite` when a database path is configured, and opt-in repository-owned schema initialization settings. SQLite is still not the default backend, and this work still does not add migrations inside the factory, packaged validation, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -17,6 +17,7 @@ This evaluation compares backend options before implementation work starts. The 
 
 - Do not treat the current SQLite `SaveLayout` proof as complete writable SQLite layout persistence.
 - Do not make SQLite the default repository backend.
+- Do not create SQLite databases unless repository schema initialization and database creation are both explicitly enabled.
 - Do not add dependencies beyond the minimal engine `SQLiteCore` plugin/module wiring used for the compile proof.
 - Do not add Marketplace dependencies, third-party Unreal plugins, or vendored third-party source.
 - Do not modify widgets, CI, assets, maps, or persistent database files.
@@ -209,6 +210,8 @@ The repository proof:
 - Supports opt-in async callback execution for SQLite `LoadLayout` and `SaveLayout`.
 - Is selectable through `USQLUILayoutRepositoryFactory` only when `ESQLUILayoutRepositoryBackend::SQLite` is explicitly requested and `SQLiteSettings.DatabasePath` is configured.
 - Has optional smoke coverage for factory-created SQLite repository lifecycle behavior and missing-path unavailable behavior.
+- Supports opt-in schema initialization through repository settings, allowing a writable repository to create and initialize an empty configured database only when `bInitializeSchemaIfMissing` and `bCreateDatabaseIfMissing` are both enabled.
+- Has optional smoke coverage for factory-created SQLite schema initialization and missing-database-without-init failure behavior.
 
 The repository proof does not:
 
@@ -220,7 +223,7 @@ Remaining blockers before SQLite layout persistence:
 
 - Packaged-build validation.
 - Production SQLite worker boundary and shutdown policy.
-- Production migration integration behind the future SQLite repository.
+- Production migration hardening beyond the first opt-in schema initialization slice.
 
 ## Evaluation Criteria
 

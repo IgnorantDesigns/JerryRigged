@@ -43,6 +43,33 @@ struct SQLUICORE_API FSQLUISQLiteLayoutSchemaMigrationProbeResult
 	FString ErrorMessage;
 };
 
+USTRUCT(BlueprintType)
+struct SQLUICORE_API FSQLUISQLiteLayoutSchemaInitializationResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Database")
+	bool bSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Database")
+	bool bDatabaseOpened = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Database")
+	bool bSchemaReady = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Database")
+	bool bMigrationApplied = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Database")
+	bool bMigrationAlreadyApplied = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Database")
+	FString DatabasePath;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Database")
+	FString ErrorMessage;
+};
+
 class SQLUICORE_API FSQLUISQLiteLayoutSchemaMigration
 {
 public:
@@ -51,4 +78,8 @@ public:
 	static FSQLUISQLiteLayoutSchemaMigrationProbeResult RunProbe(
 		const FString& DatabasePath = FString(),
 		bool bRemoveDatabaseAfterClose = true);
+
+	static FSQLUISQLiteLayoutSchemaInitializationResult ApplyInitialSchema(
+		const FString& DatabasePath,
+		bool bCreateDatabaseIfMissing);
 };

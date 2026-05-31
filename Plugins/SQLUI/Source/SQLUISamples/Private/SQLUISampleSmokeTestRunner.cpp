@@ -3276,6 +3276,408 @@ FSQLUISampleSQLiteFactoryLayoutRepositorySmokeResult RunSQLUISampleSQLiteFactory
 	return Result;
 }
 
+void AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+	FSQLUISampleSQLiteFactorySchemaInitRepositorySmokeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleSQLiteFactorySchemaInitRepositoryDatabasePath()
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("SQLiteFactorySchemaInitRepository"),
+		TEXT("SQLiteFactorySchemaInitRepository.db"));
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+FString MakeSQLUISampleSQLiteFactorySchemaInitRepositoryMissingDatabasePath()
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("SQLiteFactorySchemaInitRepository"),
+		TEXT("SQLiteFactorySchemaInitRepositoryMissing.db"));
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+bool DoSQLUISampleSQLiteFactorySchemaInitRepositoryFilesExist(const FString& DatabasePath)
+{
+	const TArray<FString> PathsToCheck = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	for (const FString& PathToCheck : PathsToCheck)
+	{
+		if (FPaths::FileExists(PathToCheck))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DeleteSQLUISampleSQLiteFactorySchemaInitRepositoryFiles(
+	const FString& DatabasePath,
+	FSQLUISampleSQLiteFactorySchemaInitRepositorySmokeResult& Result)
+{
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite factory schema init repository smoke failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+FSQLUILayoutDocument MakeSQLUISampleSQLiteFactorySchemaInitRepositoryDocument()
+{
+	FSQLUILayoutDocument Document = MakeSQLUISampleSQLiteFactoryLayoutRepositoryDocument();
+	Document.Version.Label = TEXT("SQLite Factory Schema Init Repository Probe");
+	Document.Metadata.LayoutId = TEXT("sqlui.smoke.sqlite-factory-schema-init-repository");
+	Document.Metadata.DisplayName = TEXT("SQLUI SQLite Factory Schema Init Repository Probe");
+	Document.Metadata.Description = TEXT("Smoke/probe layout for SQLite factory schema initialization.");
+	Document.Metadata.Tags.Reset();
+	Document.Metadata.Tags.Add(TEXT("sqlite"));
+	Document.Metadata.Tags.Add(TEXT("smoke"));
+	Document.Metadata.Tags.Add(TEXT("schema-init"));
+	Document.Metadata.SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteFactorySchemaInitRepository"));
+	Document.RootWidgetId = TEXT("SQLUI.SQLite.FactorySchemaInitRepository.Root");
+
+	if (Document.Nodes.Num() > 0)
+	{
+		Document.Nodes[0].WidgetId = Document.RootWidgetId;
+		Document.Nodes[0].Properties.Add(TEXT("Text"), Document.Metadata.DisplayName);
+		Document.Nodes[0].Tags.Reset();
+		Document.Nodes[0].Tags.Add(TEXT("sqlite"));
+		Document.Nodes[0].Tags.Add(TEXT("schema-init"));
+		Document.Nodes[0].SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteFactorySchemaInitRepository"));
+	}
+
+	return Document;
+}
+
+FSQLUISampleSQLiteFactorySchemaInitRepositorySmokeResult RunSQLUISampleSQLiteFactorySchemaInitRepositorySmoke(
+	UObject* Outer)
+{
+	FSQLUISampleSQLiteFactorySchemaInitRepositorySmokeResult Result;
+	Result.DatabasePath = MakeSQLUISampleSQLiteFactorySchemaInitRepositoryDatabasePath();
+	Result.MissingDatabasePath =
+		MakeSQLUISampleSQLiteFactorySchemaInitRepositoryMissingDatabasePath();
+
+	const bool bDeletedMainFiles =
+		DeleteSQLUISampleSQLiteFactorySchemaInitRepositoryFiles(Result.DatabasePath, Result);
+	const bool bDeletedMissingFiles =
+		DeleteSQLUISampleSQLiteFactorySchemaInitRepositoryFiles(Result.MissingDatabasePath, Result);
+	Result.bDatabaseAbsentBeforeStart =
+		bDeletedMainFiles
+		&& bDeletedMissingFiles
+		&& !DoSQLUISampleSQLiteFactorySchemaInitRepositoryFilesExist(Result.DatabasePath)
+		&& !DoSQLUISampleSQLiteFactorySchemaInitRepositoryFilesExist(Result.MissingDatabasePath);
+	if (!Result.bDatabaseAbsentBeforeStart)
+	{
+		AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite factory schema init repository smoke failed: probe database files were present before start or could not be removed."));
+	}
+
+	FSQLUILayoutRepositoryFactorySettings FactorySettings;
+	FactorySettings.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	FactorySettings.SQLiteSettings.DatabasePath = Result.DatabasePath;
+	FactorySettings.SQLiteSettings.bReadOnly = false;
+	FactorySettings.SQLiteSettings.bRunCallbackOperationsAsync = true;
+	FactorySettings.SQLiteSettings.bInitializeSchemaIfMissing = true;
+	FactorySettings.SQLiteSettings.bCreateDatabaseIfMissing = true;
+
+	USQLUILayoutRepository* CreatedRepository =
+		USQLUILayoutRepositoryFactory::CreateLayoutRepository(Outer, FactorySettings);
+	Result.bCreatedRepository = IsValid(CreatedRepository);
+	USQLUISQLiteLayoutRepository* SQLiteRepository =
+		Cast<USQLUISQLiteLayoutRepository>(CreatedRepository);
+	Result.bCreatedSQLiteRepository = IsValid(SQLiteRepository);
+	if (!Result.bCreatedRepository || !Result.bCreatedSQLiteRepository)
+	{
+		AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite factory schema init repository smoke failed: factory did not create a SQLite repository."));
+		Result.bDatabaseRemoved =
+			DeleteSQLUISampleSQLiteFactorySchemaInitRepositoryFiles(Result.DatabasePath, Result)
+			&& DeleteSQLUISampleSQLiteFactorySchemaInitRepositoryFiles(Result.MissingDatabasePath, Result);
+		return Result;
+	}
+
+	const FSQLUILayoutDocument Document =
+		MakeSQLUISampleSQLiteFactorySchemaInitRepositoryDocument();
+
+	TSharedRef<FSQLUISampleSQLiteAsyncCallbackSaveState, ESPMode::ThreadSafe> SaveState =
+		MakeShared<FSQLUISampleSQLiteAsyncCallbackSaveState, ESPMode::ThreadSafe>();
+	SaveState->Result.SavedLayoutId = Document.Metadata.LayoutId;
+	CreatedRepository->SaveLayout(
+		Document,
+		FSQLUILayoutSaveCompleteDelegate::CreateLambda(
+			[SaveState](const FSQLUILayoutSaveResult& InSaveResult)
+			{
+				SaveState->Result = InSaveResult;
+				SaveState->bDeliveredOnGameThread = IsInGameThread();
+				SaveState->bCallbackDelivered = true;
+			}));
+
+	const bool bSaveCallbackDelivered =
+		WaitForSQLUISampleSmokeCallback(
+			[SaveState]()
+			{
+				return SaveState->bCallbackDelivered;
+			});
+	Result.SavedLayoutId = SaveState->Result.SavedLayoutId;
+	Result.bDatabaseCreated =
+		!DoSQLUISampleSQLiteFactorySchemaInitRepositoryFilesExist(Result.MissingDatabasePath)
+		&& FPaths::FileExists(Result.DatabasePath);
+	Result.bSaveSucceeded =
+		bSaveCallbackDelivered
+		&& SaveState->bDeliveredOnGameThread
+		&& SaveState->Result.bSucceeded
+		&& SaveState->Result.SavedLayoutId == Document.Metadata.LayoutId
+		&& SaveState->Result.Validation.bIsValid;
+	if (!Result.bSaveSucceeded)
+	{
+		AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+			Result,
+			SaveState->Result.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite factory schema init repository smoke failed: SaveLayout failed or callback was not delivered on the game thread.")
+				: SaveState->Result.ErrorMessage);
+	}
+
+	if (Result.bSaveSucceeded && Result.bDatabaseCreated)
+	{
+		FSQLUISQLiteLayoutSchemaRowCounts RowCounts;
+		FString RowCountErrorMessage;
+		Result.bSaveInitializedSchema =
+			FSQLUISQLiteLayoutReadProbe::CountLayoutSchemaRows(
+				Result.DatabasePath,
+				RowCounts,
+				RowCountErrorMessage)
+			&& RowCounts.Layouts == 1
+			&& RowCounts.LayoutRevisions == 1
+			&& RowCounts.LayoutTags == Document.Metadata.Tags.Num();
+		if (!Result.bSaveInitializedSchema)
+		{
+			AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+				Result,
+				RowCountErrorMessage.IsEmpty()
+					? FString::Printf(
+						TEXT("SQLUI SQLite factory schema init repository smoke failed: schema row counts after save were unexpected. Layouts=%d Revisions=%d Tags=%d."),
+						RowCounts.Layouts,
+						RowCounts.LayoutRevisions,
+						RowCounts.LayoutTags)
+					: RowCountErrorMessage);
+		}
+	}
+
+	if (Result.bSaveInitializedSchema)
+	{
+		const FSQLUILayoutRepositoryListResult ListResult =
+			SQLiteRepository->ListLayouts();
+		Result.bListSucceeded = ListResult.bSucceeded;
+		Result.ListedLayoutCount = ListResult.Layouts.Num();
+		if (!Result.bListSucceeded)
+		{
+			AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+				Result,
+				ListResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite factory schema init repository smoke failed: ListLayouts failed.")
+					: ListResult.ErrorMessage);
+		}
+		else
+		{
+			Result.bListedMetadataFound =
+				DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListResult.Layouts,
+					Document.Metadata);
+			if (!Result.bListedMetadataFound)
+			{
+				AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+					Result,
+					TEXT("SQLUI SQLite factory schema init repository smoke failed: ListLayouts did not include saved metadata and tags."));
+			}
+		}
+	}
+
+	TSharedRef<FSQLUISampleSQLiteAsyncCallbackLoadState, ESPMode::ThreadSafe> LoadState =
+		MakeShared<FSQLUISampleSQLiteAsyncCallbackLoadState, ESPMode::ThreadSafe>();
+	LoadState->Result.Document.Metadata.LayoutId = Document.Metadata.LayoutId;
+	if (Result.bListedMetadataFound)
+	{
+		CreatedRepository->LoadLayout(
+			Document.Metadata.LayoutId,
+			FSQLUILayoutLoadCompleteDelegate::CreateLambda(
+				[LoadState](const FSQLUILayoutLoadResult& InLoadResult)
+				{
+					LoadState->Result = InLoadResult;
+					LoadState->bDeliveredOnGameThread = IsInGameThread();
+					LoadState->bCallbackDelivered = true;
+				}));
+
+		const bool bLoadCallbackDelivered =
+			WaitForSQLUISampleSmokeCallback(
+				[LoadState]()
+				{
+					return LoadState->bCallbackDelivered;
+				});
+		Result.bLoadSucceeded =
+			bLoadCallbackDelivered
+			&& LoadState->bDeliveredOnGameThread
+			&& LoadState->Result.bSucceeded;
+		Result.LoadedLayoutId = LoadState->Result.Document.Metadata.LayoutId;
+		Result.bLoadedDocumentValid =
+			Result.bLoadSucceeded
+			&& LoadState->Result.Validation.bIsValid
+			&& LoadState->Result.Document.Metadata.LayoutId == Document.Metadata.LayoutId;
+		if (!Result.bLoadSucceeded)
+		{
+			AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+				Result,
+				LoadState->Result.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite factory schema init repository smoke failed: LoadLayout failed or callback was not delivered on the game thread.")
+					: LoadState->Result.ErrorMessage);
+		}
+		else if (!Result.bLoadedDocumentValid)
+		{
+			AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+				Result,
+				TEXT("SQLUI SQLite factory schema init repository smoke failed: loaded document was invalid or did not match the saved layout id."));
+		}
+	}
+
+	if (Result.bLoadedDocumentValid)
+	{
+		const FSQLUILayoutRepositoryRemoveResult RemoveResult =
+			SQLiteRepository->RemoveLayout(Document.Metadata.LayoutId);
+		Result.bRemoveSucceeded =
+			RemoveResult.bSucceeded
+			&& RemoveResult.bRemoved
+			&& RemoveResult.RemovedLayoutId == Document.Metadata.LayoutId;
+		if (!Result.bRemoveSucceeded)
+		{
+			AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+				Result,
+				RemoveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite factory schema init repository smoke failed: RemoveLayout failed.")
+					: RemoveResult.ErrorMessage);
+		}
+	}
+
+	if (Result.bRemoveSucceeded)
+	{
+		const FSQLUILayoutRepositoryClearResult ClearResult =
+			SQLiteRepository->ClearLayouts();
+		Result.bClearSucceeded = ClearResult.bSucceeded;
+		Result.ClearRemovedCount = ClearResult.RemovedCount;
+		if (!Result.bClearSucceeded)
+		{
+			AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+				Result,
+				ClearResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite factory schema init repository smoke failed: ClearLayouts failed.")
+					: ClearResult.ErrorMessage);
+		}
+	}
+
+	const FSQLUILayoutDocument MissingDbDocument =
+		MakeSQLUISampleSQLiteFactorySchemaInitRepositoryDocument();
+	FSQLUILayoutRepositoryFactorySettings MissingDbSettings;
+	MissingDbSettings.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	MissingDbSettings.SQLiteSettings.DatabasePath = Result.MissingDatabasePath;
+	MissingDbSettings.SQLiteSettings.bReadOnly = false;
+	MissingDbSettings.SQLiteSettings.bInitializeSchemaIfMissing = false;
+	MissingDbSettings.SQLiteSettings.bCreateDatabaseIfMissing = false;
+	USQLUILayoutRepository* MissingDbRepository =
+		USQLUILayoutRepositoryFactory::CreateLayoutRepository(Outer, MissingDbSettings);
+	const FSQLUILayoutSaveResult MissingDbSaveResult =
+		SaveSQLUISampleLayoutToRepository(
+			MissingDbRepository,
+			TEXT("SQLite factory schema init missing database repository"),
+			MissingDbDocument);
+	Result.bMissingDbWithoutInitFailed =
+		!MissingDbSaveResult.bSucceeded
+		&& MissingDbSaveResult.ErrorMessage.Contains(TEXT("does not exist"));
+	Result.bMissingDbWithoutInitNotCreated =
+		!DoSQLUISampleSQLiteFactorySchemaInitRepositoryFilesExist(Result.MissingDatabasePath);
+	if (!Result.bMissingDbWithoutInitFailed)
+	{
+		AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite factory schema init repository smoke failed: missing DB without init did not fail cleanly. SaveSucceeded=%s Error='%s'."),
+				MissingDbSaveResult.bSucceeded ? TEXT("true") : TEXT("false"),
+				*MissingDbSaveResult.ErrorMessage));
+	}
+	if (!Result.bMissingDbWithoutInitNotCreated)
+	{
+		AppendSQLUISampleSQLiteFactorySchemaInitRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite factory schema init repository smoke failed: missing DB without init created a database file."));
+	}
+
+	Result.bDatabaseRemoved =
+		DeleteSQLUISampleSQLiteFactorySchemaInitRepositoryFiles(Result.DatabasePath, Result)
+		&& DeleteSQLUISampleSQLiteFactorySchemaInitRepositoryFiles(Result.MissingDatabasePath, Result);
+
+	Result.bSucceeded =
+		Result.bDatabaseAbsentBeforeStart
+		&& Result.bCreatedRepository
+		&& Result.bCreatedSQLiteRepository
+		&& Result.bSaveInitializedSchema
+		&& Result.bDatabaseCreated
+		&& Result.bSaveSucceeded
+		&& Result.bListSucceeded
+		&& Result.bListedMetadataFound
+		&& Result.bLoadSucceeded
+		&& Result.bLoadedDocumentValid
+		&& Result.bRemoveSucceeded
+		&& Result.bClearSucceeded
+		&& Result.bMissingDbWithoutInitFailed
+		&& Result.bMissingDbWithoutInitNotCreated
+		&& Result.bDatabaseRemoved;
+
+	return Result;
+}
+
 FSQLUISampleSmokeTestLayoutResult ResolveSQLUISampleSmokeTestLayoutDocument(
 	UObject* Outer,
 	const FSQLUISampleSmokeTestRequest& Request)
@@ -4047,6 +4449,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.SQLiteFactoryLayoutRepository.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI SQLite factory layout repository smoke failed.")
 					: Result.SQLiteFactoryLayoutRepository.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseSQLiteFactorySchemaInitRepository)
+	{
+		Result.bUsedSQLiteFactorySchemaInitRepository = true;
+		Result.SQLiteFactorySchemaInitRepository =
+			RunSQLUISampleSQLiteFactorySchemaInitRepositorySmoke(Outer);
+		if (!Result.SQLiteFactorySchemaInitRepository.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.SQLiteFactorySchemaInitRepository.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite factory schema init repository smoke failed.")
+					: Result.SQLiteFactorySchemaInitRepository.ErrorMessage);
 		}
 	}
 

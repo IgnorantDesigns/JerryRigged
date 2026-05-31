@@ -10,6 +10,9 @@ FSQLUISQLiteLayoutRepositoryWorkerSettings MakeSQLUISQLiteLayoutRepositoryWorker
 {
 	FSQLUISQLiteLayoutRepositoryWorkerSettings WorkerSettings;
 	WorkerSettings.DatabasePath = Settings.DatabasePath;
+	WorkerSettings.bInitializeSchemaIfMissing = Settings.bInitializeSchemaIfMissing;
+	WorkerSettings.bCreateDatabaseIfMissing = Settings.bCreateDatabaseIfMissing;
+	WorkerSettings.bAllowSchemaInitializationWrites = !Settings.bReadOnly;
 	return WorkerSettings;
 }
 }

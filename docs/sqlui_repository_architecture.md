@@ -28,7 +28,7 @@ Runtime-facing code can choose a repository backend through `FSQLUILayoutReposit
 
 `FSQLUILayoutRepositoryFactorySettings` also includes an optional `JsonFileBaseDirectory`. When it is set, the JSON file repository is configured with that directory. When it is empty, the JSON file repository keeps its default `Saved/SQLUI/Layouts` path.
 
-`FSQLUILayoutRepositoryFactorySettings` includes `SQLiteSettings` for the SQLite backend. Those settings are passed to `USQLUISQLiteLayoutRepository` without running migrations or creating database files in the factory. If `Backend = SQLite` is requested with an empty `SQLiteSettings.DatabasePath`, the factory returns the existing unavailable repository behavior instead of silently falling back to another backend.
+`FSQLUILayoutRepositoryFactorySettings` includes `SQLiteSettings` for the SQLite backend. Those settings are passed to `USQLUISQLiteLayoutRepository` without running migrations or creating database files in the factory. If `Backend = SQLite` is requested with an empty `SQLiteSettings.DatabasePath`, the factory returns the existing unavailable repository behavior instead of silently falling back to another backend. Schema initialization remains repository-owned and opt-in through SQLite settings.
 
 The factory falls back to the transient package when no valid outer is supplied. It is the runtime selection boundary for current sample code and later storage implementations. Widgets should stay behind repository/runtime-context APIs and should not select concrete storage classes themselves.
 
@@ -68,7 +68,7 @@ This repository is suitable for lightweight runtime persistence and local develo
 
 `USQLUISQLiteLayoutRepository` is the first repository-shaped SQLite implementation in SQLUICore. It supports read operations, writable `SaveLayout`, soft-delete `RemoveLayout`, and destructive scoped `ClearLayouts` when explicitly configured writable.
 
-The repository is configured with `FSQLUISQLiteLayoutRepositorySettings`, including a `DatabasePath`, `bReadOnly`, and the opt-in `bRunCallbackOperationsAsync` flag. It opens the configured database for each operation. It does not create a database, create schema tables, run migrations, or seed data. It is now factory-selectable only when `ESQLUILayoutRepositoryBackend::SQLite` is explicitly requested and a database path is provided.
+The repository is configured with `FSQLUISQLiteLayoutRepositorySettings`, including a `DatabasePath`, `bReadOnly`, the opt-in `bRunCallbackOperationsAsync` flag, and opt-in schema initialization flags. It opens the configured database for each operation. By default, it does not create a database, create schema tables, run migrations, or seed data. When `bInitializeSchemaIfMissing = true` and `bCreateDatabaseIfMissing = true` are explicitly set on a writable repository, the repository worker can create an empty database and apply the planned initial layout schema before operations such as `SaveLayout`. It is factory-selectable only when `ESQLUILayoutRepositoryBackend::SQLite` is explicitly requested and a database path is provided.
 
 SQLite database operation logic lives in the non-UObject `FSQLUISQLiteLayoutRepositoryWorker` helper. The helper accepts plain settings/request data and returns plain repository result structs, which keeps SQLite paths, connection handling, SQL statements, transactions, validation, and serialization outside the UObject wrapper. `USQLUISQLiteLayoutRepository` calls the helper synchronously by default. When `bRunCallbackOperationsAsync = true`, only the callback-style `LoadLayout` and `SaveLayout` methods run the worker helper through the SQLUI database async boundary and marshal results back to the game thread before invoking callbacks. Direct return-value methods remain synchronous.
 
@@ -79,17 +79,19 @@ Current supported behavior:
 - `ListLayouts` preserves the planned ordering by `display_name COLLATE NOCASE ASC, layout_id COLLATE NOCASE ASC`.
 - `LoadLayout` reads the current revision document JSON by joining `layouts.current_revision` to `layout_revisions.revision`.
 - `LoadLayout` deserializes with `FSQLUILayoutJson` and validates after load.
-- `SaveLayout` works only when `bReadOnly = false`, `DatabasePath` is configured, and the database already exists with the planned layout schema.
+- `SaveLayout` works only when `bReadOnly = false`, `DatabasePath` is configured, and the database already exists with the planned layout schema unless opt-in schema initialization is enabled.
 - `SaveLayout` validates the document, serializes canonical JSON, computes the next revision from `layout_revisions`, upserts `layouts`, inserts an immutable `layout_revisions` row, replaces `layout_tags`, and commits the transaction.
-- `RemoveLayout` works only when `bReadOnly = false`, `DatabasePath` is configured, and the database already exists with the planned layout schema.
+- `RemoveLayout` works only when `bReadOnly = false`, `DatabasePath` is configured, and the database already exists with the planned layout schema unless opt-in schema initialization is enabled.
 - `RemoveLayout` soft-deletes active rows by setting `layouts.b_deleted = 1`; revisions, tags, checkpoints, and previews remain intact.
-- `ClearLayouts` works only when `bReadOnly = false`, `DatabasePath` is configured, and the database already exists with the planned layout schema.
+- `ClearLayouts` works only when `bReadOnly = false`, `DatabasePath` is configured, and the database already exists with the planned layout schema unless opt-in schema initialization is enabled.
 - `ClearLayouts` destructively deletes previews, checkpoints, tags, revisions, and layouts for the configured database scope.
 - `ClearLayouts` counts rows in `layouts` before deletion and returns that count as `RemovedCount`, including active and soft-deleted layout rows.
 - `bRunCallbackOperationsAsync` defaults to `false` and preserves the existing immediate callback behavior unless explicitly enabled.
+- `bInitializeSchemaIfMissing` defaults to `false` and preserves the existing requirement for an already-prepared database.
+- `bCreateDatabaseIfMissing` defaults to `false`; the repository creates a missing database only when both schema-init settings are explicitly enabled.
 - Async callback execution currently covers only `LoadLayout` and `SaveLayout`; `LoadLayoutById`, `ListLayouts`, `RemoveLayout`, and `ClearLayouts` remain synchronous.
 
-Unsupported behavior remains explicit. `SaveLayout`, `RemoveLayout`, and `ClearLayouts` return clear read-only failures when `bReadOnly = true`. This repository is not selected by `USQLUILayoutRepositoryFactory` yet and should not be treated as complete durable SQLite layout persistence.
+Unsupported behavior remains explicit. `SaveLayout`, `RemoveLayout`, and `ClearLayouts` return clear read-only failures when `bReadOnly = true`; read-only mode does not create or initialize schemas. This repository is selected by `USQLUILayoutRepositoryFactory` only when SQLite is explicitly requested, and it should not be treated as complete durable SQLite layout persistence.
 
 ## Result Types
 
@@ -166,6 +168,7 @@ Current paths are:
 - SQLite full lifecycle repository proof: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteFullLifecycleRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, `LoadLayout`, revision 2 update behavior, soft-delete `RemoveLayout`, revision preservation, destructive scoped `ClearLayouts`, empty schema tables after clear, removes the database, and passes the default layout through the widget pipeline.
 - SQLite async callback repository proof: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteAsyncCallbackRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false` and `bRunCallbackOperationsAsync = true`, verifies callback-style `SaveLayout` and `LoadLayout` complete through the async boundary with callbacks delivered on the game thread, verifies synchronous `ListLayouts` metadata and tags afterward, removes the database, and passes the default layout through the widget pipeline.
 - SQLite factory layout repository proof: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteFactoryRepository`, requests `ESQLUILayoutRepositoryBackend::SQLite` through `USQLUILayoutRepositoryFactory`, verifies a SQLite repository is created only with a configured database path, exercises `SaveLayout`, `ListLayouts`, `LoadLayout`, `RemoveLayout`, and `ClearLayouts`, verifies missing path selection reports unavailable behavior, removes the database, and passes the default layout through the widget pipeline.
+- SQLite factory schema-init repository proof: SQLUISamples starts with no database under `Saved/SQLUI/SmokeTests/SQLiteFactorySchemaInitRepository`, requests `ESQLUILayoutRepositoryBackend::SQLite` through `USQLUILayoutRepositoryFactory`, enables `bInitializeSchemaIfMissing` and `bCreateDatabaseIfMissing` in `SQLiteSettings`, verifies repository `SaveLayout` creates and initializes the schema, exercises `ListLayouts`, `LoadLayout`, `RemoveLayout`, and `ClearLayouts`, verifies a missing database without schema-init settings fails without creating a file, removes database files, and passes the default layout through the widget pipeline.
 
 The default, JSON fixture, in-memory, JSON file, and unavailable paths do not use SQLite. SQLite smoke paths are optional and write only under their `Saved/SQLUI/SmokeTests/...` directories. No smoke path uses Content, maps, viewport attachment, or durable project assets.
 
@@ -189,7 +192,7 @@ The SQLite implementation should:
 - Preserve the current document validation boundary before saving and after loading.
 - Use `Saved/SQLUI/...` for writable runtime database state, with any seed-copy behavior handled before mutation.
 
-SQLite persistence is still incomplete. Production migration integration, full async database execution, and packaged-build validation should happen in later implementation work.
+SQLite persistence is still incomplete. The first opt-in schema initialization slice exists, but production migration hardening, full async database execution, shutdown behavior, and packaged-build validation should happen in later implementation work.
 
 ## Suggested Next Steps
 
@@ -198,5 +201,5 @@ Near-term implementation work can stay small and repository-focused:
 1. Choose a SQLite backend only after the schema, async boundaries, backend selection criteria, and backend evaluation blockers are resolved.
 2. Extend the async database boundary beyond callback-style `LoadLayout` and `SaveLayout` before using SQLite for normal runtime persistence.
 3. Keep SQLite factory selection explicitly configured and unavailable when required settings are missing.
-4. Add executable migrations and database file handling in SQLUICore, not in widgets.
+4. Harden executable migrations and database file handling in SQLUICore, not in widgets.
 5. Extend lifecycle features through repository contracts instead of exposing storage details to widgets.

@@ -18,6 +18,12 @@ struct SQLUICORE_API FSQLUISQLiteLayoutRepositorySettings
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Layout Repository")
 	bool bRunCallbackOperationsAsync = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Layout Repository")
+	bool bInitializeSchemaIfMissing = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Layout Repository")
+	bool bCreateDatabaseIfMissing = false;
 };
 
 UCLASS(BlueprintType)
