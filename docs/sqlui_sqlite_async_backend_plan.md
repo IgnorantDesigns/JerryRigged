@@ -1,6 +1,6 @@
 # SQLUI SQLite Async Backend Plan
 
-This document drafts the async and backend boundary for a future SQLite-backed SQLUI layout repository. The original plan was documentation-only. The current proof work includes minimal `SQLiteCore` availability and open/close probes, a SQLUICore-owned async boundary/probe that runs plain database-style work on a background task and delivers the result back through a game-thread callback, a smoke-only migration-runner probe, a planned layout schema migration probe, a read/list/load mapping probe, a read-only `USQLUISQLiteLayoutRepository` proof, a writable `SaveLayout` repository proof, a soft-delete `RemoveLayout` repository proof, and a destructive scoped `ClearLayouts` repository proof. It still does not add SQLite repository factory selection, async SQLite workers, widgets, maps, assets, CI, or persistent database files.
+This document drafts the async and backend boundary for a future SQLite-backed SQLUI layout repository. The original plan was documentation-only. The current proof work includes minimal `SQLiteCore` availability and open/close probes, a SQLUICore-owned async boundary/probe that runs plain database-style work on a background task and delivers the result back through a game-thread callback, a smoke-only migration-runner probe, a planned layout schema migration probe, a read/list/load mapping probe, a read-only `USQLUISQLiteLayoutRepository` proof, writable `SaveLayout`, soft-delete `RemoveLayout`, destructive scoped `ClearLayouts`, a combined full lifecycle repository smoke path, and a non-UObject worker-safe operation helper for SQLite repository database work. Repository calls are still synchronous in this slice. It still does not add SQLite repository factory selection, async SQLite workers, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -57,6 +57,8 @@ The recommended shape is a small SQLUI Core-owned worker boundary:
 This boundary can be implemented with whichever Unreal async primitive best fits the chosen backend later. The design requirement is the boundary itself, not a specific task API.
 
 The current scaffold proves only the boundary shape. `FSQLUIDatabaseAsyncRunner` accepts immutable request data, runs a simulated database-style task on a background thread, and marshals `FSQLUIDatabaseAsyncResult` back to the game thread before invoking the callback. It deliberately does not open SQLite, execute SQL, write files, manage migrations, or expose a repository backend.
+
+The SQLite repository database operations now also sit behind `FSQLUISQLiteLayoutRepositoryWorker`, a non-UObject helper that accepts plain settings/request data and returns existing repository result structs. `USQLUISQLiteLayoutRepository` still invokes the helper synchronously, so no async SQLite execution is enabled yet. This boundary is intended to be the unit a later PR can enqueue through the SQLUI database async boundary before marshaling results back to the game thread.
 
 ## Game-Thread Responsibilities
 
@@ -287,6 +289,8 @@ The optional SQLite RemoveLayout repository smoke path prepares a temporary data
 
 The optional SQLite ClearLayouts repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteClearLayoutsRepository`, points `USQLUISQLiteLayoutRepository` at it with `bReadOnly = false`, verifies `SaveLayout`, soft-delete `RemoveLayout`, `ListLayouts`, `LoadLayout`, and destructive scoped `ClearLayouts`, verifies active and soft-deleted layout rows plus dependent schema rows are removed, closes all database handles, and removes the file. It proves scoped cleanup semantics only; worker execution and factory selection remain deferred.
 
+The optional SQLite full lifecycle repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteFullLifecycleRepository`, points `USQLUISQLiteLayoutRepository` at it with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, `LoadLayout`, revision update behavior, soft-delete `RemoveLayout`, destructive scoped `ClearLayouts`, revision preservation, and empty schema rows after clear, closes all database handles, and removes the file. It proves the currently supported SQLite lifecycle works through the synchronous repository wrapper and non-UObject worker helper; async execution and factory selection remain deferred.
+
 When the SQLite backend is added later, smoke coverage should prove:
 
 - Repository factory selection creates the SQLite repository only when the backend is available.
@@ -345,7 +349,7 @@ Evaluate candidate SQLite backends against the selection criteria. Propose the m
 
 ### Phase 2: Async Database Service Boundary
 
-Use the minimal SQLUI Core-owned async scaffold as the starting point, then harden it for real SQLite work. The implementation PR should decide whether the simple task-graph runner remains sufficient or whether SQLite needs a serialized worker queue, explicit cancellation tokens, or a longer-lived database service boundary.
+Use the minimal SQLUI Core-owned async scaffold and the new `FSQLUISQLiteLayoutRepositoryWorker` helper as the starting point, then harden them for real SQLite work. The implementation PR should decide whether the simple task-graph runner remains sufficient or whether SQLite needs a serialized worker queue, explicit cancellation tokens, or a longer-lived database service boundary.
 
 ### Phase 3: Migration Runner
 

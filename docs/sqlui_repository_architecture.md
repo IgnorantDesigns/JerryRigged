@@ -67,6 +67,8 @@ This repository is suitable for lightweight runtime persistence and local develo
 
 The repository is configured with `FSQLUISQLiteLayoutRepositorySettings`, including a `DatabasePath` and `bReadOnly`. It opens the configured database for each operation. It does not create a database, create schema tables, run migrations, seed data, or select itself through the repository factory.
 
+SQLite database operation logic lives in the non-UObject `FSQLUISQLiteLayoutRepositoryWorker` helper. The helper accepts plain settings/request data and returns plain repository result structs, which keeps SQLite paths, connection handling, SQL statements, transactions, validation, and serialization outside the UObject wrapper. `USQLUISQLiteLayoutRepository` still calls the helper synchronously in this implementation slice; a later async PR can run the same helper behind the SQLUI database worker boundary and marshal results back before invoking repository callbacks.
+
 Current supported behavior:
 
 - `ListLayouts` reads active rows from `layouts` where `b_deleted = 0`.
@@ -162,7 +164,7 @@ The default, JSON fixture, in-memory, JSON file, and unavailable paths do not us
 
 ## Future SQLite Repository Direction
 
-The SQLite repository proof now sits behind the same repository shape for `ListLayouts`, `LoadLayout`, writable `SaveLayout`, soft-delete `RemoveLayout`, and destructive scoped `ClearLayouts`, and a combined full lifecycle smoke path exercises those currently supported operations in one workflow. Full SQLite persistence remains future work. Callers should eventually be able to request, save, list, remove, and clear layouts without knowing whether the backing store is in memory, JSON files, or SQLite.
+The SQLite repository proof now sits behind the same repository shape for `ListLayouts`, `LoadLayout`, writable `SaveLayout`, soft-delete `RemoveLayout`, and destructive scoped `ClearLayouts`, and a combined full lifecycle smoke path exercises those currently supported operations in one workflow. SQLite database work is separated into a non-UObject worker-safe helper, but repository calls remain synchronous for now. Full SQLite persistence remains future work. Callers should eventually be able to request, save, list, remove, and clear layouts without knowing whether the backing store is in memory, JSON files, or SQLite.
 
 The proposed SQLite schema is drafted in [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md). That document defines the planned tables, keys, indexes, revision/history behavior, soft-delete semantics for normal remove operations, destructive clear behavior for scoped cleanup, migration/versioning expectations, validation boundaries, threading expectations, and repository-operation mapping.
 
