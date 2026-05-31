@@ -6,6 +6,9 @@
 struct SQLUICORE_API FSQLUISQLiteLayoutRepositoryWorkerSettings
 {
 	FString DatabasePath;
+	bool bInitializeSchemaIfMissing = false;
+	bool bCreateDatabaseIfMissing = false;
+	bool bAllowSchemaInitializationWrites = false;
 };
 
 /**

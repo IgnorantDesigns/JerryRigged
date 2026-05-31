@@ -26,6 +26,23 @@ void AppendSQLUILayoutSchemaProbeError(
 	Result.ErrorMessage += ErrorMessage;
 }
 
+void AppendSQLUILayoutSchemaInitializationError(
+	FSQLUISQLiteLayoutSchemaInitializationResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
 FString NormalizeSQLUILayoutSchemaProbePath(FString DatabasePath)
 {
 	FPaths::NormalizeFilename(DatabasePath);
@@ -194,6 +211,196 @@ bool DoesSQLiteObjectExist(
 	return ObjectCount > 0;
 }
 
+bool QuerySQLUILayoutSchemaSQLiteObjectCount(
+	FSQLiteDatabase& Database,
+	const TCHAR* ObjectType,
+	const TCHAR* ObjectName,
+	int32& OutObjectCount,
+	FString& OutErrorMessage)
+{
+	OutObjectCount = 0;
+	OutErrorMessage.Empty();
+
+	FSQLitePreparedStatement Statement = Database.PrepareStatement(
+		TEXT("SELECT COUNT(*) FROM sqlite_master WHERE type = ? AND name = ?;"));
+	if (!Statement.IsValid())
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout schema initialization failed: could not prepare %s verification for '%s'. SQLiteCore error: %s"),
+			ObjectType,
+			ObjectName,
+			*Database.GetLastError());
+		return false;
+	}
+
+	if (!Statement.SetBindingValueByIndex(1, ObjectType)
+		|| !Statement.SetBindingValueByIndex(2, ObjectName))
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout schema initialization failed: could not bind %s verification for '%s'. SQLiteCore error: %s"),
+			ObjectType,
+			ObjectName,
+			*Database.GetLastError());
+		return false;
+	}
+
+	const int64 RowCount = Statement.Execute(
+		[&OutObjectCount](const FSQLitePreparedStatement& Row)
+		{
+			return Row.GetColumnValueByIndex(0, OutObjectCount)
+				? ESQLitePreparedStatementExecuteRowResult::Continue
+				: ESQLitePreparedStatementExecuteRowResult::Error;
+		});
+
+	if (RowCount == INDEX_NONE)
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout schema initialization failed: %s verification query failed for '%s'. SQLiteCore error: %s"),
+			ObjectType,
+			ObjectName,
+			*Database.GetLastError());
+		return false;
+	}
+
+	return true;
+}
+
+bool DoesSQLUILayoutSchemaSQLiteObjectExist(
+	FSQLiteDatabase& Database,
+	FSQLUISQLiteLayoutSchemaInitializationResult& Result,
+	const TCHAR* ObjectType,
+	const TCHAR* ObjectName)
+{
+	int32 ObjectCount = 0;
+	FString ErrorMessage;
+	if (!QuerySQLUILayoutSchemaSQLiteObjectCount(
+		Database,
+		ObjectType,
+		ObjectName,
+		ObjectCount,
+		ErrorMessage))
+	{
+		AppendSQLUILayoutSchemaInitializationError(Result, ErrorMessage);
+		return false;
+	}
+
+	return ObjectCount > 0;
+}
+
+bool VerifySQLUILayoutSchemaReady(
+	FSQLiteDatabase& Database,
+	FSQLUISQLiteLayoutSchemaInitializationResult& Result)
+{
+	TArray<FString> MissingObjects;
+	const TArray<TPair<const TCHAR*, const TCHAR*>> ExpectedObjects = {
+		TPair<const TCHAR*, const TCHAR*>(TEXT("table"), TEXT("layouts")),
+		TPair<const TCHAR*, const TCHAR*>(TEXT("table"), TEXT("layout_revisions")),
+		TPair<const TCHAR*, const TCHAR*>(TEXT("table"), TEXT("layout_tags")),
+		TPair<const TCHAR*, const TCHAR*>(TEXT("table"), TEXT("layout_checkpoints")),
+		TPair<const TCHAR*, const TCHAR*>(TEXT("table"), TEXT("layout_previews")),
+		TPair<const TCHAR*, const TCHAR*>(TEXT("index"), TEXT("idx_layouts_display_name")),
+		TPair<const TCHAR*, const TCHAR*>(TEXT("index"), TEXT("idx_layouts_updated_at_utc")),
+		TPair<const TCHAR*, const TCHAR*>(TEXT("index"), TEXT("idx_layouts_b_deleted")),
+		TPair<const TCHAR*, const TCHAR*>(TEXT("index"), TEXT("idx_layout_revisions_layout_revision")),
+		TPair<const TCHAR*, const TCHAR*>(TEXT("index"), TEXT("idx_layout_tags_tag")),
+		TPair<const TCHAR*, const TCHAR*>(TEXT("index"), TEXT("idx_layout_previews_layout_id"))
+	};
+
+	for (const TPair<const TCHAR*, const TCHAR*>& ExpectedObject : ExpectedObjects)
+	{
+		if (!DoesSQLUILayoutSchemaSQLiteObjectExist(
+			Database,
+			Result,
+			ExpectedObject.Key,
+			ExpectedObject.Value))
+		{
+			MissingObjects.Add(ExpectedObject.Value);
+		}
+	}
+
+	Result.bSchemaReady = MissingObjects.Num() == 0;
+	if (!Result.bSchemaReady)
+	{
+		AppendSQLUILayoutSchemaInitializationError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite layout schema initialization failed: missing expected schema object(s): %s."),
+				*FString::Join(MissingObjects, TEXT(", "))));
+	}
+
+	return Result.bSchemaReady;
+}
+
+bool QuerySQLUILayoutSchemaInitialMigrationRecorded(
+	FSQLiteDatabase& Database,
+	FSQLUISQLiteLayoutSchemaInitializationResult& Result,
+	bool& bOutMigrationRecorded)
+{
+	bOutMigrationRecorded = false;
+
+	int32 MigrationTableCount = 0;
+	FString ErrorMessage;
+	if (!QuerySQLUILayoutSchemaSQLiteObjectCount(
+		Database,
+		TEXT("table"),
+		TEXT("sqlui_schema_migrations"),
+		MigrationTableCount,
+		ErrorMessage))
+	{
+		AppendSQLUILayoutSchemaInitializationError(Result, ErrorMessage);
+		return false;
+	}
+
+	if (MigrationTableCount == 0)
+	{
+		return true;
+	}
+
+	FSQLitePreparedStatement Statement = Database.PrepareStatement(
+		TEXT("SELECT COUNT(*) FROM sqlui_schema_migrations WHERE migration_id = ?;"));
+	if (!Statement.IsValid())
+	{
+		AppendSQLUILayoutSchemaInitializationError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite layout schema initialization failed: could not prepare migration-record query. SQLiteCore error: %s"),
+				*Database.GetLastError()));
+		return false;
+	}
+
+	if (!Statement.SetBindingValueByIndex(1, SQLUILayoutSchemaMigrationId))
+	{
+		AppendSQLUILayoutSchemaInitializationError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite layout schema initialization failed: could not bind migration-record query. SQLiteCore error: %s"),
+				*Database.GetLastError()));
+		return false;
+	}
+
+	int32 RecordedCount = 0;
+	const int64 RowCount = Statement.Execute(
+		[&RecordedCount](const FSQLitePreparedStatement& Row)
+		{
+			return Row.GetColumnValueByIndex(0, RecordedCount)
+				? ESQLitePreparedStatementExecuteRowResult::Continue
+				: ESQLitePreparedStatementExecuteRowResult::Error;
+		});
+
+	if (RowCount == INDEX_NONE)
+	{
+		AppendSQLUILayoutSchemaInitializationError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite layout schema initialization failed: migration-record query failed. SQLiteCore error: %s"),
+				*Database.GetLastError()));
+		return false;
+	}
+
+	bOutMigrationRecorded = RecordedCount > 0;
+	return true;
+}
+
 bool VerifySQLUILayoutSchemaTables(
 	FSQLiteDatabase& Database,
 	FSQLUISQLiteLayoutSchemaMigrationProbeResult& Result)
@@ -272,6 +479,38 @@ bool VerifySQLUILayoutSchemaIndexes(
 	}
 
 	return Result.bExpectedIndexesExist;
+}
+
+bool VerifySQLUILayoutSchemaInitialization(
+	FSQLUISQLiteLayoutSchemaInitializationResult& Result)
+{
+	FSQLiteDatabase Database;
+	if (!Database.Open(*Result.DatabasePath, ESQLiteDatabaseOpenMode::ReadOnly))
+	{
+		AppendSQLUILayoutSchemaInitializationError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite layout schema initialization failed: could not open database '%s' for schema verification. SQLiteCore error: %s"),
+				*Result.DatabasePath,
+				*Database.GetLastError()));
+		return false;
+	}
+
+	Result.bDatabaseOpened = true;
+	const bool bSchemaReady = VerifySQLUILayoutSchemaReady(Database, Result);
+
+	if (!Database.Close())
+	{
+		AppendSQLUILayoutSchemaInitializationError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite layout schema initialization failed: could not close verification database '%s'. SQLiteCore error: %s"),
+				*Result.DatabasePath,
+				*Database.GetLastError()));
+		return false;
+	}
+
+	return bSchemaReady;
 }
 
 bool VerifySQLUILayoutSchemaMigration(
@@ -368,6 +607,113 @@ FSQLUISQLiteLayoutSchemaMigrationProbeResult FSQLUISQLiteLayoutSchemaMigration::
 		&& Result.bLayoutPreviewsTableExists
 		&& Result.bExpectedIndexesExist
 		&& (!bRemoveDatabaseAfterClose || Result.bDatabaseRemoved);
+
+	return Result;
+}
+
+FSQLUISQLiteLayoutSchemaInitializationResult FSQLUISQLiteLayoutSchemaMigration::ApplyInitialSchema(
+	const FString& DatabasePath,
+	const bool bCreateDatabaseIfMissing)
+{
+	FSQLUISQLiteLayoutSchemaInitializationResult Result;
+	Result.DatabasePath = DatabasePath.IsEmpty()
+		? FString()
+		: NormalizeSQLUILayoutSchemaProbePath(DatabasePath);
+
+	if (Result.DatabasePath.IsEmpty())
+	{
+		AppendSQLUILayoutSchemaInitializationError(
+			Result,
+			TEXT("SQLUI SQLite layout schema initialization failed: database path is empty."));
+		return Result;
+	}
+
+	const bool bDatabaseExists = FPaths::FileExists(Result.DatabasePath);
+	if (!bDatabaseExists && !bCreateDatabaseIfMissing)
+	{
+		AppendSQLUILayoutSchemaInitializationError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite layout schema initialization failed: database '%s' does not exist and database creation is disabled."),
+				*Result.DatabasePath));
+		return Result;
+	}
+
+	if (bDatabaseExists)
+	{
+		FSQLiteDatabase Database;
+		if (!Database.Open(*Result.DatabasePath, ESQLiteDatabaseOpenMode::ReadOnly))
+		{
+			AppendSQLUILayoutSchemaInitializationError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite layout schema initialization failed: could not inspect database '%s'. SQLiteCore error: %s"),
+					*Result.DatabasePath,
+					*Database.GetLastError()));
+			return Result;
+		}
+
+		Result.bDatabaseOpened = true;
+		bool bMigrationRecorded = false;
+		const bool bQueriedMigrationRecord =
+			QuerySQLUILayoutSchemaInitialMigrationRecorded(
+				Database,
+				Result,
+				bMigrationRecorded);
+		Result.bMigrationAlreadyApplied = bQueriedMigrationRecord && bMigrationRecorded;
+
+		if (Result.bMigrationAlreadyApplied)
+		{
+			VerifySQLUILayoutSchemaReady(Database, Result);
+		}
+
+		if (!Database.Close())
+		{
+			AppendSQLUILayoutSchemaInitializationError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite layout schema initialization failed: could not close inspected database '%s'. SQLiteCore error: %s"),
+					*Result.DatabasePath,
+					*Database.GetLastError()));
+			return Result;
+		}
+
+		if (!bQueriedMigrationRecord)
+		{
+			return Result;
+		}
+
+		if (Result.bMigrationAlreadyApplied)
+		{
+			Result.bSucceeded = Result.bSchemaReady;
+			return Result;
+		}
+	}
+
+	TArray<FSQLUISQLiteMigrationStep> MigrationSteps;
+	MigrationSteps.Add(MakeSQLUILayoutSchemaInitialMigration());
+
+	const FSQLUISQLiteMigrationResult MigrationResult =
+		FSQLUISQLiteMigrationRunner::RunMigrations(
+			Result.DatabasePath,
+			MigrationSteps,
+			false);
+	Result.bDatabaseOpened = Result.bDatabaseOpened || MigrationResult.bDatabaseOpened;
+	Result.bMigrationApplied = MigrationResult.bMigrationApplied;
+	if (!MigrationResult.ErrorMessage.IsEmpty())
+	{
+		AppendSQLUILayoutSchemaInitializationError(Result, MigrationResult.ErrorMessage);
+	}
+
+	if (MigrationResult.bSucceeded)
+	{
+		VerifySQLUILayoutSchemaInitialization(Result);
+	}
+
+	Result.bSucceeded =
+		MigrationResult.bSucceeded
+		&& Result.bMigrationApplied
+		&& Result.bSchemaReady;
 
 	return Result;
 }

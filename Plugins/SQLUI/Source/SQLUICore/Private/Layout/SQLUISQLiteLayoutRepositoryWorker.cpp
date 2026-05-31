@@ -1,5 +1,6 @@
 #include "Layout/SQLUISQLiteLayoutRepositoryWorker.h"
 
+#include "Database/SQLUISQLiteLayoutSchemaMigration.h"
 #include "HAL/FileManager.h"
 #include "Layout/SQLUILayoutJson.h"
 #include "Misc/Paths.h"
@@ -155,6 +156,42 @@ bool TryOpenSQLUISQLiteLayoutReadOnlyDatabase(
 	}
 
 	return true;
+}
+
+bool TryEnsureSQLUISQLiteLayoutSchemaReady(
+	const FSQLUISQLiteLayoutRepositoryWorkerSettings& Settings,
+	const TCHAR* OperationName,
+	FString& OutErrorMessage)
+{
+	OutErrorMessage.Empty();
+
+	if (!Settings.bInitializeSchemaIfMissing)
+	{
+		return true;
+	}
+
+	if (!Settings.bAllowSchemaInitializationWrites)
+	{
+		return true;
+	}
+
+	const FString DatabasePath =
+		FSQLUISQLiteLayoutRepositoryWorker::ResolveDatabasePath(Settings.DatabasePath);
+	const FSQLUISQLiteLayoutSchemaInitializationResult InitializationResult =
+		FSQLUISQLiteLayoutSchemaMigration::ApplyInitialSchema(
+			DatabasePath,
+			Settings.bCreateDatabaseIfMissing);
+
+	if (InitializationResult.bSucceeded)
+	{
+		return true;
+	}
+
+	OutErrorMessage = FString::Printf(
+		TEXT("SQLUI SQLite layout repository could not %s: schema initialization failed. %s"),
+		OperationName,
+		*InitializationResult.ErrorMessage);
+	return false;
 }
 
 bool TryOpenSQLUISQLiteLayoutWriteDatabase(
@@ -1009,6 +1046,14 @@ FSQLUILayoutLoadResult FSQLUISQLiteLayoutRepositoryWorker::LoadLayoutById(
 
 	const FString DatabasePath = ResolveDatabasePath(Settings.DatabasePath);
 	FString ErrorMessage;
+	if (!TryEnsureSQLUISQLiteLayoutSchemaReady(
+		Settings,
+		TEXT("load layout"),
+		ErrorMessage))
+	{
+		return MakeSQLUISQLiteLayoutLoadFailure(LayoutId, ErrorMessage);
+	}
+
 	FSQLiteDatabase Database;
 	if (!TryOpenSQLUISQLiteLayoutReadOnlyDatabase(
 		DatabasePath,
@@ -1082,6 +1127,16 @@ FSQLUILayoutRepositoryListResult FSQLUISQLiteLayoutRepositoryWorker::ListLayouts
 
 	const FString DatabasePath = ResolveDatabasePath(Settings.DatabasePath);
 	FString ErrorMessage;
+	if (!TryEnsureSQLUISQLiteLayoutSchemaReady(
+		Settings,
+		TEXT("list layouts"),
+		ErrorMessage))
+	{
+		Result.bSucceeded = false;
+		Result.ErrorMessage = ErrorMessage;
+		return Result;
+	}
+
 	FSQLiteDatabase Database;
 	if (!TryOpenSQLUISQLiteLayoutReadOnlyDatabase(
 		DatabasePath,
@@ -1145,6 +1200,17 @@ FSQLUILayoutSaveResult FSQLUISQLiteLayoutRepositoryWorker::SaveLayout(
 
 	const FString DatabasePath = ResolveDatabasePath(Settings.DatabasePath);
 	FString ErrorMessage;
+	if (!TryEnsureSQLUISQLiteLayoutSchemaReady(
+		Settings,
+		TEXT("save layout"),
+		ErrorMessage))
+	{
+		return MakeSQLUISQLiteLayoutSaveFailure(
+			LayoutId,
+			ErrorMessage,
+			Validation);
+	}
+
 	FSQLiteDatabase Database;
 	if (!TryOpenSQLUISQLiteLayoutWriteDatabase(
 		DatabasePath,
@@ -1200,6 +1266,14 @@ FSQLUILayoutRepositoryRemoveResult FSQLUISQLiteLayoutRepositoryWorker::RemoveLay
 
 	const FString DatabasePath = ResolveDatabasePath(Settings.DatabasePath);
 	FString ErrorMessage;
+	if (!TryEnsureSQLUISQLiteLayoutSchemaReady(
+		Settings,
+		TEXT("remove layout"),
+		ErrorMessage))
+	{
+		return MakeSQLUISQLiteLayoutRemoveFailure(LayoutId, ErrorMessage);
+	}
+
 	FSQLiteDatabase Database;
 	if (!TryOpenSQLUISQLiteLayoutWriteDatabase(
 		DatabasePath,
@@ -1239,6 +1313,14 @@ FSQLUILayoutRepositoryClearResult FSQLUISQLiteLayoutRepositoryWorker::ClearLayou
 {
 	const FString DatabasePath = ResolveDatabasePath(Settings.DatabasePath);
 	FString ErrorMessage;
+	if (!TryEnsureSQLUISQLiteLayoutSchemaReady(
+		Settings,
+		TEXT("clear layouts"),
+		ErrorMessage))
+	{
+		return MakeSQLUISQLiteLayoutClearFailure(ErrorMessage);
+	}
+
 	FSQLiteDatabase Database;
 	if (!TryOpenSQLUISQLiteLayoutWriteDatabase(
 		DatabasePath,

@@ -295,6 +295,8 @@ The optional SQLite async callback repository smoke path prepares a temporary da
 
 The optional SQLite factory layout repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteFactoryRepository`, requests `ESQLUILayoutRepositoryBackend::SQLite` through `USQLUILayoutRepositoryFactory`, configures async callback execution through factory settings, verifies repository lifecycle behavior, verifies missing-path selection reports unavailable behavior, closes all database handles, and removes the file. It proves explicit factory selection without running migrations or creating database files inside the factory.
 
+The optional SQLite factory schema-init repository smoke path starts with no database under `Saved/SQLUI/SmokeTests/SQLiteFactorySchemaInitRepository`, requests `ESQLUILayoutRepositoryBackend::SQLite` through `USQLUILayoutRepositoryFactory`, enables repository-owned schema initialization and database creation through `SQLiteSettings`, verifies callback-style `SaveLayout` initializes the schema and creates the database, verifies list/load/remove/clear behavior, verifies a missing database without schema-init settings fails without creating a file, closes all database handles, and removes the file. It proves the first opt-in schema initialization slice without moving migration logic into the factory.
+
 Future SQLite smoke coverage should continue to prove:
 
 - Repository factory selection creates the SQLite repository only when explicitly requested and configured.
@@ -314,8 +316,9 @@ SQLite smoke tests should not add maps, Content assets, editor tooling, CI, or d
 Current and future fit:
 
 - `ESQLUILayoutRepositoryBackend::SQLite` creates `USQLUISQLiteLayoutRepository` only when explicitly requested.
-- `FSQLUILayoutRepositoryFactorySettings::SQLiteSettings` carries the database path, read-only mode, and async callback opt-in.
+- `FSQLUILayoutRepositoryFactorySettings::SQLiteSettings` carries the database path, read-only mode, async callback opt-in, and opt-in schema initialization settings.
 - Missing SQLite database paths return the existing unavailable repository behavior instead of silently falling back to JSON or in-memory.
+- Schema initialization remains repository-owned; the factory passes settings only and does not open databases or run migrations.
 - Keep default settings pointed at existing backends until SQLite is ready.
 - Return `USQLUILayoutRepository` or a clear unavailable result path when SQLite is selected but not compiled, disabled, or misconfigured.
 - Keep widget and sample runtime code dependent on repository interfaces and factory settings, not concrete SQLite classes.

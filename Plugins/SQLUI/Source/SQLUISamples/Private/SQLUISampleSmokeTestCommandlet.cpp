@@ -1571,6 +1571,137 @@ void LogSQLUISampleSmokeTestSQLiteFactoryLayoutRepositoryResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteFactorySchemaInitRepositoryResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteFactorySchemaInitRepository)
+	{
+		return;
+	}
+
+	const FSQLUISampleSQLiteFactorySchemaInitRepositorySmokeResult& RepositoryResult =
+		Result.SQLiteFactorySchemaInitRepository;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository database path: '%s'"),
+		*RepositoryResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository database absent before start: %s"),
+		RepositoryResult.bDatabaseAbsentBeforeStart ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository created repository: %s"),
+		RepositoryResult.bCreatedRepository ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository created SQLite repository: %s"),
+		RepositoryResult.bCreatedSQLiteRepository ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository save initialized schema: %s"),
+		RepositoryResult.bSaveInitializedSchema ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository database created: %s"),
+		RepositoryResult.bDatabaseCreated ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository save succeeded: %s"),
+		RepositoryResult.bSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository list succeeded: %s"),
+		RepositoryResult.bListSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository listed metadata found: %s"),
+		RepositoryResult.bListedMetadataFound ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository load succeeded: %s"),
+		RepositoryResult.bLoadSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository loaded document valid: %s"),
+		RepositoryResult.bLoadedDocumentValid ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository remove succeeded: %s"),
+		RepositoryResult.bRemoveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository clear succeeded: %s"),
+		RepositoryResult.bClearSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository missing db without init failed: %s"),
+		RepositoryResult.bMissingDbWithoutInitFailed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository missing db without init not created: %s"),
+		RepositoryResult.bMissingDbWithoutInitNotCreated ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository saved layout id: '%s' loaded layout id: '%s' listed layout count: %d clear removed count: %d missing database path: '%s'"),
+		*RepositoryResult.SavedLayoutId,
+		*RepositoryResult.LoadedLayoutId,
+		RepositoryResult.ListedLayoutCount,
+		RepositoryResult.ClearRemovedCount,
+		*RepositoryResult.MissingDatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory schema init repository database removed: %s"),
+		RepositoryResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (RepositoryResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite factory schema init repository succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite factory schema init repository failed: %s"),
+			*RepositoryResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -1619,6 +1750,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteFullLifecycleRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteAsyncCallbackRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteFactoryLayoutRepositoryResult(Result);
+	LogSQLUISampleSmokeTestSQLiteFactorySchemaInitRepositoryResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -1724,6 +1856,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteFactoryLayoutRepository =
 		FParse::Param(*Params, TEXT("UseSQLiteFactoryLayoutRepository"))
 		|| FParse::Param(*Params, TEXT("SQLiteFactoryLayoutRepository"));
+	const bool bUseSQLiteFactorySchemaInitRepository =
+		FParse::Param(*Params, TEXT("UseSQLiteFactorySchemaInitRepository"))
+		|| FParse::Param(*Params, TEXT("SQLiteFactorySchemaInitRepository"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -1808,6 +1943,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite factory layout repository selected: true"));
 	}
 
+	if (bUseSQLiteFactorySchemaInitRepository)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite factory schema init repository selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -1836,6 +1976,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteFullLifecycleRepository = bUseSQLiteFullLifecycleRepository;
 		Request.bUseSQLiteAsyncCallbackRepository = bUseSQLiteAsyncCallbackRepository;
 		Request.bUseSQLiteFactoryLayoutRepository = bUseSQLiteFactoryLayoutRepository;
+		Request.bUseSQLiteFactorySchemaInitRepository = bUseSQLiteFactorySchemaInitRepository;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 
