@@ -49,6 +49,27 @@ struct SQLUICORE_API FSQLUISQLiteLayoutReadProbeResult
 	FString ErrorMessage;
 };
 
+USTRUCT(BlueprintType)
+struct SQLUICORE_API FSQLUISQLiteLayoutSchemaRowCounts
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Database")
+	int32 Layouts = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Database")
+	int32 LayoutRevisions = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Database")
+	int32 LayoutTags = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Database")
+	int32 LayoutCheckpoints = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Database")
+	int32 LayoutPreviews = 0;
+};
+
 class SQLUICORE_API FSQLUISQLiteLayoutReadProbe
 {
 public:
@@ -62,5 +83,10 @@ public:
 		const FString& DatabasePath,
 		const FString& LayoutId,
 		int32& OutRevisionCount,
+		FString& OutErrorMessage);
+
+	static bool CountLayoutSchemaRows(
+		const FString& DatabasePath,
+		FSQLUISQLiteLayoutSchemaRowCounts& OutRowCounts,
 		FString& OutErrorMessage);
 };

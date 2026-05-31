@@ -109,6 +109,16 @@ FSQLUILayoutRepositoryClearResult MakeSQLUISQLiteLayoutReadOnlyClearFailure()
 	return Result;
 }
 
+FSQLUILayoutRepositoryClearResult MakeSQLUISQLiteLayoutClearFailure(
+	const FString& ErrorMessage)
+{
+	FSQLUILayoutRepositoryClearResult Result;
+	Result.bSucceeded = false;
+	Result.RemovedCount = 0;
+	Result.ErrorMessage = ErrorMessage;
+	return Result;
+}
+
 bool TryOpenSQLUISQLiteLayoutReadOnlyDatabase(
 	const FString& DatabasePath,
 	const TCHAR* OperationName,
@@ -417,6 +427,48 @@ bool TryQuerySQLUISQLiteLayoutActiveRowCount(
 	return true;
 }
 
+bool TryQuerySQLUISQLiteLayoutTableRowCount(
+	FSQLiteDatabase& Database,
+	const TCHAR* TableName,
+	int32& OutRowCount,
+	FString& OutErrorMessage)
+{
+	OutRowCount = 0;
+	OutErrorMessage.Empty();
+
+	const FString Query = FString::Printf(TEXT("SELECT COUNT(*) FROM %s;"), TableName);
+	FSQLitePreparedStatement Statement = Database.PrepareStatement(*Query);
+
+	if (!Statement.IsValid())
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout repository could not prepare row-count query for table '%s'. SQLiteCore error: %s"),
+			TableName,
+			*Database.GetLastError());
+		return false;
+	}
+
+	const int64 RowCount = Statement.Execute(
+		[&OutRowCount](const FSQLitePreparedStatement& Row)
+		{
+			return Row.GetColumnValueByIndex(0, OutRowCount)
+				? ESQLitePreparedStatementExecuteRowResult::Continue
+				: ESQLitePreparedStatementExecuteRowResult::Error;
+		});
+
+	if (RowCount != 1)
+	{
+		OutErrorMessage = FString::Printf(
+			TEXT("SQLUI SQLite layout repository row-count query failed for table '%s'. RowCount=%lld SQLiteCore error: %s"),
+			TableName,
+			RowCount,
+			*Database.GetLastError());
+		return false;
+	}
+
+	return true;
+}
+
 bool TryUpsertSQLUISQLiteLayoutRow(
 	FSQLiteDatabase& Database,
 	const FSQLUILayoutDocument& Document,
@@ -696,6 +748,75 @@ bool TrySoftDeleteSQLUISQLiteLayout(
 		Database,
 		TEXT("COMMIT;"),
 		TEXT("commit RemoveLayout transaction"),
+		OutErrorMessage))
+	{
+		Database.Execute(TEXT("ROLLBACK;"));
+		return false;
+	}
+
+	return true;
+}
+
+bool TryClearSQLUISQLiteLayouts(
+	FSQLiteDatabase& Database,
+	int32& OutRemovedCount,
+	FString& OutErrorMessage)
+{
+	OutRemovedCount = 0;
+	OutErrorMessage.Empty();
+
+	if (!TryExecuteSQLUISQLiteLayoutStatement(
+		Database,
+		TEXT("BEGIN TRANSACTION;"),
+		TEXT("begin ClearLayouts transaction"),
+		OutErrorMessage))
+	{
+		return false;
+	}
+
+	if (!TryQuerySQLUISQLiteLayoutTableRowCount(
+		Database,
+		TEXT("layouts"),
+		OutRemovedCount,
+		OutErrorMessage))
+	{
+		Database.Execute(TEXT("ROLLBACK;"));
+		return false;
+	}
+
+	const TCHAR* DeleteStatements[] = {
+		TEXT("DELETE FROM layout_previews;"),
+		TEXT("DELETE FROM layout_checkpoints;"),
+		TEXT("DELETE FROM layout_tags;"),
+		TEXT("DELETE FROM layout_revisions;"),
+		TEXT("DELETE FROM layouts;")
+	};
+
+	const TCHAR* OperationNames[] = {
+		TEXT("delete layout previews during ClearLayouts"),
+		TEXT("delete layout checkpoints during ClearLayouts"),
+		TEXT("delete layout tags during ClearLayouts"),
+		TEXT("delete layout revisions during ClearLayouts"),
+		TEXT("delete layouts during ClearLayouts")
+	};
+
+	for (int32 Index = 0; Index < UE_ARRAY_COUNT(DeleteStatements); ++Index)
+	{
+		if (!TryExecuteSQLUISQLiteLayoutStatement(
+			Database,
+			DeleteStatements[Index],
+			OperationNames[Index],
+			OutErrorMessage))
+		{
+			Database.Execute(TEXT("ROLLBACK;"));
+			return false;
+		}
+	}
+
+	if (!TryExecuteSQLUISQLiteLayoutStatement(
+		Database,
+		TEXT("COMMIT;"),
+		TEXT("commit ClearLayouts transaction"),
 		OutErrorMessage))
 	{
 		Database.Execute(TEXT("ROLLBACK;"));
@@ -1127,5 +1248,41 @@ FSQLUILayoutRepositoryRemoveResult USQLUISQLiteLayoutRepository::RemoveLayout(
 
 FSQLUILayoutRepositoryClearResult USQLUISQLiteLayoutRepository::ClearLayouts()
 {
-	return MakeSQLUISQLiteLayoutReadOnlyClearFailure();
+	if (Settings.bReadOnly)
+	{
+		return MakeSQLUISQLiteLayoutReadOnlyClearFailure();
+	}
+
+	const FString DatabasePath = GetResolvedDatabasePath();
+	FString ErrorMessage;
+	FSQLiteDatabase Database;
+	if (!TryOpenSQLUISQLiteLayoutWriteDatabase(
+		DatabasePath,
+		TEXT("clear layouts"),
+		Database,
+		ErrorMessage))
+	{
+		return MakeSQLUISQLiteLayoutClearFailure(ErrorMessage);
+	}
+
+	int32 RemovedCount = 0;
+	const bool bClearSucceeded = TryClearSQLUISQLiteLayouts(
+		Database,
+		RemovedCount,
+		ErrorMessage);
+
+	if (!TryCloseSQLUISQLiteLayoutDatabase(Database, TEXT("clear layouts"), ErrorMessage))
+	{
+		return MakeSQLUISQLiteLayoutClearFailure(ErrorMessage);
+	}
+
+	if (!bClearSucceeded)
+	{
+		return MakeSQLUISQLiteLayoutClearFailure(ErrorMessage);
+	}
+
+	FSQLUILayoutRepositoryClearResult Result;
+	Result.bSucceeded = true;
+	Result.RemovedCount = RemovedCount;
+	return Result;
 }
