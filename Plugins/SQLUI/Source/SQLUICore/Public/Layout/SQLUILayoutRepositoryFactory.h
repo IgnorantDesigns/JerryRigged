@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Layout/SQLUILayoutRepository.h"
+#include "Layout/SQLUISQLiteLayoutRepository.h"
 #include "UObject/Object.h"
 
 #include "SQLUILayoutRepositoryFactory.generated.h"
@@ -11,7 +12,8 @@ enum class ESQLUILayoutRepositoryBackend : uint8
 {
 	Unavailable UMETA(DisplayName = "Unavailable"),
 	InMemory UMETA(DisplayName = "In Memory"),
-	JsonFile UMETA(DisplayName = "JSON File")
+	JsonFile UMETA(DisplayName = "JSON File"),
+	SQLite UMETA(DisplayName = "SQLite")
 };
 
 USTRUCT(BlueprintType)
@@ -24,6 +26,9 @@ struct SQLUICORE_API FSQLUILayoutRepositoryFactorySettings
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Layout Repository")
 	FString JsonFileBaseDirectory;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Layout Repository")
+	FSQLUISQLiteLayoutRepositorySettings SQLiteSettings;
 };
 
 UCLASS(BlueprintType)

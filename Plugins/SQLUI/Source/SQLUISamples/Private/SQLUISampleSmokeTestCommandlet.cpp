@@ -1445,6 +1445,132 @@ void LogSQLUISampleSmokeTestSQLiteAsyncCallbackRepositoryResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteFactoryLayoutRepositoryResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteFactoryLayoutRepository)
+	{
+		return;
+	}
+
+	const FSQLUISampleSQLiteFactoryLayoutRepositorySmokeResult& RepositoryResult =
+		Result.SQLiteFactoryLayoutRepository;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository database path: '%s'"),
+		*RepositoryResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository database prepared: %s"),
+		RepositoryResult.bDatabasePrepared ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository created repository: %s"),
+		RepositoryResult.bCreatedRepository ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository created SQLite repository: %s"),
+		RepositoryResult.bCreatedSQLiteRepository ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository save succeeded: %s"),
+		RepositoryResult.bSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository list succeeded: %s"),
+		RepositoryResult.bListSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository listed metadata found: %s"),
+		RepositoryResult.bListedMetadataFound ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository load succeeded: %s"),
+		RepositoryResult.bLoadSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository loaded document valid: %s"),
+		RepositoryResult.bLoadedDocumentValid ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository remove succeeded: %s"),
+		RepositoryResult.bRemoveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository removed: %s"),
+		RepositoryResult.bRemoved ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository metadata absent after remove: %s"),
+		RepositoryResult.bMetadataAbsentAfterRemove ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository clear succeeded: %s"),
+		RepositoryResult.bClearSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository missing path unavailable: %s"),
+		RepositoryResult.bMissingPathUnavailable ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository saved layout id: '%s' loaded layout id: '%s' removed layout id: '%s' listed layout count: %d listed after remove count: %d clear removed count: %d"),
+		*RepositoryResult.SavedLayoutId,
+		*RepositoryResult.LoadedLayoutId,
+		*RepositoryResult.RemovedLayoutId,
+		RepositoryResult.ListedLayoutCount,
+		RepositoryResult.ListedLayoutCountAfterRemove,
+		RepositoryResult.ClearRemovedCount);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite factory layout repository database removed: %s"),
+		RepositoryResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (RepositoryResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite factory layout repository succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite factory layout repository failed: %s"),
+			*RepositoryResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -1492,6 +1618,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteClearLayoutsRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteFullLifecycleRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteAsyncCallbackRepositoryResult(Result);
+	LogSQLUISampleSmokeTestSQLiteFactoryLayoutRepositoryResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -1594,6 +1721,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteAsyncCallbackRepository =
 		FParse::Param(*Params, TEXT("UseSQLiteAsyncCallbackRepository"))
 		|| FParse::Param(*Params, TEXT("SQLiteAsyncCallbackRepository"));
+	const bool bUseSQLiteFactoryLayoutRepository =
+		FParse::Param(*Params, TEXT("UseSQLiteFactoryLayoutRepository"))
+		|| FParse::Param(*Params, TEXT("SQLiteFactoryLayoutRepository"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -1673,6 +1803,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite async callback repository selected: true"));
 	}
 
+	if (bUseSQLiteFactoryLayoutRepository)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite factory layout repository selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -1700,6 +1835,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteClearLayoutsRepository = bUseSQLiteClearLayoutsRepository;
 		Request.bUseSQLiteFullLifecycleRepository = bUseSQLiteFullLifecycleRepository;
 		Request.bUseSQLiteAsyncCallbackRepository = bUseSQLiteAsyncCallbackRepository;
+		Request.bUseSQLiteFactoryLayoutRepository = bUseSQLiteFactoryLayoutRepository;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 
