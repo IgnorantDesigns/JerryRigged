@@ -1960,6 +1960,641 @@ FSQLUISampleSQLiteClearLayoutsRepositorySmokeResult RunSQLUISampleSQLiteClearLay
 	return Result;
 }
 
+void AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+	FSQLUISampleSQLiteFullLifecycleRepositorySmokeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleSQLiteFullLifecycleRepositoryDatabasePath()
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("SQLiteFullLifecycleRepository"),
+		TEXT("SQLiteFullLifecycleRepository.db"));
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+bool DeleteSQLUISampleSQLiteFullLifecycleRepositoryFiles(
+	const FString& DatabasePath,
+	FSQLUISampleSQLiteFullLifecycleRepositorySmokeResult& Result)
+{
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite full lifecycle repository smoke failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+FSQLUILayoutDocument MakeSQLUISampleSQLiteFullLifecycleRepositoryDocument(
+	const TCHAR* LayoutIdSuffix,
+	const TCHAR* DisplayNameSuffix,
+	const TCHAR* TagSuffix)
+{
+	FSQLUILayoutDocument Document = MakeSQLUISampleSQLiteSaveLayoutRepositoryDocument();
+	Document.Version.Label = FString::Printf(
+		TEXT("SQLite Full Lifecycle Repository Probe %s"),
+		DisplayNameSuffix);
+	Document.Metadata.LayoutId = FString::Printf(
+		TEXT("sqlui.smoke.sqlite-full-lifecycle.%s"),
+		LayoutIdSuffix);
+	Document.Metadata.DisplayName = FString::Printf(
+		TEXT("SQLUI SQLite Full Lifecycle Repository Probe %s"),
+		DisplayNameSuffix);
+	Document.Metadata.Description = TEXT("Smoke/probe layout for SQLite full lifecycle repository mapping.");
+	Document.Metadata.CreatedAtUtc = TEXT("2026-05-30T00:00:00Z");
+	Document.Metadata.UpdatedAtUtc = Document.Metadata.CreatedAtUtc;
+	Document.Metadata.Tags.Reset();
+	Document.Metadata.Tags.Add(TEXT("sqlite"));
+	Document.Metadata.Tags.Add(TEXT("smoke"));
+	Document.Metadata.Tags.Add(TEXT("full-lifecycle"));
+	Document.Metadata.Tags.Add(TagSuffix);
+	Document.Metadata.SearchMetadata.Reset();
+	Document.Metadata.SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteFullLifecycleRepository"));
+	Document.RootWidgetId = FString::Printf(
+		TEXT("SQLUI.SQLite.FullLifecycleRepository.%s.Root"),
+		DisplayNameSuffix);
+
+	if (Document.Nodes.Num() > 0)
+	{
+		Document.Nodes[0].WidgetId = Document.RootWidgetId;
+		Document.Nodes[0].WidgetTypeKey = TEXT("SQLUI.ProbeRoot");
+		Document.Nodes[0].Properties.Add(TEXT("Text"), Document.Metadata.DisplayName);
+		Document.Nodes[0].Tags.Reset();
+		Document.Nodes[0].Tags.Add(TEXT("sqlite"));
+		Document.Nodes[0].Tags.Add(TEXT("full-lifecycle"));
+		Document.Nodes[0].Tags.Add(TagSuffix);
+		Document.Nodes[0].SearchMetadata.Reset();
+		Document.Nodes[0].SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteFullLifecycleRepository"));
+	}
+
+	return Document;
+}
+
+FSQLUILayoutDocument MakeSQLUISampleSQLiteFullLifecycleRepositoryUpdatedDocument(
+	const FSQLUILayoutDocument& OriginalDocument)
+{
+	FSQLUILayoutDocument UpdatedDocument = OriginalDocument;
+	UpdatedDocument.Version.Label = TEXT("SQLite Full Lifecycle Repository Probe First Updated");
+	UpdatedDocument.Metadata.DisplayName = TEXT("SQLUI SQLite Full Lifecycle Repository Probe First Updated");
+	UpdatedDocument.Metadata.Description = TEXT("Updated smoke/probe layout for SQLite full lifecycle repository mapping.");
+	UpdatedDocument.Metadata.UpdatedAtUtc = TEXT("2026-05-30T00:02:00Z");
+	UpdatedDocument.Metadata.Tags.Add(TEXT("updated"));
+
+	if (UpdatedDocument.Nodes.Num() > 0)
+	{
+		UpdatedDocument.Nodes[0].Properties.Add(TEXT("Text"), UpdatedDocument.Metadata.DisplayName);
+		UpdatedDocument.Nodes[0].Tags.Add(TEXT("updated"));
+	}
+
+	return UpdatedDocument;
+}
+
+bool IsSQLUISampleLoadFailureOrdinaryNotFound(
+	const FSQLUILayoutLoadResult& LoadResult)
+{
+	return !LoadResult.bSucceeded
+		&& !LoadResult.bBackendUnavailable
+		&& !LoadResult.ErrorMessage.IsEmpty();
+}
+
+bool DoesSQLUISampleLoadedDocumentMatchUpdatedFullLifecycleDocument(
+	const FSQLUILayoutDocument& LoadedDocument,
+	const FSQLUILayoutDocument& ExpectedDocument)
+{
+	return LoadedDocument.Metadata.LayoutId == ExpectedDocument.Metadata.LayoutId
+		&& LoadedDocument.Metadata.DisplayName == ExpectedDocument.Metadata.DisplayName
+		&& LoadedDocument.Metadata.Description == ExpectedDocument.Metadata.Description
+		&& LoadedDocument.Metadata.UpdatedAtUtc == ExpectedDocument.Metadata.UpdatedAtUtc
+		&& LoadedDocument.Version.Label == ExpectedDocument.Version.Label
+		&& DoSQLUISampleTagSetsMatch(LoadedDocument.Metadata.Tags, ExpectedDocument.Metadata.Tags);
+}
+
+FSQLUISampleSQLiteFullLifecycleRepositorySmokeResult RunSQLUISampleSQLiteFullLifecycleRepositorySmoke(
+	UObject* Outer)
+{
+	FSQLUISampleSQLiteFullLifecycleRepositorySmokeResult Result;
+	Result.DatabasePath = MakeSQLUISampleSQLiteFullLifecycleRepositoryDatabasePath();
+
+	const FSQLUISQLiteLayoutSchemaMigrationProbeResult SchemaResult =
+		FSQLUISQLiteLayoutSchemaMigration::RunProbe(Result.DatabasePath, false);
+	Result.bDatabasePrepared = SchemaResult.bSucceeded && SchemaResult.bMigrationSucceeded;
+	if (!Result.bDatabasePrepared)
+	{
+		AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+			Result,
+			SchemaResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite full lifecycle repository smoke failed: could not prepare probe database.")
+				: SchemaResult.ErrorMessage);
+		Result.bDatabaseRemoved =
+			DeleteSQLUISampleSQLiteFullLifecycleRepositoryFiles(Result.DatabasePath, Result);
+		return Result;
+	}
+
+	USQLUISQLiteLayoutRepository* Repository =
+		NewObject<USQLUISQLiteLayoutRepository>(IsValid(Outer) ? Outer : GetTransientPackage());
+	if (!IsValid(Repository))
+	{
+		AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite full lifecycle repository smoke failed: could not create repository object."));
+		Result.bDatabaseRemoved =
+			DeleteSQLUISampleSQLiteFullLifecycleRepositoryFiles(Result.DatabasePath, Result);
+		return Result;
+	}
+
+	FSQLUISQLiteLayoutRepositorySettings RepositorySettings;
+	RepositorySettings.DatabasePath = Result.DatabasePath;
+	RepositorySettings.bReadOnly = false;
+	Repository->Configure(RepositorySettings);
+
+	const FSQLUILayoutDocument FirstDocument =
+		MakeSQLUISampleSQLiteFullLifecycleRepositoryDocument(
+			TEXT("first"),
+			TEXT("First"),
+			TEXT("first"));
+	const FSQLUILayoutDocument UpdatedFirstDocument =
+		MakeSQLUISampleSQLiteFullLifecycleRepositoryUpdatedDocument(FirstDocument);
+	const FSQLUILayoutDocument SecondDocument =
+		MakeSQLUISampleSQLiteFullLifecycleRepositoryDocument(
+			TEXT("second"),
+			TEXT("Second"),
+			TEXT("second"));
+	Result.FirstLayoutId = FirstDocument.Metadata.LayoutId;
+	Result.SecondLayoutId = SecondDocument.Metadata.LayoutId;
+
+	const FSQLUILayoutSaveResult FirstSaveResult = SaveSQLUISampleLayoutToRepository(
+		Repository,
+		TEXT("SQLite full lifecycle repository first layout"),
+		FirstDocument);
+	Result.FirstLayoutId = FirstSaveResult.SavedLayoutId;
+	Result.bFirstSaveSucceeded =
+		FirstSaveResult.bSucceeded
+		&& FirstSaveResult.SavedLayoutId == FirstDocument.Metadata.LayoutId
+		&& FirstSaveResult.Validation.bIsValid;
+	if (!Result.bFirstSaveSucceeded)
+	{
+		AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+			Result,
+			FirstSaveResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite full lifecycle repository smoke failed: first SaveLayout failed.")
+				: FirstSaveResult.ErrorMessage);
+	}
+
+	if (Result.bFirstSaveSucceeded)
+	{
+		const FSQLUILayoutRepositoryListResult ListAfterFirstSaveResult =
+			Repository->ListLayouts();
+		Result.bListAfterFirstSaveSucceeded = ListAfterFirstSaveResult.bSucceeded;
+		Result.ListedLayoutCountAfterFirstSave = ListAfterFirstSaveResult.Layouts.Num();
+		if (!Result.bListAfterFirstSaveSucceeded)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				ListAfterFirstSaveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite full lifecycle repository smoke failed: ListLayouts failed after first save.")
+					: ListAfterFirstSaveResult.ErrorMessage);
+		}
+		else
+		{
+			Result.bFirstMetadataFoundAfterFirstSave =
+				DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListAfterFirstSaveResult.Layouts,
+					FirstDocument.Metadata);
+			if (!Result.bFirstMetadataFoundAfterFirstSave)
+			{
+				AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+					Result,
+					TEXT("SQLUI SQLite full lifecycle repository smoke failed: ListLayouts did not include first saved metadata and tags after first save."));
+			}
+		}
+
+		const FSQLUILayoutLoadResult LoadAfterFirstSaveResult =
+			LoadSQLUISampleLayoutFromRepository(
+				Repository,
+				TEXT("SQLite full lifecycle repository after first save"),
+				FirstDocument.Metadata.LayoutId);
+		Result.bLoadAfterFirstSaveSucceeded = LoadAfterFirstSaveResult.bSucceeded;
+		Result.LoadedLayoutId = LoadAfterFirstSaveResult.Document.Metadata.LayoutId;
+		Result.bFirstRevisionLoaded =
+			LoadAfterFirstSaveResult.bSucceeded
+			&& LoadAfterFirstSaveResult.Validation.bIsValid
+			&& LoadAfterFirstSaveResult.Document.Metadata.LayoutId == FirstDocument.Metadata.LayoutId
+			&& LoadAfterFirstSaveResult.Document.Version.Revision == 1;
+		if (!Result.bLoadAfterFirstSaveSucceeded)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				LoadAfterFirstSaveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite full lifecycle repository smoke failed: LoadLayout failed after first save.")
+					: LoadAfterFirstSaveResult.ErrorMessage);
+		}
+		else if (!Result.bFirstRevisionLoaded)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				TEXT("SQLUI SQLite full lifecycle repository smoke failed: loaded first layout was invalid, mismatched, or not revision 1."));
+		}
+	}
+
+	if (Result.bFirstRevisionLoaded)
+	{
+		const FSQLUILayoutSaveResult SecondRevisionSaveResult = SaveSQLUISampleLayoutToRepository(
+			Repository,
+			TEXT("SQLite full lifecycle repository first layout update"),
+			UpdatedFirstDocument);
+		Result.bSecondRevisionSaveSucceeded =
+			SecondRevisionSaveResult.bSucceeded
+			&& SecondRevisionSaveResult.SavedLayoutId == UpdatedFirstDocument.Metadata.LayoutId
+			&& SecondRevisionSaveResult.Validation.bIsValid;
+		if (!Result.bSecondRevisionSaveSucceeded)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				SecondRevisionSaveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite full lifecycle repository smoke failed: second revision SaveLayout failed.")
+					: SecondRevisionSaveResult.ErrorMessage);
+		}
+	}
+
+	if (Result.bSecondRevisionSaveSucceeded)
+	{
+		const FSQLUILayoutLoadResult LoadAfterUpdateResult =
+			LoadSQLUISampleLayoutFromRepository(
+				Repository,
+				TEXT("SQLite full lifecycle repository after first layout update"),
+				UpdatedFirstDocument.Metadata.LayoutId);
+		Result.bLatestRevisionLoaded =
+			LoadAfterUpdateResult.bSucceeded
+			&& LoadAfterUpdateResult.Validation.bIsValid
+			&& LoadAfterUpdateResult.Document.Version.Revision == 2
+			&& DoesSQLUISampleLoadedDocumentMatchUpdatedFullLifecycleDocument(
+				LoadAfterUpdateResult.Document,
+				UpdatedFirstDocument);
+		Result.LoadedLayoutId = LoadAfterUpdateResult.Document.Metadata.LayoutId;
+		if (!LoadAfterUpdateResult.bSucceeded)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				LoadAfterUpdateResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite full lifecycle repository smoke failed: LoadLayout failed after second revision save.")
+					: LoadAfterUpdateResult.ErrorMessage);
+		}
+		else if (!Result.bLatestRevisionLoaded)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				TEXT("SQLUI SQLite full lifecycle repository smoke failed: LoadLayout did not return the updated revision 2 document."));
+		}
+	}
+
+	if (Result.bLatestRevisionLoaded)
+	{
+		const FSQLUILayoutSaveResult SecondSaveResult = SaveSQLUISampleLayoutToRepository(
+			Repository,
+			TEXT("SQLite full lifecycle repository second layout"),
+			SecondDocument);
+		Result.SecondLayoutId = SecondSaveResult.SavedLayoutId;
+		Result.bSecondSaveSucceeded =
+			SecondSaveResult.bSucceeded
+			&& SecondSaveResult.SavedLayoutId == SecondDocument.Metadata.LayoutId
+			&& SecondSaveResult.Validation.bIsValid;
+		if (!Result.bSecondSaveSucceeded)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				SecondSaveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite full lifecycle repository smoke failed: second layout SaveLayout failed.")
+					: SecondSaveResult.ErrorMessage);
+		}
+	}
+
+	if (Result.bSecondSaveSucceeded)
+	{
+		const FSQLUILayoutRepositoryListResult ListBeforeRemoveResult =
+			Repository->ListLayouts();
+		Result.bListBeforeRemoveSucceeded = ListBeforeRemoveResult.bSucceeded;
+		Result.ListedLayoutCountBeforeRemove = ListBeforeRemoveResult.Layouts.Num();
+		if (!Result.bListBeforeRemoveSucceeded)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				ListBeforeRemoveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite full lifecycle repository smoke failed: ListLayouts failed before remove.")
+					: ListBeforeRemoveResult.ErrorMessage);
+		}
+		else
+		{
+			Result.bBothMetadataEntriesFoundBeforeRemove =
+				DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListBeforeRemoveResult.Layouts,
+					UpdatedFirstDocument.Metadata)
+				&& DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListBeforeRemoveResult.Layouts,
+					SecondDocument.Metadata);
+			if (!Result.bBothMetadataEntriesFoundBeforeRemove)
+			{
+				AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+					Result,
+					TEXT("SQLUI SQLite full lifecycle repository smoke failed: ListLayouts did not include updated first and second metadata/tag entries before remove."));
+			}
+		}
+	}
+
+	if (Result.bBothMetadataEntriesFoundBeforeRemove)
+	{
+		const FSQLUILayoutRepositoryRemoveResult RemoveResult =
+			Repository->RemoveLayout(UpdatedFirstDocument.Metadata.LayoutId);
+		Result.RemovedLayoutId = RemoveResult.RemovedLayoutId;
+		Result.bRemoveSucceeded = RemoveResult.bSucceeded;
+		Result.bRemoved =
+			RemoveResult.bSucceeded
+			&& RemoveResult.bRemoved
+			&& RemoveResult.RemovedLayoutId == UpdatedFirstDocument.Metadata.LayoutId;
+		if (!Result.bRemoveSucceeded)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				RemoveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite full lifecycle repository smoke failed: RemoveLayout failed.")
+					: RemoveResult.ErrorMessage);
+		}
+		else if (!Result.bRemoved)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				TEXT("SQLUI SQLite full lifecycle repository smoke failed: RemoveLayout succeeded but did not report bRemoved=true for the first layout id."));
+		}
+	}
+
+	if (Result.bRemoved)
+	{
+		const FSQLUILayoutRepositoryListResult ListAfterRemoveResult =
+			Repository->ListLayouts();
+		Result.bListAfterRemoveSucceeded = ListAfterRemoveResult.bSucceeded;
+		Result.ListedLayoutCountAfterRemove = ListAfterRemoveResult.Layouts.Num();
+		if (!Result.bListAfterRemoveSucceeded)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				ListAfterRemoveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite full lifecycle repository smoke failed: ListLayouts failed after remove.")
+					: ListAfterRemoveResult.ErrorMessage);
+		}
+		else
+		{
+			Result.bRemovedMetadataAbsentAfterRemove =
+				!DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListAfterRemoveResult.Layouts,
+					UpdatedFirstDocument.Metadata);
+			Result.bSecondMetadataPreservedAfterRemove =
+				DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListAfterRemoveResult.Layouts,
+					SecondDocument.Metadata);
+			if (!Result.bRemovedMetadataAbsentAfterRemove)
+			{
+				AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+					Result,
+					TEXT("SQLUI SQLite full lifecycle repository smoke failed: removed first metadata was still listed after remove."));
+			}
+			if (!Result.bSecondMetadataPreservedAfterRemove)
+			{
+				AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+					Result,
+					TEXT("SQLUI SQLite full lifecycle repository smoke failed: second metadata was not preserved after removing the first layout."));
+			}
+		}
+
+		const FSQLUILayoutLoadResult RemovedLoadResult =
+			LoadSQLUISampleLayoutFromRepository(
+				Repository,
+				TEXT("SQLite full lifecycle repository removed first layout"),
+				UpdatedFirstDocument.Metadata.LayoutId);
+		Result.bRemovedLoadFailedAsExpected =
+			IsSQLUISampleLoadFailureOrdinaryNotFound(RemovedLoadResult);
+		if (!Result.bRemovedLoadFailedAsExpected)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite full lifecycle repository smoke failed: LoadLayout for removed first layout did not fail as an ordinary not-found/deleted-layout result. bSucceeded=%s bBackendUnavailable=%s Error='%s'."),
+					RemovedLoadResult.bSucceeded ? TEXT("true") : TEXT("false"),
+					RemovedLoadResult.bBackendUnavailable ? TEXT("true") : TEXT("false"),
+					*RemovedLoadResult.ErrorMessage));
+		}
+
+		const FSQLUILayoutLoadResult SecondLoadAfterRemoveResult =
+			LoadSQLUISampleLayoutFromRepository(
+				Repository,
+				TEXT("SQLite full lifecycle repository second layout after remove"),
+				SecondDocument.Metadata.LayoutId);
+		Result.bSecondLoadAfterRemoveSucceeded =
+			SecondLoadAfterRemoveResult.bSucceeded
+			&& SecondLoadAfterRemoveResult.Validation.bIsValid
+			&& SecondLoadAfterRemoveResult.Document.Metadata.LayoutId == SecondDocument.Metadata.LayoutId;
+		if (!Result.bSecondLoadAfterRemoveSucceeded)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				SecondLoadAfterRemoveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite full lifecycle repository smoke failed: second layout LoadLayout failed after removing the first layout.")
+					: SecondLoadAfterRemoveResult.ErrorMessage);
+		}
+
+		FString RevisionCountErrorMessage;
+		const bool bRevisionCountQueried = FSQLUISQLiteLayoutReadProbe::CountLayoutRevisions(
+			Result.DatabasePath,
+			UpdatedFirstDocument.Metadata.LayoutId,
+			Result.RevisionCountAfterRemove,
+			RevisionCountErrorMessage);
+		Result.bRevisionHistoryPreservedAfterRemove =
+			bRevisionCountQueried
+			&& Result.RevisionCountAfterRemove == 2;
+		if (!Result.bRevisionHistoryPreservedAfterRemove)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				RevisionCountErrorMessage.IsEmpty()
+					? FString::Printf(
+						TEXT("SQLUI SQLite full lifecycle repository smoke failed: first layout revision count after remove was %d, expected 2."),
+						Result.RevisionCountAfterRemove)
+					: RevisionCountErrorMessage);
+		}
+	}
+
+	if (Result.bRevisionHistoryPreservedAfterRemove)
+	{
+		const FSQLUILayoutRepositoryClearResult ClearResult = Repository->ClearLayouts();
+		Result.bClearSucceeded = ClearResult.bSucceeded;
+		Result.ClearRemovedCount = ClearResult.RemovedCount;
+		Result.bRemovedCountMatchedExpected =
+			ClearResult.bSucceeded
+			&& ClearResult.RemovedCount == 2;
+		if (!Result.bClearSucceeded)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				ClearResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite full lifecycle repository smoke failed: ClearLayouts failed.")
+					: ClearResult.ErrorMessage);
+		}
+		else if (!Result.bRemovedCountMatchedExpected)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite full lifecycle repository smoke failed: ClearLayouts removed %d layout rows, expected 2."),
+					ClearResult.RemovedCount));
+		}
+	}
+
+	if (Result.bClearSucceeded)
+	{
+		const FSQLUILayoutRepositoryListResult ListAfterClearResult =
+			Repository->ListLayouts();
+		Result.bListAfterClearSucceeded = ListAfterClearResult.bSucceeded;
+		Result.ListedLayoutCountAfterClear = ListAfterClearResult.Layouts.Num();
+		Result.bEmptyAfterClear =
+			ListAfterClearResult.bSucceeded
+			&& ListAfterClearResult.Layouts.Num() == 0;
+		if (!Result.bListAfterClearSucceeded)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				ListAfterClearResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite full lifecycle repository smoke failed: ListLayouts failed after clear.")
+					: ListAfterClearResult.ErrorMessage);
+		}
+		else if (!Result.bEmptyAfterClear)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite full lifecycle repository smoke failed: ListLayouts returned %d layout(s) after clear."),
+					ListAfterClearResult.Layouts.Num()));
+		}
+
+		const FSQLUILayoutLoadResult FirstLoadAfterClearResult =
+			LoadSQLUISampleLayoutFromRepository(
+				Repository,
+				TEXT("SQLite full lifecycle repository after clear first layout"),
+				UpdatedFirstDocument.Metadata.LayoutId);
+		const FSQLUILayoutLoadResult SecondLoadAfterClearResult =
+			LoadSQLUISampleLayoutFromRepository(
+				Repository,
+				TEXT("SQLite full lifecycle repository after clear second layout"),
+				SecondDocument.Metadata.LayoutId);
+		Result.bLoadsAfterClearFailedAsExpected =
+			IsSQLUISampleLoadFailureOrdinaryNotFound(FirstLoadAfterClearResult)
+			&& IsSQLUISampleLoadFailureOrdinaryNotFound(SecondLoadAfterClearResult);
+		if (!Result.bLoadsAfterClearFailedAsExpected)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite full lifecycle repository smoke failed: LoadLayout after clear did not fail as ordinary not-found results. FirstSucceeded=%s FirstBackendUnavailable=%s FirstError='%s' SecondSucceeded=%s SecondBackendUnavailable=%s SecondError='%s'."),
+					FirstLoadAfterClearResult.bSucceeded ? TEXT("true") : TEXT("false"),
+					FirstLoadAfterClearResult.bBackendUnavailable ? TEXT("true") : TEXT("false"),
+					*FirstLoadAfterClearResult.ErrorMessage,
+					SecondLoadAfterClearResult.bSucceeded ? TEXT("true") : TEXT("false"),
+					SecondLoadAfterClearResult.bBackendUnavailable ? TEXT("true") : TEXT("false"),
+					*SecondLoadAfterClearResult.ErrorMessage));
+		}
+
+		FString RowCountErrorMessage;
+		const bool bRowCountsQueried = FSQLUISQLiteLayoutReadProbe::CountLayoutSchemaRows(
+			Result.DatabasePath,
+			Result.TableRowCountsAfterClear,
+			RowCountErrorMessage);
+		Result.bTablesEmptyAfterClear =
+			bRowCountsQueried
+			&& Result.TableRowCountsAfterClear.Layouts == 0
+			&& Result.TableRowCountsAfterClear.LayoutRevisions == 0
+			&& Result.TableRowCountsAfterClear.LayoutTags == 0
+			&& Result.TableRowCountsAfterClear.LayoutCheckpoints == 0
+			&& Result.TableRowCountsAfterClear.LayoutPreviews == 0;
+		if (!Result.bTablesEmptyAfterClear)
+		{
+			AppendSQLUISampleSQLiteFullLifecycleRepositoryError(
+				Result,
+				RowCountErrorMessage.IsEmpty()
+					? FString::Printf(
+						TEXT("SQLUI SQLite full lifecycle repository smoke failed: schema rows remained after clear. Layouts=%d Revisions=%d Tags=%d Checkpoints=%d Previews=%d."),
+						Result.TableRowCountsAfterClear.Layouts,
+						Result.TableRowCountsAfterClear.LayoutRevisions,
+						Result.TableRowCountsAfterClear.LayoutTags,
+						Result.TableRowCountsAfterClear.LayoutCheckpoints,
+						Result.TableRowCountsAfterClear.LayoutPreviews)
+					: RowCountErrorMessage);
+		}
+	}
+
+	Result.bDatabaseRemoved =
+		DeleteSQLUISampleSQLiteFullLifecycleRepositoryFiles(Result.DatabasePath, Result);
+
+	Result.bSucceeded =
+		Result.bDatabasePrepared
+		&& Result.bFirstSaveSucceeded
+		&& Result.bListAfterFirstSaveSucceeded
+		&& Result.bFirstMetadataFoundAfterFirstSave
+		&& Result.bLoadAfterFirstSaveSucceeded
+		&& Result.bFirstRevisionLoaded
+		&& Result.bSecondRevisionSaveSucceeded
+		&& Result.bLatestRevisionLoaded
+		&& Result.bSecondSaveSucceeded
+		&& Result.bListBeforeRemoveSucceeded
+		&& Result.bBothMetadataEntriesFoundBeforeRemove
+		&& Result.bRemoveSucceeded
+		&& Result.bRemoved
+		&& Result.bListAfterRemoveSucceeded
+		&& Result.bRemovedMetadataAbsentAfterRemove
+		&& Result.bSecondMetadataPreservedAfterRemove
+		&& Result.bRemovedLoadFailedAsExpected
+		&& Result.bSecondLoadAfterRemoveSucceeded
+		&& Result.bRevisionHistoryPreservedAfterRemove
+		&& Result.bClearSucceeded
+		&& Result.bRemovedCountMatchedExpected
+		&& Result.bListAfterClearSucceeded
+		&& Result.bEmptyAfterClear
+		&& Result.bLoadsAfterClearFailedAsExpected
+		&& Result.bTablesEmptyAfterClear
+		&& Result.bDatabaseRemoved;
+
+	return Result;
+}
+
 FSQLUISampleSmokeTestLayoutResult ResolveSQLUISampleSmokeTestLayoutDocument(
 	UObject* Outer,
 	const FSQLUISampleSmokeTestRequest& Request)
@@ -2683,6 +3318,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.SQLiteClearLayoutsRepository.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI SQLite ClearLayouts repository smoke failed.")
 					: Result.SQLiteClearLayoutsRepository.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseSQLiteFullLifecycleRepository)
+	{
+		Result.bUsedSQLiteFullLifecycleRepository = true;
+		Result.SQLiteFullLifecycleRepository =
+			RunSQLUISampleSQLiteFullLifecycleRepositorySmoke(Outer);
+		if (!Result.SQLiteFullLifecycleRepository.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.SQLiteFullLifecycleRepository.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite full lifecycle repository smoke failed.")
+					: Result.SQLiteFullLifecycleRepository.ErrorMessage);
 		}
 	}
 

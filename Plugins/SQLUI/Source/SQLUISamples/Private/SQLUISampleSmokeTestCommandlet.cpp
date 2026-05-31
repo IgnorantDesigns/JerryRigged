@@ -1138,6 +1138,214 @@ void LogSQLUISampleSmokeTestSQLiteClearLayoutsRepositoryResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteFullLifecycleRepositoryResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteFullLifecycleRepository)
+	{
+		return;
+	}
+
+	const FSQLUISampleSQLiteFullLifecycleRepositorySmokeResult& RepositoryResult =
+		Result.SQLiteFullLifecycleRepository;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository database path: '%s'"),
+		*RepositoryResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository database prepared: %s"),
+		RepositoryResult.bDatabasePrepared ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository first save succeeded: %s"),
+		RepositoryResult.bFirstSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository list after first save succeeded: %s"),
+		RepositoryResult.bListAfterFirstSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository first metadata found after first save: %s"),
+		RepositoryResult.bFirstMetadataFoundAfterFirstSave ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository load after first save succeeded: %s"),
+		RepositoryResult.bLoadAfterFirstSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository first revision loaded: %s"),
+		RepositoryResult.bFirstRevisionLoaded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository second revision save succeeded: %s"),
+		RepositoryResult.bSecondRevisionSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository latest revision loaded: %s"),
+		RepositoryResult.bLatestRevisionLoaded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository second layout save succeeded: %s"),
+		RepositoryResult.bSecondSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository list before remove succeeded: %s"),
+		RepositoryResult.bListBeforeRemoveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository both metadata entries found before remove: %s"),
+		RepositoryResult.bBothMetadataEntriesFoundBeforeRemove ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository remove succeeded: %s"),
+		RepositoryResult.bRemoveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository removed: %s"),
+		RepositoryResult.bRemoved ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository list after remove succeeded: %s"),
+		RepositoryResult.bListAfterRemoveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository removed metadata absent after remove: %s"),
+		RepositoryResult.bRemovedMetadataAbsentAfterRemove ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository second metadata preserved after remove: %s"),
+		RepositoryResult.bSecondMetadataPreservedAfterRemove ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository removed load failed as expected: %s"),
+		RepositoryResult.bRemovedLoadFailedAsExpected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository second load after remove succeeded: %s"),
+		RepositoryResult.bSecondLoadAfterRemoveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository revision history preserved after remove: %s"),
+		RepositoryResult.bRevisionHistoryPreservedAfterRemove ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository clear succeeded: %s"),
+		RepositoryResult.bClearSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository removed count matched expected: %s"),
+		RepositoryResult.bRemovedCountMatchedExpected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository list after clear succeeded: %s"),
+		RepositoryResult.bListAfterClearSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository empty after clear: %s"),
+		RepositoryResult.bEmptyAfterClear ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository loads after clear failed as expected: %s"),
+		RepositoryResult.bLoadsAfterClearFailedAsExpected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository tables empty after clear: %s"),
+		RepositoryResult.bTablesEmptyAfterClear ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository table rows after clear: layouts=%d revisions=%d tags=%d checkpoints=%d previews=%d"),
+		RepositoryResult.TableRowCountsAfterClear.Layouts,
+		RepositoryResult.TableRowCountsAfterClear.LayoutRevisions,
+		RepositoryResult.TableRowCountsAfterClear.LayoutTags,
+		RepositoryResult.TableRowCountsAfterClear.LayoutCheckpoints,
+		RepositoryResult.TableRowCountsAfterClear.LayoutPreviews);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository first layout id: '%s' second layout id: '%s' removed layout id: '%s' loaded layout id: '%s' revision count after remove: %d removed count: %d"),
+		*RepositoryResult.FirstLayoutId,
+		*RepositoryResult.SecondLayoutId,
+		*RepositoryResult.RemovedLayoutId,
+		*RepositoryResult.LoadedLayoutId,
+		RepositoryResult.RevisionCountAfterRemove,
+		RepositoryResult.ClearRemovedCount);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite full lifecycle repository database removed: %s"),
+		RepositoryResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (RepositoryResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite full lifecycle repository succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite full lifecycle repository failed: %s"),
+			*RepositoryResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -1183,6 +1391,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteSaveLayoutRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteRemoveLayoutRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteClearLayoutsRepositoryResult(Result);
+	LogSQLUISampleSmokeTestSQLiteFullLifecycleRepositoryResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -1279,6 +1488,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteClearLayoutsRepository =
 		FParse::Param(*Params, TEXT("UseSQLiteClearLayoutsRepository"))
 		|| FParse::Param(*Params, TEXT("SQLiteClearLayoutsRepository"));
+	const bool bUseSQLiteFullLifecycleRepository =
+		FParse::Param(*Params, TEXT("UseSQLiteFullLifecycleRepository"))
+		|| FParse::Param(*Params, TEXT("SQLiteFullLifecycleRepository"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -1348,6 +1560,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite ClearLayouts repository selected: true"));
 	}
 
+	if (bUseSQLiteFullLifecycleRepository)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite full lifecycle repository selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -1373,6 +1590,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteSaveLayoutRepository = bUseSQLiteSaveLayoutRepository;
 		Request.bUseSQLiteRemoveLayoutRepository = bUseSQLiteRemoveLayoutRepository;
 		Request.bUseSQLiteClearLayoutsRepository = bUseSQLiteClearLayoutsRepository;
+		Request.bUseSQLiteFullLifecycleRepository = bUseSQLiteFullLifecycleRepository;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 

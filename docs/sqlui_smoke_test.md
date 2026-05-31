@@ -28,9 +28,11 @@ The optional SQLite RemoveLayout repository smoke path opens a temporary SQLite 
 
 The optional SQLite ClearLayouts repository smoke path opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\SQLiteClearLayoutsRepository`, prepares it with the planned schema, configures `USQLUISQLiteLayoutRepository` with `bReadOnly = false`, saves two probe-only layouts, soft-deletes one through `RemoveLayout`, destructively clears the selected repository scope through `ClearLayouts`, verifies active and soft-deleted layout rows plus dependent schema rows are gone, and removes the probe database file. This proves scoped cleanup semantics without adding SQLite factory selection, async SQLite workers, or persistent database files.
 
+The optional SQLite full lifecycle repository smoke path opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\SQLiteFullLifecycleRepository`, prepares it with the planned schema, configures `USQLUISQLiteLayoutRepository` with `bReadOnly = false`, saves one layout, lists and loads it, saves it again as revision 2 with updated metadata and tags, saves a second layout, soft-deletes the first layout, verifies revision history remains, destructively clears the selected repository scope, verifies schema rows are empty, and removes the probe database file. This combines the currently supported SQLite repository operations without adding SQLite factory selection, async SQLite workers, or persistent database files.
+
 This is a local developer workflow only. It is not CI yet, and it does not assume Unreal Engine is installed on GitHub Actions or any build agent.
 
-The smoke test does not edit maps, levels, Content, persistent database files, or the viewport. It does not add SQLite factory selection or attach widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory. The SQLiteCore probe writes only under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe` and removes `SQLiteCoreProbe.db` after the check. The SQLite migration probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe` and removes `SQLiteMigrationProbe.db` after the check. The SQLite layout schema migration probe writes only under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe` and removes `LayoutSchemaMigrationProbe.db` after the check. The SQLite layout read probe writes only under `Saved\SQLUI\SmokeTests\LayoutReadProbe` and removes `LayoutReadProbe.db` after the check. The SQLite read-only layout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteReadOnlyRepository` and removes `SQLiteReadOnlyRepository.db` after the check. The SQLite SaveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSaveLayoutRepository` and removes `SQLiteSaveLayoutRepository.db` after the check. The SQLite RemoveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteRemoveLayoutRepository` and removes `SQLiteRemoveLayoutRepository.db` after the check. The SQLite ClearLayouts repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteClearLayoutsRepository` and removes `SQLiteClearLayoutsRepository.db` after the check. The database async probe does not perform file I/O.
+The smoke test does not edit maps, levels, Content, persistent database files, or the viewport. It does not add SQLite factory selection or attach widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory. The SQLiteCore probe writes only under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe` and removes `SQLiteCoreProbe.db` after the check. The SQLite migration probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe` and removes `SQLiteMigrationProbe.db` after the check. The SQLite layout schema migration probe writes only under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe` and removes `LayoutSchemaMigrationProbe.db` after the check. The SQLite layout read probe writes only under `Saved\SQLUI\SmokeTests\LayoutReadProbe` and removes `LayoutReadProbe.db` after the check. The SQLite read-only layout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteReadOnlyRepository` and removes `SQLiteReadOnlyRepository.db` after the check. The SQLite SaveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSaveLayoutRepository` and removes `SQLiteSaveLayoutRepository.db` after the check. The SQLite RemoveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteRemoveLayoutRepository` and removes `SQLiteRemoveLayoutRepository.db` after the check. The SQLite ClearLayouts repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteClearLayoutsRepository` and removes `SQLiteClearLayoutsRepository.db` after the check. The SQLite full lifecycle repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFullLifecycleRepository` and removes `SQLiteFullLifecycleRepository.db` after the check. The database async probe does not perform file I/O.
 
 ## Build JerryRiggedEditor
 
@@ -213,6 +215,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 The commandlet also accepts `-SQLiteClearLayoutsRepository` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
 This path is a ClearLayouts repository proof only. It does not add `ESQLUILayoutRepositoryBackend::SQLite`, repository factory selection, async SQLite workers, Content changes, map edits, or persistent database files.
+
+## Run The SQLite Full Lifecycle Repository Smoke Test
+
+The SQLite full lifecycle repository path keeps the same transient commandlet flow, prepares a temporary database under `Saved\SQLUI\SmokeTests\SQLiteFullLifecycleRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false`, saves one probe-only layout, verifies list/load behavior, saves that layout again as revision 2 with updated metadata and tags, saves a second layout, soft-deletes the first layout, verifies the second layout remains readable, verifies the first layout's revision history remains preserved, clears the repository scope, verifies schema rows are empty, removes the probe database file, and then runs the same default runtime widget pipeline:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteFullLifecycleRepository
+```
+
+The commandlet also accepts `-SQLiteFullLifecycleRepository` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
+
+This path is a combined currently-supported lifecycle proof only. It does not add `ESQLUILayoutRepositoryBackend::SQLite`, repository factory selection, async SQLite workers, Content changes, map edits, or persistent database files.
 
 ## Expected Results
 
@@ -461,6 +475,44 @@ SQLUI sample smoke test created widget count: 1
 ```
 
 After the smoke test succeeds, `Saved\SQLUI\SmokeTests\SQLiteClearLayoutsRepository\SQLiteClearLayoutsRepository.db` should not exist.
+
+For the SQLite full lifecycle repository smoke test, also look for:
+
+```text
+SQLUI SQLite full lifecycle repository selected: true
+SQLUI SQLite full lifecycle repository database prepared: true
+SQLUI SQLite full lifecycle repository first save succeeded: true
+SQLUI SQLite full lifecycle repository list after first save succeeded: true
+SQLUI SQLite full lifecycle repository first metadata found after first save: true
+SQLUI SQLite full lifecycle repository load after first save succeeded: true
+SQLUI SQLite full lifecycle repository first revision loaded: true
+SQLUI SQLite full lifecycle repository second revision save succeeded: true
+SQLUI SQLite full lifecycle repository latest revision loaded: true
+SQLUI SQLite full lifecycle repository second layout save succeeded: true
+SQLUI SQLite full lifecycle repository list before remove succeeded: true
+SQLUI SQLite full lifecycle repository both metadata entries found before remove: true
+SQLUI SQLite full lifecycle repository remove succeeded: true
+SQLUI SQLite full lifecycle repository removed: true
+SQLUI SQLite full lifecycle repository list after remove succeeded: true
+SQLUI SQLite full lifecycle repository removed metadata absent after remove: true
+SQLUI SQLite full lifecycle repository second metadata preserved after remove: true
+SQLUI SQLite full lifecycle repository removed load failed as expected: true
+SQLUI SQLite full lifecycle repository second load after remove succeeded: true
+SQLUI SQLite full lifecycle repository revision history preserved after remove: true
+SQLUI SQLite full lifecycle repository clear succeeded: true
+SQLUI SQLite full lifecycle repository removed count matched expected: true
+SQLUI SQLite full lifecycle repository list after clear succeeded: true
+SQLUI SQLite full lifecycle repository empty after clear: true
+SQLUI SQLite full lifecycle repository loads after clear failed as expected: true
+SQLUI SQLite full lifecycle repository tables empty after clear: true
+SQLUI SQLite full lifecycle repository database removed: true
+SQLUI SQLite full lifecycle repository succeeded.
+SQLUI sample smoke test commandlet succeeded.
+SQLUI sample smoke test root widget valid: true
+SQLUI sample smoke test created widget count: 1
+```
+
+After the smoke test succeeds, `Saved\SQLUI\SmokeTests\SQLiteFullLifecycleRepository\SQLiteFullLifecycleRepository.db` should not exist.
 
 Some optional pipeline steps may log `Skipped` depending on the current sample request. Failures are logged with `SQLUI sample smoke test commandlet failed.` and the script returns a non-zero exit code.
 
