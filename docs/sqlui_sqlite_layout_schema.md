@@ -1,17 +1,20 @@
 # SQLUI SQLite Layout Schema Draft
 
-This document drafts the future SQLite-backed layout repository for SQLUI. The original schema draft was documentation-only. SQLUICore now also has temporary smoke proofs that apply the planned initial layout schema to a database under `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, verify the expected tables and indexes, and seed/read one probe-only layout under `Saved/SQLUI/SmokeTests/LayoutReadProbe`. These probes remove their databases afterward and still do not implement SQLite layout persistence, repository factory selection, widgets, maps, assets, CI, or persistent database files.
+This document describes the SQLite layout schema used by SQLUI's SQLite repository work. The original schema draft was documentation-only; SQLUICore now has an initial schema migration helper, schema-init hardening coverage, SQLite read/list/load probes, and `USQLUISQLiteLayoutRepository` operations that use this schema for save, list, load, soft-delete remove, and scoped clear behavior.
+
+For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 
 ## Purpose
 
-The future SQLite repository should provide durable runtime layout storage behind the existing SQLUI repository boundary. Widgets, widget factories, and runtime pipeline code should continue to work with layout documents, repositories, runtime contexts, variable stores, and action systems. They should not know SQL table names, SQLite connection objects, file paths, or concrete storage classes.
+The SQLite repository should provide durable runtime layout storage behind the existing SQLUI repository boundary. Widgets, widget factories, and runtime pipeline code should continue to work with layout documents, repositories, runtime contexts, variable stores, and action systems. They should not know SQL table names, SQLite connection objects, file paths, or concrete storage classes.
 
 The proposed schema is meant to support the current repository lifecycle plus later layout history, checkpoints, previews, tags, and searchable metadata.
 
 ## Non-Goals
 
-- Do not implement the SQLite layout repository in this step.
-- Do not add SQLite repository factory selection in this step.
+- Do not make SQLite the default repository backend.
+- Do not run migrations inside `USQLUILayoutRepositoryFactory`; the factory passes settings only.
+- Do not treat local smoke coverage as packaged-build validation.
 - Do not expose SQL or schema details to `SQLUI.Widgets`.
 - Do not replace JSON document validation with database constraints.
 - Do not use `Content/`, maps, or assets as writable runtime layout storage.
@@ -37,7 +40,7 @@ Saved/SQLUI/SmokeTests/LayoutReadProbe/LayoutReadProbe.db
 Saved/SQLUI/Samples/LayoutDrivenFilterList/Layouts.db
 ```
 
-The repository factory can later gain a SQLite backend setting and optional database path or base directory setting. Until then, SQLite should remain absent from runtime selection.
+The repository factory now supports explicit SQLite selection through `ESQLUILayoutRepositoryBackend::SQLite` and passes `SQLiteSettings` into `USQLUISQLiteLayoutRepository`. The factory does not run migrations or create database files. A missing database may be created and initialized only by a writable repository when `bInitializeSchemaIfMissing = true` and `bCreateDatabaseIfMissing = true`.
 
 The layout schema migration smoke proof uses `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe/LayoutSchemaMigrationProbe.db` only as temporary runtime output and removes the database and SQLite sidecar files after verification.
 
@@ -411,7 +414,16 @@ Load and validate `layout_previews.document_json`, save it as a new revision thr
 
 The first SQLite implementation should apply named migrations inside a transaction and record them in `sqlui_schema_migrations`.
 
-The current layout schema migration smoke proof applies only the planned initial DDL to a temporary probe database and verifies table/index existence. The layout read smoke proof then seeds one valid layout into that schema and verifies list/load style reads. These are schema-readiness and read-mapping proofs, not repository persistence.
+The current layout schema migration helper applies the planned initial DDL to temporary smoke databases and to explicitly configured repository databases when schema initialization is enabled. Layout read and repository smoke paths seed or save valid layouts into that schema and verify list/load behavior.
+
+Schema initialization is hardened for the current initial migration:
+
+- Missing databases fail when creation is disabled.
+- Empty databases initialize when creation is enabled.
+- Already-initialized databases succeed idempotently without duplicate migration rows.
+- Complete schemas with a missing initial migration row are recorded non-destructively.
+- Partial schemas fail clearly and report missing expected objects.
+- Read-only repositories reject writes before schema initialization can create database files.
 
 Migration rules:
 

@@ -1,10 +1,12 @@
 # SQLUI SQLite Async Backend Plan
 
-This document drafts the async and backend boundary for a future SQLite-backed SQLUI layout repository. The original plan was documentation-only. The current proof work includes minimal `SQLiteCore` availability and open/close probes, a SQLUICore-owned async boundary/probe that runs plain database-style work on a background task and delivers the result back through a game-thread callback, a smoke-only migration-runner probe, a planned layout schema migration probe, a read/list/load mapping probe, a read-only `USQLUISQLiteLayoutRepository` proof, writable `SaveLayout`, soft-delete `RemoveLayout`, destructive scoped `ClearLayouts`, a combined full lifecycle repository smoke path, a non-UObject worker-safe operation helper for SQLite repository database work, opt-in async execution for the SQLite repository's callback-style `LoadLayout` and `SaveLayout` methods, and explicit SQLite repository factory selection for configured database paths. Direct return-value methods, `ListLayouts`, `RemoveLayout`, and `ClearLayouts` are still synchronous in this slice. It still does not add a full persistent database service, migrations inside the factory, widgets, maps, assets, CI, or persistent database files.
+This document describes the async and backend boundary for the SQLite-backed SQLUI layout repository. The original plan was documentation-only; the current code now includes the SQLite repository, a non-UObject worker-safe operation helper, opt-in async execution for callback-style `LoadLayout` and `SaveLayout`, and explicit factory selection for configured SQLite database paths. Direct return-value methods, `ListLayouts`, `RemoveLayout`, and `ClearLayouts` are still synchronous. The project still does not have a full persistent database service, migrations inside the factory, widgets that know SQLite details, maps, assets, CI, or persistent database files.
+
+For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 
 ## Purpose
 
-The future SQLite repository should provide durable layout persistence while preserving the current SQLUI repository contract and keeping widgets unaware of storage details.
+The SQLite repository should provide durable layout persistence while preserving the current SQLUI repository contract and keeping widgets unaware of storage details.
 
 The async/backend plan defines how the repository should handle:
 
@@ -18,11 +20,11 @@ The schema itself is drafted separately in [`sqlui_sqlite_layout_schema.md`](sql
 
 ## Non-Goals
 
-- Do not treat the current writable SQLite repository proofs as complete durable SQLite layout persistence.
-- Do not choose a concrete SQLite plugin or library beyond the already-proven engine `SQLiteCore` candidate.
+- Do not treat current local smoke coverage as packaged-build or production-service validation.
+- Do not choose a concrete SQLite plugin or library beyond the active engine `SQLiteCore` candidate without a new evaluation.
 - Do not add new SQLite module dependencies or modify `Build.cs`.
 - Do not add persistent database files.
-- Do not expand the async scaffold beyond a small proof that can run plain background work and marshal a result safely.
+- Do not expand the current async callback slice into a full production database service without a separate implementation step.
 - Do not expose SQL, table names, database paths, worker objects, or SQLite connection details to `SQLUI.Widgets`.
 - Do not change existing smoke-test behavior unless an optional probe flag is explicitly passed.
 - Do not require the first SQLite implementation to ship history, checkpoints, previews, or search UI.
@@ -107,7 +109,7 @@ The SQLite repository should preserve the existing repository surface:
 - `RemoveLayout(LayoutId, Callback)`
 - `ClearLayouts(Callback)`
 
-The callback contract should remain valid whether the concrete repository completes immediately, like the current in-memory and JSON-file repositories, or completes asynchronously, like the future SQLite implementation.
+The callback contract should remain valid whether the concrete repository completes immediately, like the current in-memory and JSON-file repositories, or completes asynchronously, like the opt-in SQLite callback path.
 
 Public calls should return quickly. If a request cannot be enqueued because the backend is unavailable, the repository is shutting down, or required settings are invalid, it should deliver a failure result through the same callback path.
 
@@ -238,7 +240,7 @@ Operation-specific expectations:
 
 ## Backend-Unavailable Cases
 
-The future SQLite backend should report clean unavailability when:
+The SQLite backend should report clean unavailability when:
 
 - The project was built without the selected SQLite dependency.
 - The selected SQLite module fails to load or initialize.
@@ -271,7 +273,7 @@ Do not log full `document_json` bodies by default. If verbose document logging i
 
 ## Smoke-Test Implications
 
-Existing smoke paths should remain unchanged until SQLite is implemented.
+Existing smoke paths should remain unchanged unless an optional flag explicitly selects a SQLite probe or repository path.
 
 The optional database async probe exercises the minimal SQLUICore async boundary without touching SQLite or the filesystem. In commandlet smoke runs, the harness pumps the game-thread task queue while waiting for the probe callback because there is no normal gameplay tick while the commandlet stack is blocked. Runtime code should use the callback asynchronously rather than copying that blocking smoke-test wait pattern.
 
@@ -311,7 +313,7 @@ SQLite smoke tests should not add maps, Content assets, editor tooling, CI, or d
 
 ## Repository Factory Integration
 
-`USQLUILayoutRepositoryFactory` is now the explicit runtime selection boundary for the SQLite repository proof.
+`USQLUILayoutRepositoryFactory` is now the explicit runtime selection boundary for the SQLite repository.
 
 Current and future fit:
 
@@ -327,7 +329,7 @@ The factory should remain a small object-construction boundary. It should not ex
 
 ## Backend Selection Criteria
 
-A concrete SQLite implementation should be chosen later using explicit criteria.
+Any later SQLite backend change should be chosen using explicit criteria.
 
 Selection criteria:
 
@@ -361,15 +363,15 @@ Use the minimal SQLUI Core-owned async scaffold, the new `FSQLUISQLiteLayoutRepo
 
 ### Phase 3: Migration Runner
 
-Build on the smoke-only migration-runner proof and layout schema migration proof by integrating executable schema migrations behind the future SQLite repository. Ensure migration failures produce clear unavailable-backend results.
+Build on the smoke-only migration-runner proof and layout schema initialization path by hardening executable migrations behind the SQLite repository. Ensure migration failures produce clear unavailable-backend results.
 
 ### Phase 4: Read-Only Repository Operations
 
-The first read-only repository proof now implements `LoadLayout` and `ListLayouts` synchronously against a prepared database. The production phase should move those reads behind the async database boundary and keep the same result semantics.
+`LoadLayout` and `ListLayouts` currently work against a configured database. The production phase should move reads beyond callback-style `LoadLayout` behind the async database boundary and keep the same result semantics.
 
 ### Phase 5: Write Repository Operations
 
-Move `SaveLayout`, `RemoveLayout`, and `ClearLayouts` behind the production async database boundary while preserving transaction ownership, revision creation, soft-delete behavior, tag updates, destructive clear behavior, and clear-count semantics.
+Move the remaining synchronous operations behind the production async database boundary while preserving transaction ownership, revision creation, soft-delete behavior, tag updates, destructive clear behavior, and clear-count semantics.
 
 ### Phase 6: Smoke Coverage
 
@@ -383,7 +385,7 @@ Add history, checkpoints, previews, restore, retention, or search improvements w
 
 The following decisions remain intentionally deferred:
 
-- Which SQLite backend to use.
+- Whether to continue with only engine `SQLiteCore` or add another backend after new evidence.
 - Whether SQLite support is always compiled or feature-gated.
 - Exact async primitive or worker queue implementation.
 - Database path settings names and defaults.

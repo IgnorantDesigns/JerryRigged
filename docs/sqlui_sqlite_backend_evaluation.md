@@ -1,12 +1,14 @@
 # SQLUI SQLite Backend Evaluation
 
-This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, optional smoke-safe database probes under `Saved/SQLUI/SmokeTests`, a non-UObject SQLite repository worker helper, SQLite repository operations for list/load/save/remove/clear, opt-in async callback execution for `LoadLayout` and `SaveLayout`, a combined full lifecycle smoke path, explicit `USQLUILayoutRepositoryFactory` selection through `ESQLUILayoutRepositoryBackend::SQLite` when a database path is configured, opt-in repository-owned schema initialization settings, and schema-init hardening coverage for edge cases. SQLite is still not the default backend, and this work still does not add migrations inside the factory, packaged validation, widgets, maps, assets, CI, or persistent database files.
+This document records the SQLite backend evaluation that led SQLUI to use engine `SQLiteCore` as the active runtime candidate. The original backend evaluation was documentation-only; the current code now includes SQLiteCore wiring, repository operations, factory selection, opt-in schema initialization, opt-in async callback execution for `LoadLayout` and `SaveLayout`, and local smoke coverage. SQLite is still not the default backend, and this work still does not add migrations inside the factory, packaged validation, widgets, maps, assets, CI, or persistent database files.
+
+For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 
 ## Purpose
 
-SQLUI needs a future durable layout repository that can store the schema drafted in [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md) and follow the async boundary drafted in [`sqlui_sqlite_async_backend_plan.md`](sqlui_sqlite_async_backend_plan.md).
+SQLUI needs a durable layout repository that stores the schema documented in [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md) and follows the async boundary documented in [`sqlui_sqlite_async_backend_plan.md`](sqlui_sqlite_async_backend_plan.md).
 
-This evaluation compares backend options before implementation work starts. The goal is to identify the smallest safe path for runtime SQLite persistence while keeping:
+This evaluation compares backend options and captures why the smallest safe path is engine `SQLiteCore` behind SQLUI-owned repository and worker boundaries while keeping:
 
 - SQL and database details inside `SQLUI.Core`.
 - Widgets unaware of SQL, table names, database paths, SQLite connections, worker threads, or concrete storage classes.
@@ -15,14 +17,14 @@ This evaluation compares backend options before implementation work starts. The 
 
 ## Non-Goals
 
-- Do not treat the current SQLite `SaveLayout` proof as complete writable SQLite layout persistence.
+- Do not treat current local smoke coverage as packaged-build or production-service validation.
 - Do not make SQLite the default repository backend.
 - Do not create SQLite databases unless repository schema initialization and database creation are both explicitly enabled.
-- Do not add dependencies beyond the minimal engine `SQLiteCore` plugin/module wiring used for the compile proof.
+- Do not add dependencies beyond the engine `SQLiteCore` plugin/module wiring already used by SQLUICore.
 - Do not add Marketplace dependencies, third-party Unreal plugins, or vendored third-party source.
 - Do not modify widgets, CI, assets, maps, or persistent database files.
 - Do not open, create, or write SQLite databases outside the optional smoke-safe probe paths under `Saved/SQLUI/SmokeTests/...`.
-- Do not treat this evaluation as proof that packaged builds work. Packaging still needs implementation-time validation.
+- Do not treat this evaluation as proof that packaged builds work. Packaging still needs validation.
 
 ## Local Verification
 
@@ -57,12 +59,12 @@ Important limitations:
 
 - This was a local source/header/descriptor inspection, not a packaged build test.
 - Runtime module type is verified, but target-platform packaging behavior for JerryRigged remains unverified.
-- Threading guarantees beyond the public API and build comments need an implementation proof with SQLUI's planned worker boundary.
+- Threading guarantees beyond the public API and build comments still need production hardening around SQLUI's worker boundary.
 - No third-party Marketplace plugin was inspected locally for this evaluation.
 
 ## SQLiteCore Availability Proof
 
-SQLUICore now includes a minimal compile-time availability probe for engine-provided `SQLiteCore`.
+SQLUICore includes a minimal compile-time availability probe for engine-provided `SQLiteCore`.
 
 The proof:
 
@@ -189,9 +191,9 @@ The layout read proof does not:
 - Add async SQLite database workers.
 - Modify widgets or default smoke-test behavior.
 
-SQLUICore also includes a SQLite layout repository proof.
+SQLUICore also includes a SQLite layout repository implementation.
 
-The repository proof:
+The repository implementation:
 
 - Adds `USQLUISQLiteLayoutRepository` in SQLUICore.
 - Opens an already-prepared SQLite database with `SQLiteCore`.
@@ -214,13 +216,13 @@ The repository proof:
 - Has optional smoke coverage for factory-created SQLite schema initialization and missing-database-without-init failure behavior.
 - Has optional smoke coverage for schema initialization hardening: missing database with creation disabled, empty database with creation enabled, already-initialized database idempotence, complete schema with missing migration record, partial schema failure behavior, and read-only init-blocked protection.
 
-The repository proof does not:
+The repository implementation does not:
 
 - Make SQLite the default repository backend.
 - Run migrations or create database files inside `USQLUILayoutRepositoryFactory`.
 - Modify widgets or default smoke-test behavior.
 
-Remaining blockers before SQLite layout persistence:
+Remaining blockers before promoting SQLite to production/default persistence:
 
 - Packaged-build validation.
 - Production SQLite worker boundary and shutdown policy.
@@ -384,7 +386,7 @@ Assessment:
 
 | Option | UE 5.7 Verification | Runtime / Packaging | Threading Fit | Path Control | Migrations / Raw SQL | Transactions | Footprint | Maintainability | Risk | Recommendation |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Engine `SQLiteCore` | Verified present locally | Runtime module verified; packaging requires proof | Good with one worker-owned connection; concurrency caveat verified in Build.cs | Good | Good | Good through SQL | Low | Strong | Medium-low | Preferred candidate pending implementation proof |
+| Engine `SQLiteCore` | Verified present locally | Runtime module verified; packaging requires proof | Good with one worker-owned connection; concurrency caveat verified in Build.cs | Good | Good | Good through SQL | Low | Strong | Medium-low | Active candidate; packaging proof still needed |
 | SQLUI wrapper around `SQLiteCore` | Same as `SQLiteCore` | Same as `SQLiteCore` | Strongest because SQLUI owns the boundary | Strong | Strong | Strong | Low-small | Strong | Low-medium | Smallest safe implementation shape |
 | Engine `SQLiteSupport` | Verified present locally | Runtime module verified; packaging requires proof | Acceptable but less direct | Acceptable | Acceptable | Acceptable | Medium | Acceptable | Medium | Secondary engine option |
 | Third-party plugin | Not verified | Unknown until candidate tested | Unknown | Must verify | Must verify | Must verify | Medium-high | Varies | Medium-high | Avoid unless clearly superior |
@@ -397,14 +399,14 @@ The conservative recommendation is:
 
 1. Treat engine-provided `SQLiteCore` as the preferred candidate because it is verified in the local UE 5.7 install, exposes direct runtime C++ database and prepared-statement APIs, supports raw SQL, supports explicit file paths, and keeps dependency footprint smaller than third-party or vendored paths.
 2. Implement SQLUI's own small wrapper and async database boundary around `SQLiteCore` rather than letting repository or widget code use `FSQLiteDatabase` directly.
-3. Defer a final backend selection until an implementation PR proves packaged build behavior, target-platform support, threading rules, and smoke-test compatibility.
-4. Keep JSON-file persistence as the safe interim runtime persistence path if any `SQLiteCore` verification item fails.
+3. Keep SQLite explicit and non-default until packaged build behavior, target-platform support, and production threading/shutdown rules are validated.
+4. Keep JSON-file persistence available as the safe lightweight runtime persistence path if any remaining `SQLiteCore` validation item fails.
 
 Do not choose a Marketplace or third-party dependency unless it clearly beats `SQLiteCore` on runtime packaging, threading, licensing, platform coverage, and maintenance. Do not vendor SQLite unless engine-provided support is absent or unsuitable for SQLUI's runtime requirements.
 
 ## Implementation-Readiness Checklist
 
-Before any SQLite implementation PR changes project code, confirm:
+Before promoting SQLite from explicit opt-in backend to broader runtime use, confirm:
 
 - Backend verified in UE 5.7.
 - Runtime module dependency identified.
@@ -423,7 +425,7 @@ Before any SQLite implementation PR changes project code, confirm:
 
 ## Decision Record
 
-Current status: engine `SQLiteCore` remains the preferred backend candidate. SQLUI now has explicit SQLite repository factory selection and opt-in schema initialization with targeted edge-case hardening, but SQLite is not the default backend and packaged-build validation remains open.
+Current status: engine `SQLiteCore` is the active backend candidate and current implementation basis. SQLUI now has explicit SQLite repository factory selection and opt-in schema initialization with targeted edge-case hardening, but SQLite is not the default backend and packaged-build validation remains open.
 
 Preferred candidate: engine-provided `SQLiteCore`, wrapped by a small SQLUI Core-owned async database boundary.
 
@@ -444,7 +446,7 @@ Blocking questions:
 - What is the exact graceful behavior when SQLite support is disabled or unavailable in a packaged build?
 - What license notice changes, if any, are required for shipping with the engine-provided SQLite module?
 
-Future implementation PRs may still touch:
+Future SQLite hardening PRs may still touch:
 
 - A SQLUI Core async database service or wrapper around the chosen backend.
 - Production migration versioning and upgrade paths for later schema changes.

@@ -2,13 +2,15 @@
 
 The SQLUI sample smoke test commandlet runs the current sample runtime widget pipeline in a transient commandlet world. It creates the sample widget catalog, variable store, runtime context, and layout request, then reports whether the root widget and pipeline steps succeeded.
 
+For the consolidated current SQLite runtime state, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md). This document remains the command reference for local smoke paths and expected log lines.
+
 By default, the smoke test uses the existing in-memory C++ layout document. It can also run the built-in SQLUISamples JSON layout fixture, which deserializes a tiny `SQLUI.FilterBox` layout through SQLUICore's layout JSON helpers before running the same runtime widget pipeline.
 
 The in-memory repository smoke path reuses that same JSON fixture, selects the in-memory backend through the SQLUICore layout repository factory, saves the deserialized layout into `USQLUIInMemoryLayoutRepository`, verifies `ListLayouts` includes the saved metadata, loads it back by layout id, verifies `RemoveLayout` removes it, verifies `ListLayouts` no longer includes it, exercises `ClearLayouts`, and then runs the runtime widget pipeline with the loaded document.
 
 The JSON file repository smoke path also reuses the JSON fixture, selects the JSON-file backend through the SQLUICore layout repository factory, saves the deserialized layout into `USQLUIJsonFileLayoutRepository`, verifies `ListLayouts` includes the saved metadata, loads it back by layout id, verifies `RemoveLayout` removes it, verifies `ListLayouts` no longer includes it, exercises `ClearLayouts`, and then runs the runtime widget pipeline with the loaded document.
 
-Both repository smoke paths also select the unavailable backend through the factory and verify load/save report `bBackendUnavailable` cleanly. This keeps unavailable persistence explicit without adding SQLite.
+Both repository smoke paths also select the unavailable backend through the factory and verify load/save report `bBackendUnavailable` cleanly. This keeps unavailable persistence explicit without relying on SQLite.
 
 The optional SQLiteCore probe opens and closes a temporary SQLite database under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe`, then removes the probe database file. This proves engine `SQLiteCore` can use a runtime-writable SQLUI smoke-test path without adding a layout repository, migrations, schema tables, async database workers, or repository factory behavior.
 
@@ -126,7 +128,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-SQLiteCoreProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
-This path is a backend availability proof only. It does not add a SQLite layout repository, repository factory selection, schema tables, migrations, async database work, Content, maps, or persistent database files.
+This path is a backend availability probe only. It does not exercise the SQLite layout repository, repository factory selection, schema tables, migrations, async database work, Content, maps, or persistent database files.
 
 ## Run The Database Async Probe
 
@@ -138,7 +140,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-DatabaseAsyncProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
-This path is an async-boundary proof only. It does not open SQLite, create database files, run SQL, add migrations, implement a SQLite layout repository, change repository factory selection, modify Content, or edit maps.
+This path is an async-boundary probe only. It does not open SQLite, create database files, run SQL, run migrations, exercise the SQLite layout repository, change repository factory selection, modify Content, or edit maps.
 
 ## Run The SQLite Migration Probe
 
@@ -150,7 +152,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-SQLiteMigrationProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
-This path is a migration-runner proof only. The probe migration is clearly separate from the planned layout schema. It does not implement SQLite layout persistence, add real layout schema migrations, change repository factory selection, modify Content, edit maps, or leave persistent database files behind.
+This path is a migration-runner probe only. The probe migration is clearly separate from the planned layout schema. It does not exercise SQLite layout persistence, run the real layout schema migration, change repository factory selection, modify Content, edit maps, or leave persistent database files behind.
 
 ## Run The SQLite Layout Schema Migration Probe
 
@@ -162,7 +164,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-SQLiteLayoutSchemaMigrationProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
-This path is a layout-schema migration proof only. It does not implement SQLite layout persistence, add repository factory selection, modify Content, edit maps, or leave persistent database files behind.
+This path is a layout-schema migration probe only. It does not exercise repository operations, repository factory selection, Content changes, map edits, or persistent database files.
 
 ## Run The SQLite Layout Read Probe
 
@@ -174,7 +176,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-SQLiteLayoutReadProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
-This path is a read/list/load mapping proof only. It does not implement SQLite layout repository persistence, repository callbacks, repository factory selection, `SaveLayout`, `RemoveLayout`, `ClearLayouts`, Content changes, map edits, or persistent database files.
+This path is a read/list/load mapping probe only. It does not exercise the SQLite repository wrapper, repository callbacks, repository factory selection, `SaveLayout`, `RemoveLayout`, `ClearLayouts`, Content changes, map edits, or persistent database files.
 
 ## Run The SQLite Read-Only Layout Repository Smoke Test
 
@@ -186,7 +188,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-SQLiteReadOnlyLayoutRepository` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
-This path is a read-only repository proof only. It instantiates the SQLite repository directly and does not exercise repository factory selection, writable SQLite operations, Content changes, map edits, or persistent database files. Writable `SaveLayout`, `RemoveLayout`, and `ClearLayouts` behavior are covered by separate optional smoke paths.
+This path is a read-only repository smoke path. It instantiates the SQLite repository directly and does not exercise repository factory selection, writable SQLite operations, Content changes, map edits, or persistent database files. Writable `SaveLayout`, `RemoveLayout`, and `ClearLayouts` behavior are covered by separate optional smoke paths.
 
 ## Run The SQLite SaveLayout Repository Smoke Test
 
@@ -198,7 +200,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-SQLiteSaveLayoutRepository` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
-This path is a SaveLayout repository proof only. It instantiates the SQLite repository directly and does not exercise repository factory selection, async SQLite workers, Content changes, map edits, or persistent database files. Soft-delete `RemoveLayout` and destructive `ClearLayouts` behavior are covered by separate optional smoke paths.
+This path is a SaveLayout repository smoke path. It instantiates the SQLite repository directly and does not exercise repository factory selection, async callback execution, Content changes, map edits, or persistent database files. Soft-delete `RemoveLayout` and destructive `ClearLayouts` behavior are covered by separate optional smoke paths.
 
 ## Run The SQLite RemoveLayout Repository Smoke Test
 
@@ -210,7 +212,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-SQLiteRemoveLayoutRepository` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
-This path is a RemoveLayout repository proof only. It instantiates the SQLite repository directly and does not exercise repository factory selection, async SQLite workers, Content changes, map edits, or persistent database files. Destructive `ClearLayouts` behavior is covered by a separate optional smoke path.
+This path is a RemoveLayout repository smoke path. It instantiates the SQLite repository directly and does not exercise repository factory selection, async callback execution, Content changes, map edits, or persistent database files. Destructive `ClearLayouts` behavior is covered by a separate optional smoke path.
 
 ## Run The SQLite ClearLayouts Repository Smoke Test
 
@@ -222,7 +224,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-SQLiteClearLayoutsRepository` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
-This path is a ClearLayouts repository proof only. It instantiates the SQLite repository directly and does not exercise repository factory selection, async SQLite workers, Content changes, map edits, or persistent database files.
+This path is a ClearLayouts repository smoke path. It instantiates the SQLite repository directly and does not exercise repository factory selection, async callback execution, Content changes, map edits, or persistent database files.
 
 ## Run The SQLite Full Lifecycle Repository Smoke Test
 
@@ -234,7 +236,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-SQLiteFullLifecycleRepository` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
-This path is a combined currently-supported lifecycle proof only. It instantiates the SQLite repository directly and does not exercise repository factory selection, async SQLite workers, Content changes, map edits, or persistent database files.
+This path is a combined currently supported lifecycle smoke path. It instantiates the SQLite repository directly and does not exercise repository factory selection, async callback execution, Content changes, map edits, or persistent database files.
 
 ## Run The SQLite Async Callback Repository Smoke Test
 
