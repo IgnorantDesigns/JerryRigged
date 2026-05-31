@@ -3,6 +3,7 @@
 This document records the SQLite backend evaluation that led SQLUI to use engine `SQLiteCore` as the active runtime candidate. The original backend evaluation was documentation-only; the current code now includes SQLiteCore wiring, repository operations, factory selection, opt-in schema initialization, opt-in async callback execution for `LoadLayout` and `SaveLayout`, and local smoke coverage. SQLite is still not the default backend, and this work still does not add migrations inside the factory, packaged validation, widgets, maps, assets, CI, or persistent database files.
 
 For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
+For the local packaged-build validation scaffold, see [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md).
 
 ## Purpose
 
@@ -224,7 +225,8 @@ The repository implementation does not:
 
 Remaining blockers before promoting SQLite to production/default persistence:
 
-- Packaged-build validation.
+- Running packaged-build validation across the intended target platforms.
+- Packaged runtime SQLite lifecycle execution.
 - Production SQLite worker boundary and shutdown policy.
 - Production migration versioning and upgrade paths beyond the initial schema and hardening smoke slice.
 
@@ -413,6 +415,7 @@ Before promoting SQLite from explicit opt-in backend to broader runtime use, con
 - Required plugin descriptor changes identified.
 - `Build.cs` impact understood.
 - Packaging impact understood for the first supported targets.
+- Local packaged-build validation run for the first supported targets.
 - Threading rules confirmed.
 - Single-connection or connection-pool policy confirmed.
 - Database path behavior confirmed under `Saved/SQLUI/...`.
@@ -425,7 +428,7 @@ Before promoting SQLite from explicit opt-in backend to broader runtime use, con
 
 ## Decision Record
 
-Current status: engine `SQLiteCore` is the active backend candidate and current implementation basis. SQLUI now has explicit SQLite repository factory selection and opt-in schema initialization with targeted edge-case hardening, but SQLite is not the default backend and packaged-build validation remains open.
+Current status: engine `SQLiteCore` is the active backend candidate and current implementation basis. SQLUI now has explicit SQLite repository factory selection, opt-in schema initialization with targeted edge-case hardening, and a local packaged-build validation scaffold, but SQLite is not the default backend and packaged runtime lifecycle validation remains open.
 
 Preferred candidate: engine-provided `SQLiteCore`, wrapped by a small SQLUI Core-owned async database boundary.
 

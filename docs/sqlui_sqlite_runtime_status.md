@@ -9,6 +9,7 @@ Related docs:
 - [`sqlui_sqlite_async_backend_plan.md`](sqlui_sqlite_async_backend_plan.md) describes the async/threading direction.
 - [`sqlui_sqlite_backend_evaluation.md`](sqlui_sqlite_backend_evaluation.md) describes why engine `SQLiteCore` is the active backend candidate.
 - [`sqlui_smoke_test.md`](sqlui_smoke_test.md) is the command reference for local smoke paths.
+- [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) describes the local packaged-build validation scaffold.
 
 ## Current SQLite Repository Capabilities
 
@@ -118,7 +119,8 @@ The SQLite path is implemented enough for repository-shaped local smoke coverage
 
 Remaining work includes:
 
-- Packaged-build validation for target platforms.
+- Running and expanding the local packaged-build validation scaffold for target platforms.
+- Packaged runtime SQLite lifecycle execution inside a built executable.
 - Production async database service or queue design.
 - Shutdown, cancellation, and stale-callback policy for all repository operations.
 - Migration versioning and upgrade paths beyond `001_initial_layout_schema`.
@@ -128,6 +130,8 @@ Remaining work includes:
 
 ## Not Yet Production/Packaged Validated
 
-Local smoke tests prove commandlet behavior and temporary database cleanup. They do not prove packaged runtime behavior, platform-specific SQLite packaging, long-running database service behavior, or production migration upgrades.
+Local smoke tests prove commandlet behavior and temporary database cleanup. The packaged-build validation scaffold in [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) provides a repeatable local `RunUAT BuildCookRun` command for checking package compatibility with SQLUI and SQLiteCore wiring.
+
+That scaffold does not yet prove packaged runtime SQLite lifecycle execution, packaged runtime database path behavior under `Saved/SQLUI`, platform coverage beyond the requested local target, long-running database service behavior, or production migration upgrades.
 
 Until those items are validated, SQLite should stay explicitly configured, not default.
