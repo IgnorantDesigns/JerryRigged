@@ -197,6 +197,28 @@ function Clear-ValidationDirectory
 	}
 }
 
+function Write-DetectedToolVersion
+{
+	param(
+		[Parameter(Mandatory = $true)]
+		[string]$ToolName
+	)
+
+	$Command = Get-Command $ToolName -ErrorAction SilentlyContinue | Select-Object -First 1
+	if ($null -eq $Command)
+	{
+		Write-Host "SQLUI packaged-build validation preflight $ToolName not found on PATH. UBT will choose the build toolchain."
+		return
+	}
+
+	Write-Host "SQLUI packaged-build validation preflight $ToolName path: $($Command.Source)"
+	$VersionOutput = & $Command.Source 2>&1 | Select-Object -First 4
+	foreach ($Line in $VersionOutput)
+	{
+		Write-Host "  $Line"
+	}
+}
+
 if ($Help)
 {
 	Show-SQLUIPackagedBuildValidationHelp
@@ -267,6 +289,14 @@ if ([string]::IsNullOrWhiteSpace($RunUATPath))
 }
 
 $ResolvedRunUATPath = Resolve-ExistingFile -Path $RunUATPath -Description 'RunUAT.bat'
+
+Write-Host "SQLUI packaged-build validation RunUAT path: $ResolvedRunUATPath"
+Write-Host "SQLUI packaged-build validation project path: $ResolvedProjectPath"
+Write-Host "SQLUI packaged-build validation platform: $Platform"
+Write-Host "SQLUI packaged-build validation configuration: $Configuration"
+Write-Host 'SQLUI packaged-build validation note: UnrealBuildTool logs are the source of truth for the selected compiler, linker, Windows SDK, and preferred-toolchain warnings.'
+Write-DetectedToolVersion -ToolName 'cl.exe'
+Write-DetectedToolVersion -ToolName 'link.exe'
 
 $BuildCookRunArgs = @(
 	'BuildCookRun',
