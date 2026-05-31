@@ -2,6 +2,7 @@
 
 #include "Layout/SQLUIInMemoryLayoutRepository.h"
 #include "Layout/SQLUIJsonFileLayoutRepository.h"
+#include "Layout/SQLUISQLiteLayoutRepository.h"
 #include "UObject/Package.h"
 
 USQLUILayoutRepository* USQLUILayoutRepositoryFactory::CreateLayoutRepository(
@@ -24,6 +25,22 @@ USQLUILayoutRepository* USQLUILayoutRepositoryFactory::CreateLayoutRepository(
 			FSQLUIJsonFileLayoutRepositorySettings JsonFileSettings;
 			JsonFileSettings.BaseDirectory = Settings.JsonFileBaseDirectory;
 			Repository->Configure(JsonFileSettings);
+		}
+		return Repository;
+	}
+
+	case ESQLUILayoutRepositoryBackend::SQLite:
+	{
+		if (Settings.SQLiteSettings.DatabasePath.IsEmpty())
+		{
+			return NewObject<USQLUILayoutRepository>(ResolvedOuter);
+		}
+
+		USQLUISQLiteLayoutRepository* Repository =
+			NewObject<USQLUISQLiteLayoutRepository>(ResolvedOuter);
+		if (IsValid(Repository))
+		{
+			Repository->Configure(Settings.SQLiteSettings);
 		}
 		return Repository;
 	}

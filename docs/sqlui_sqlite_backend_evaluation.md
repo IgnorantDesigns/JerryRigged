@@ -1,6 +1,6 @@
 # SQLUI SQLite Backend Evaluation
 
-This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, an optional smoke-safe open/close probe under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`, a minimal SQLUICore async-boundary probe, an optional smoke-only migration-runner probe under `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`, an optional planned layout schema migration probe under `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, an optional read/list/load mapping probe under `Saved/SQLUI/SmokeTests/LayoutReadProbe`, a read-only `USQLUISQLiteLayoutRepository` proof under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, a writable `SaveLayout` repository proof under `Saved/SQLUI/SmokeTests/SQLiteSaveLayoutRepository`, a soft-delete `RemoveLayout` repository proof under `Saved/SQLUI/SmokeTests/SQLiteRemoveLayoutRepository`, and a destructive scoped `ClearLayouts` repository proof under `Saved/SQLUI/SmokeTests/SQLiteClearLayoutsRepository`; it does not add SQLite repository factory selection, async SQLite workers, widgets, maps, assets, CI, or persistent database files.
+This document evaluates realistic backend options for a future SQLite-backed SQLUI layout repository. The original backend evaluation was documentation-only. The current proof work adds minimal engine `SQLiteCore` plugin/module wiring, a compile/link probe, optional smoke-safe database probes under `Saved/SQLUI/SmokeTests`, a non-UObject SQLite repository worker helper, SQLite repository operations for list/load/save/remove/clear, opt-in async callback execution for `LoadLayout` and `SaveLayout`, a combined full lifecycle smoke path, and explicit `USQLUILayoutRepositoryFactory` selection through `ESQLUILayoutRepositoryBackend::SQLite` when a database path is configured. SQLite is still not the default backend, and this work still does not add migrations inside the factory, packaged validation, widgets, maps, assets, CI, or persistent database files.
 
 ## Purpose
 
@@ -16,11 +16,11 @@ This evaluation compares backend options before implementation work starts. The 
 ## Non-Goals
 
 - Do not treat the current SQLite `SaveLayout` proof as complete writable SQLite layout persistence.
-- Do not add `ESQLUILayoutRepositoryBackend::SQLite` or select SQLite in repository factory behavior.
+- Do not make SQLite the default repository backend.
 - Do not add dependencies beyond the minimal engine `SQLiteCore` plugin/module wiring used for the compile proof.
 - Do not add Marketplace dependencies, third-party Unreal plugins, or vendored third-party source.
 - Do not modify widgets, CI, assets, maps, or persistent database files.
-- Do not open, create, or write SQLite databases outside the optional smoke-safe probe paths under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`, `Saved/SQLUI/SmokeTests/SQLiteMigrationProbe`, `Saved/SQLUI/SmokeTests/LayoutSchemaMigrationProbe`, `Saved/SQLUI/SmokeTests/LayoutReadProbe`, `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, `Saved/SQLUI/SmokeTests/SQLiteSaveLayoutRepository`, `Saved/SQLUI/SmokeTests/SQLiteRemoveLayoutRepository`, and `Saved/SQLUI/SmokeTests/SQLiteClearLayoutsRepository`.
+- Do not open, create, or write SQLite databases outside the optional smoke-safe probe paths under `Saved/SQLUI/SmokeTests/...`.
 - Do not treat this evaluation as proof that packaged builds work. Packaging still needs implementation-time validation.
 
 ## Local Verification
@@ -205,12 +205,15 @@ The repository proof:
 - Is available through a second optional smoke-test flag that prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteSaveLayoutRepository`, verifies `SaveLayout`, verifies `ListLayouts` and `LoadLayout`, saves the same layout id again, verifies the latest revision and updated metadata are read back, and removes the database.
 - Is available through a third optional smoke-test flag that prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteRemoveLayoutRepository`, verifies `SaveLayout`, `ListLayouts`, `LoadLayout`, and soft-delete `RemoveLayout`, verifies the removed layout disappears from list/load, verifies revisions remain preserved, and removes the database.
 - Is available through a fourth optional smoke-test flag that prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteClearLayoutsRepository`, verifies `SaveLayout`, soft-delete `RemoveLayout`, `ListLayouts`, `LoadLayout`, and destructive scoped `ClearLayouts`, verifies active and soft-deleted layout rows plus dependent schema rows are removed, and removes the database.
+- Is available through a full lifecycle optional smoke-test flag that verifies save, list, load, revision update, soft-delete remove, clear, revision preservation, and empty schema tables after clear.
+- Supports opt-in async callback execution for SQLite `LoadLayout` and `SaveLayout`.
+- Is selectable through `USQLUILayoutRepositoryFactory` only when `ESQLUILayoutRepositoryBackend::SQLite` is explicitly requested and `SQLiteSettings.DatabasePath` is configured.
+- Has optional smoke coverage for factory-created SQLite repository lifecycle behavior and missing-path unavailable behavior.
 
 The repository proof does not:
 
-- Add `ESQLUILayoutRepositoryBackend::SQLite`.
-- Change `USQLUILayoutRepositoryFactory`.
-- Add async SQLite database workers.
+- Make SQLite the default repository backend.
+- Run migrations or create database files inside `USQLUILayoutRepositoryFactory`.
 - Modify widgets or default smoke-test behavior.
 
 Remaining blockers before SQLite layout persistence:
@@ -218,8 +221,6 @@ Remaining blockers before SQLite layout persistence:
 - Packaged-build validation.
 - Production SQLite worker boundary and shutdown policy.
 - Production migration integration behind the future SQLite repository.
-- Repository factory selection.
-- Full writable SQLite repository lifecycle smoke coverage.
 
 ## Evaluation Criteria
 
@@ -418,7 +419,7 @@ Before any SQLite implementation PR changes project code, confirm:
 
 ## Decision Record
 
-Current status: compile availability proven only; not selected as a layout repository backend.
+Current status: engine `SQLiteCore` remains the preferred backend candidate. SQLUI now has explicit SQLite repository factory selection for already-prepared databases, but SQLite is not the default backend and packaged-build validation remains open.
 
 Preferred candidate: engine-provided `SQLiteCore`, wrapped by a small SQLUI Core-owned async database boundary.
 
@@ -439,15 +440,12 @@ Blocking questions:
 - What is the exact graceful behavior when SQLite support is disabled or unavailable in a packaged build?
 - What license notice changes, if any, are required for shipping with the engine-provided SQLite module?
 
-Once the decision is made, the next implementation PR may touch:
+Future implementation PRs may still touch:
 
-- SQLUI plugin descriptor dependency wiring if needed.
-- `SQLUICore.Build.cs` module dependencies.
-- `ESQLUILayoutRepositoryBackend` and factory settings for a SQLite backend value.
 - A SQLUI Core async database service or wrapper around the chosen backend.
-- A SQLite layout repository implementation.
 - Executable migration code for the approved schema.
-- Smoke coverage for SQLite backend selection and repository lifecycle behavior.
+- Packaged-build validation and any target-platform fixes.
+- Additional smoke coverage for production migration and async lifecycle behavior.
 - Documentation updates reflecting the implemented path.
 
 It should still avoid widgets, maps, Content assets, editor tooling, CI, and unrelated JerryRigged host changes.
