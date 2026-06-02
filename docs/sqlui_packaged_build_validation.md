@@ -151,9 +151,31 @@ The same UBT log showed:
 - The failing link command using that toolchain's `link.exe` with `JerryRigged.exe.rsp`.
 - The first unresolved references coming from Unreal/engine or engine-plugin objects such as `Module.LiveCoding.cpp.obj`, `Module.TraceAnalysis.cpp.obj`, `Module.GeometryAlgorithms.*.cpp.obj`, `reverb_onset_compensator.cc.obj`, and `reverb_node.cc.obj`.
 
-That evidence indicated a local Visual Studio/MSVC toolchain or runtime-library mismatch in this run, not a SQLUI SQLite repository runtime failure. Do not treat this symbol pattern as a SQLUI or SQLiteCore bug unless the UBT log points to SQLUI or SQLiteCore objects.
+That evidence indicated a local Visual Studio/MSVC toolchain or runtime-library mismatch in that run, not a SQLUI SQLite repository runtime failure. Do not treat this symbol pattern as a SQLUI or SQLiteCore bug unless the UBT log points to SQLUI or SQLiteCore objects.
 
-Recommended local follow-up:
+The local machine later had the UE 5.7-preferred Visual Studio 2022 MSVC 14.44.x toolchain installed. The observed MSVC toolset folders were:
+
+- `14.29.30133`
+- `14.38.33130`
+- `14.44.35207`
+
+After installing the preferred `14.44.x` toolchain, the same packaged validation command with `-CleanPackageOutput` completed successfully:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput
+```
+
+Latest local result:
+
+- Build command completed.
+- Cook command completed.
+- Stage command completed.
+- Package command completed.
+- Archive command completed.
+- AutomationTool exited with `ExitCode=0`.
+- SQLUI packaged-build validation exit code: `0`.
+
+Recommended local follow-up if the unresolved `__std_*` linker symbols appear again:
 
 1. Install or select the UE 5.7 preferred MSVC toolchain reported by UBT for the machine.
 2. Ensure the matching MSVC libraries and Windows SDK components are installed through Visual Studio Installer.
