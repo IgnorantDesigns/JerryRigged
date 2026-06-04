@@ -1,6 +1,6 @@
 # SQLUI SQLite Layout Schema Draft
 
-This document describes the SQLite layout schema used by SQLUI's SQLite repository work. The original schema draft was documentation-only; SQLUICore now has an initial schema migration helper, schema-init hardening coverage, SQLite read/list/load probes, and `USQLUISQLiteLayoutRepository` operations that use this schema for save, list, load, soft-delete remove, and scoped clear behavior.
+This document describes the SQLite layout schema used by SQLUI's SQLite repository work. The original schema draft was documentation-only; SQLUICore now has an initial schema migration helper, schema-init hardening coverage, a migration version/status helper, SQLite read/list/load probes, and `USQLUISQLiteLayoutRepository` operations that use this schema for save, list, load, soft-delete remove, and scoped clear behavior.
 
 For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 
@@ -418,6 +418,12 @@ The first SQLite implementation should apply named migrations inside a transacti
 
 The current layout schema migration helper applies the planned initial DDL to temporary smoke databases and to explicitly configured repository databases when schema initialization is enabled. Layout read and repository smoke paths seed or save valid layouts into that schema and verify list/load behavior.
 
+The current production known migration set is:
+
+- `001_initial_layout_schema`
+
+`FSQLUISQLiteLayoutSchemaVersioning` reports schema version status for the known migration set. It records applied ids, pending known ids, the latest known id, the latest applied id, whether the initial schema migration row exists, and whether the expected layout schema objects are present. This PR does not add a real production `002` migration or alter the initial schema.
+
 Schema initialization is hardened for the current initial migration:
 
 - Missing databases fail when creation is disabled.
@@ -426,6 +432,13 @@ Schema initialization is hardened for the current initial migration:
 - Complete schemas with a missing initial migration row are recorded non-destructively.
 - Partial schemas fail clearly and report missing expected objects.
 - Read-only repositories reject writes before schema initialization can create database files.
+
+Versioning status follows the same policy:
+
+- A complete schema with a missing `001_initial_layout_schema` row is schema-ready but pending; applying known migrations records the row non-destructively.
+- Partial schemas with missing required tables or indexes fail clearly instead of being destructively repaired.
+- Unknown extra migration rows are tolerated; they do not by themselves make the known migration set fail or current.
+- Smoke-only versioning migrations such as `001_smoke_versioning_a` and `002_smoke_versioning_b` are not production layout schema migrations.
 
 Migration rules:
 
@@ -436,6 +449,7 @@ Migration rules:
 - Never silently drop user layout data.
 - Back up or copy seed databases before mutating them.
 - Keep document schema upgrades separate from database schema migrations when possible.
+- Add future production migrations only when there is a real schema change and a matching compatibility policy.
 
 `layouts.schema_version` stores the SQLUI layout document schema version for the current revision. Database migration version and document schema version are related but separate concerns.
 

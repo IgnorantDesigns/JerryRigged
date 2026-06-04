@@ -617,6 +617,17 @@ FString FSQLUISQLiteLayoutSchemaMigration::GetDefaultProbeDatabasePath()
 		TEXT("LayoutSchemaMigrationProbe.db")));
 }
 
+FString FSQLUISQLiteLayoutSchemaMigration::GetInitialLayoutSchemaMigrationId()
+{
+	return SQLUILayoutSchemaMigrationId;
+}
+
+FSQLUISQLiteMigrationStep
+FSQLUISQLiteLayoutSchemaMigration::GetInitialLayoutSchemaMigrationStep()
+{
+	return MakeSQLUILayoutSchemaInitialMigration();
+}
+
 FSQLUISQLiteLayoutSchemaMigrationProbeResult FSQLUISQLiteLayoutSchemaMigration::RunProbe(
 	const FString& DatabasePath,
 	const bool bRemoveDatabaseAfterClose)

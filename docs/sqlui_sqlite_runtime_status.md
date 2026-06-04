@@ -109,7 +109,26 @@ Read-only mode blocks schema-initialization writes. Writable operations reject r
 
 `FSQLUISQLiteLayoutSchemaMigration::ApplyInitialSchema` applies the planned initial layout schema and records `001_initial_layout_schema` in `sqlui_schema_migrations`. The initialization path is idempotent for an already-initialized database, can record the migration row non-destructively when the complete schema exists but the row is missing, and fails clearly for partial or corrupt schemas instead of dropping or repairing user data.
 
-Production migration versioning and upgrade paths beyond the initial schema are still future work.
+## Migration Versioning Policy
+
+`FSQLUISQLiteLayoutSchemaVersioning` is the SQLUICore-owned status/version helper for layout schema migrations.
+
+The current production known migration set is still only:
+
+- `001_initial_layout_schema`
+
+No real production `002` schema migration is introduced yet.
+
+The versioning helper can report the latest known migration id, applied migration ids, pending known migration ids, initial-schema record state, and whether the expected layout schema objects are ready. It uses the existing `sqlui_schema_migrations` table and does not make SQLite the default backend, run migrations in the factory, or add startup behavior.
+
+Current policy:
+
+- A missing database fails status checks unless a caller explicitly uses an apply/create path.
+- A complete schema with a missing `001_initial_layout_schema` row is detected as schema-ready but pending; applying known migrations records the missing row non-destructively.
+- Partial schemas fail clearly and report missing expected schema objects.
+- Unknown extra migration rows do not fail status by themselves; known migration state is still reported from the configured known migration list.
+
+Actual future schema migrations and upgrade-specific data transforms remain future work.
 
 ## Async Behavior
 
@@ -157,6 +176,7 @@ Current SQLite-related smoke flags are:
 - `-UseSQLiteFactorySchemaInitRepository`: verifies opt-in repository-owned schema initialization through factory settings.
 - `-UseSQLiteSchemaInitHardening`: verifies schema-init edge cases and read-only init blocking.
 - `-UseSQLiteSeedDatabaseCopyPolicyProbe`: verifies explicit seed DB copy/no-overwrite/overwrite/failure behavior and confirms copied targets are repository-readable.
+- `-UseSQLiteMigrationVersioningPolicyProbe`: verifies schema version status, missing-record repair, partial-schema failure, ordered smoke-only migrations, pending migration detection, idempotent reruns, and failing migration reporting.
 
 The smoke command reference and expected log lines live in [`sqlui_smoke_test.md`](sqlui_smoke_test.md).
 
@@ -180,7 +200,7 @@ Remaining work includes:
 - Expanding packaged runtime SQLite lifecycle coverage beyond the first local packaged executable smoke.
 - Production async database service design beyond the current per-repository callback queue.
 - Cancellation, shutdown draining beyond stale-callback suppression, and async coverage for all repository operations.
-- Migration versioning and upgrade paths beyond `001_initial_layout_schema`.
+- Actual future schema migrations, upgrade-specific data transforms, and version-specific compatibility policy beyond the current version/status framework.
 - User-facing runtime configuration surfaces and production database path policy.
 - Product seed database asset/package/version policy, if seed DBs are added.
 - Optional lifecycle features such as history APIs, checkpoints, previews, restore flows, and richer search.

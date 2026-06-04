@@ -144,11 +144,13 @@ bool RecordSQLUISQLiteMigration(
 	return true;
 }
 
-bool VerifySQLUISQLiteMigrationRecorded(
+bool QuerySQLUISQLiteMigrationRecordedCount(
 	FSQLiteDatabase& Database,
 	FSQLUISQLiteMigrationResult& Result,
-	const FString& MigrationId)
+	const FString& MigrationId,
+	int32& OutRecordedCount)
 {
+	OutRecordedCount = 0;
 	const FString VerificationStatement = FString::Printf(
 		TEXT("SELECT COUNT(*) FROM %s WHERE migration_id = ?;"),
 		SQLUISQLiteMigrationTableName);
@@ -164,7 +166,6 @@ bool VerifySQLUISQLiteMigrationRecorded(
 		return false;
 	}
 
-	int32 RecordedCount = 0;
 	if (!Statement.SetBindingValueByIndex(1, MigrationId))
 	{
 		AppendSQLUISQLiteMigrationError(
@@ -176,9 +177,9 @@ bool VerifySQLUISQLiteMigrationRecorded(
 	}
 
 	const int64 RowCount = Statement.Execute(
-		[&RecordedCount](const FSQLitePreparedStatement& Row)
+		[&OutRecordedCount](const FSQLitePreparedStatement& Row)
 		{
-			return Row.GetColumnValueByIndex(0, RecordedCount)
+			return Row.GetColumnValueByIndex(0, OutRecordedCount)
 				? ESQLitePreparedStatementExecuteRowResult::Continue
 				: ESQLitePreparedStatementExecuteRowResult::Error;
 		});
@@ -190,6 +191,45 @@ bool VerifySQLUISQLiteMigrationRecorded(
 			FString::Printf(
 				TEXT("SQLUI SQLite migration probe failed: migration verification query failed. SQLiteCore error: %s"),
 				*Database.GetLastError()));
+		return false;
+	}
+
+	return true;
+}
+
+bool IsSQLUISQLiteMigrationRecorded(
+	FSQLiteDatabase& Database,
+	FSQLUISQLiteMigrationResult& Result,
+	const FString& MigrationId,
+	bool& bOutRecorded)
+{
+	bOutRecorded = false;
+	int32 RecordedCount = 0;
+	if (!QuerySQLUISQLiteMigrationRecordedCount(
+		Database,
+		Result,
+		MigrationId,
+		RecordedCount))
+	{
+		return false;
+	}
+
+	bOutRecorded = RecordedCount > 0;
+	return true;
+}
+
+bool VerifySQLUISQLiteMigrationRecorded(
+	FSQLiteDatabase& Database,
+	FSQLUISQLiteMigrationResult& Result,
+	const FString& MigrationId)
+{
+	int32 RecordedCount = 0;
+	if (!QuerySQLUISQLiteMigrationRecordedCount(
+		Database,
+		Result,
+		MigrationId,
+		RecordedCount))
+	{
 		return false;
 	}
 
@@ -356,13 +396,28 @@ FSQLUISQLiteMigrationResult FSQLUISQLiteMigrationRunner::RunMigrations(
 	{
 		for (const FSQLUISQLiteMigrationStep& Step : MigrationSteps)
 		{
+			bool bMigrationAlreadyRecorded = false;
+			if (!IsSQLUISQLiteMigrationRecorded(
+				Database,
+				Result,
+				Step.MigrationId,
+				bMigrationAlreadyRecorded))
+			{
+				break;
+			}
+
+			if (bMigrationAlreadyRecorded)
+			{
+				continue;
+			}
+
 			if (!ApplySQLUISQLiteMigrationStep(Database, Result, Step))
 			{
 				break;
 			}
 		}
 
-		if (Result.bMigrationApplied && MigrationSteps.Num() > 0)
+		if (MigrationSteps.Num() > 0)
 		{
 			VerifySQLUISQLiteMigrationRecorded(
 				Database,
@@ -392,8 +447,7 @@ FSQLUISQLiteMigrationResult FSQLUISQLiteMigrationRunner::RunMigrations(
 	Result.bSucceeded =
 		Result.bDatabaseOpened
 		&& Result.bMigrationTableCreated
-		&& Result.bMigrationApplied
-		&& Result.bMigrationRecorded
+		&& (MigrationSteps.Num() == 0 || Result.bMigrationRecorded)
 		&& Result.bDatabaseClosed
 		&& (!bRemoveDatabaseAfterClose || Result.bDatabaseRemoved);
 

@@ -952,6 +952,57 @@ struct SQLUISAMPLES_API FSQLUISampleSQLiteSchemaInitHardeningSmokeResult
 };
 
 USTRUCT(BlueprintType)
+struct SQLUISAMPLES_API FSQLUISampleSQLiteMigrationVersioningPolicyProbeResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bCurrentInitialSchemaStatusSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bLatestKnownMigrationMatched = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bNoPendingKnownMigrations = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bCompleteSchemaMissingRecordDetected = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bMissingRecordRepairedNonDestructively = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPartialSchemaFailedClearly = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSmokeMigrationsAppliedInOrder = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSmokeMigrationsIdempotent = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSmokePendingMigrationDetected = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSmokePendingMigrationApplied = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bFailingMigrationFailedClearly = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bFailingMigrationNotRecorded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bDatabaseFilesRemoved = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FString ErrorMessage;
+};
+
+USTRUCT(BlueprintType)
 struct SQLUISAMPLES_API FSQLUISampleSmokeTestRequest
 {
 	GENERATED_BODY()
@@ -1036,6 +1087,9 @@ struct SQLUISAMPLES_API FSQLUISampleSmokeTestRequest
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bUseSQLiteSeedDatabaseCopyPolicyProbe = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bUseSQLiteMigrationVersioningPolicyProbe = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	FString SampleFilterText = TEXT("Smoke test");
@@ -1243,6 +1297,12 @@ struct SQLUISAMPLES_API FSQLUISampleSmokeTestResult
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult SQLiteSeedDatabaseCopyPolicyProbe;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bUsedSQLiteMigrationVersioningPolicyProbe = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FSQLUISampleSQLiteMigrationVersioningPolicyProbeResult SQLiteMigrationVersioningPolicyProbe;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	TArray<FString> Errors;

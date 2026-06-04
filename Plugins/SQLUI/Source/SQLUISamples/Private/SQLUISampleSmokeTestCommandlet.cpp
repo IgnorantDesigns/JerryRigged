@@ -2214,6 +2214,109 @@ void LogSQLUISampleSmokeTestSQLiteSeedDatabaseCopyPolicyProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteMigrationVersioningPolicyProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteMigrationVersioningPolicyProbe)
+	{
+		return;
+	}
+
+	const FSQLUISampleSQLiteMigrationVersioningPolicyProbeResult& ProbeResult =
+		Result.SQLiteMigrationVersioningPolicyProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration versioning policy probe current initial schema status succeeded: %s"),
+		ProbeResult.bCurrentInitialSchemaStatusSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration versioning policy probe latest known migration matched: %s"),
+		ProbeResult.bLatestKnownMigrationMatched ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration versioning policy probe no pending known migrations: %s"),
+		ProbeResult.bNoPendingKnownMigrations ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration versioning policy probe complete schema missing record detected: %s"),
+		ProbeResult.bCompleteSchemaMissingRecordDetected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration versioning policy probe missing record repaired non-destructively: %s"),
+		ProbeResult.bMissingRecordRepairedNonDestructively ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration versioning policy probe partial schema failed clearly: %s"),
+		ProbeResult.bPartialSchemaFailedClearly ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration versioning policy probe smoke migrations applied in order: %s"),
+		ProbeResult.bSmokeMigrationsAppliedInOrder ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration versioning policy probe smoke migrations idempotent: %s"),
+		ProbeResult.bSmokeMigrationsIdempotent ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration versioning policy probe smoke pending migration detected: %s"),
+		ProbeResult.bSmokePendingMigrationDetected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration versioning policy probe smoke pending migration applied: %s"),
+		ProbeResult.bSmokePendingMigrationApplied ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration versioning policy probe failing migration failed clearly: %s"),
+		ProbeResult.bFailingMigrationFailedClearly ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration versioning policy probe failing migration not recorded: %s"),
+		ProbeResult.bFailingMigrationNotRecorded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite migration versioning policy probe database files removed: %s"),
+		ProbeResult.bDatabaseFilesRemoved ? TEXT("true") : TEXT("false"));
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite migration versioning policy probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite migration versioning policy probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -2268,6 +2371,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteFactorySchemaInitRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteSchemaInitHardeningResult(Result);
 	LogSQLUISampleSmokeTestSQLiteSeedDatabaseCopyPolicyProbeResult(Result);
+	LogSQLUISampleSmokeTestSQLiteMigrationVersioningPolicyProbeResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -2391,6 +2495,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteSeedDatabaseCopyPolicyProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteSeedDatabaseCopyPolicyProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteSeedDatabaseCopyPolicyProbe"));
+	const bool bUseSQLiteMigrationVersioningPolicyProbe =
+		FParse::Param(*Params, TEXT("UseSQLiteMigrationVersioningPolicyProbe"))
+		|| FParse::Param(*Params, TEXT("SQLiteMigrationVersioningPolicyProbe"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -2505,6 +2612,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite seed database copy policy probe selected: true"));
 	}
 
+	if (bUseSQLiteMigrationVersioningPolicyProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite migration versioning policy probe selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -2539,6 +2651,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteFactorySchemaInitRepository = bUseSQLiteFactorySchemaInitRepository;
 		Request.bUseSQLiteSchemaInitHardening = bUseSQLiteSchemaInitHardening;
 		Request.bUseSQLiteSeedDatabaseCopyPolicyProbe = bUseSQLiteSeedDatabaseCopyPolicyProbe;
+		Request.bUseSQLiteMigrationVersioningPolicyProbe = bUseSQLiteMigrationVersioningPolicyProbe;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 

@@ -4,6 +4,7 @@
 #include "Database/SQLUIDatabaseAsyncRunner.h"
 #include "Database/SQLUISQLiteLayoutReadProbe.h"
 #include "Database/SQLUISQLiteLayoutSchemaMigration.h"
+#include "Database/SQLUISQLiteLayoutSchemaVersioning.h"
 #include "Database/SQLUISQLiteMigrationRunner.h"
 #include "Database/SQLUISQLiteProbe.h"
 #include "Database/SQLUISQLiteSeedDatabaseCopy.h"
@@ -5456,6 +5457,508 @@ FSQLUISampleSQLiteSchemaInitHardeningSmokeResult RunSQLUISampleSQLiteSchemaInitH
 	return Result;
 }
 
+void AppendSQLUISampleSQLiteMigrationVersioningPolicyError(
+	FSQLUISampleSQLiteMigrationVersioningPolicyProbeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePath(
+	const TCHAR* DatabaseFileName)
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("SQLiteMigrationVersioningPolicy"),
+		DatabaseFileName);
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+TArray<FString> MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePaths()
+{
+	return {
+		MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePath(TEXT("LayoutSchemaCurrent.db")),
+		MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePath(TEXT("LayoutSchemaMissingRecord.db")),
+		MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePath(TEXT("LayoutSchemaPartial.db")),
+		MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePath(TEXT("SmokeOrderedMigrations.db")),
+		MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePath(TEXT("SmokePendingMigration.db")),
+		MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePath(TEXT("SmokeFailingMigration.db"))
+	};
+}
+
+bool DoSQLUISampleSQLiteMigrationVersioningPolicyFilesExist(const FString& DatabasePath)
+{
+	const TArray<FString> PathsToCheck = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	for (const FString& PathToCheck : PathsToCheck)
+	{
+		if (FPaths::FileExists(PathToCheck))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DeleteSQLUISampleSQLiteMigrationVersioningPolicyFiles(
+	const FString& DatabasePath,
+	FSQLUISampleSQLiteMigrationVersioningPolicyProbeResult& Result)
+{
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleSQLiteMigrationVersioningPolicyError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite migration versioning policy probe failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+bool DeleteSQLUISampleSQLiteMigrationVersioningPolicyFiles(
+	FSQLUISampleSQLiteMigrationVersioningPolicyProbeResult& Result)
+{
+	bool bRemoved = true;
+	for (const FString& DatabasePath : MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePaths())
+	{
+		bRemoved =
+			DeleteSQLUISampleSQLiteMigrationVersioningPolicyFiles(DatabasePath, Result)
+			&& bRemoved;
+	}
+
+	return bRemoved;
+}
+
+bool DoesAnySQLUISampleSQLiteMigrationVersioningPolicyFileExist()
+{
+	for (const FString& DatabasePath : MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePaths())
+	{
+		if (DoSQLUISampleSQLiteMigrationVersioningPolicyFilesExist(DatabasePath))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+FSQLUISQLiteMigrationStep MakeSQLUISampleSQLiteMigrationVersioningPolicySmokeStepA()
+{
+	FSQLUISQLiteMigrationStep Step;
+	Step.MigrationId = TEXT("001_smoke_versioning_a");
+	Step.Description =
+		TEXT("Smoke-only versioning migration A. This is not a production layout schema migration.");
+	Step.Statements.Add(
+		TEXT("CREATE TABLE IF NOT EXISTS sqlui_smoke_versioning_a (")
+		TEXT("probe_id TEXT PRIMARY KEY")
+		TEXT(");"));
+	Step.Statements.Add(
+		TEXT("INSERT OR IGNORE INTO sqlui_smoke_versioning_a (probe_id) VALUES ('a');"));
+	return Step;
+}
+
+FSQLUISQLiteMigrationStep MakeSQLUISampleSQLiteMigrationVersioningPolicySmokeStepB()
+{
+	FSQLUISQLiteMigrationStep Step;
+	Step.MigrationId = TEXT("002_smoke_versioning_b");
+	Step.Description =
+		TEXT("Smoke-only versioning migration B. This is not a production layout schema migration.");
+	Step.Statements.Add(
+		TEXT("CREATE TABLE IF NOT EXISTS sqlui_smoke_versioning_b (")
+		TEXT("probe_id TEXT PRIMARY KEY")
+		TEXT(");"));
+	Step.Statements.Add(
+		TEXT("INSERT OR IGNORE INTO sqlui_smoke_versioning_b (probe_id) VALUES ('b');"));
+	return Step;
+}
+
+FSQLUISQLiteMigrationStep MakeSQLUISampleSQLiteMigrationVersioningPolicyFailingStep()
+{
+	FSQLUISQLiteMigrationStep Step;
+	Step.MigrationId = TEXT("003_smoke_versioning_fails");
+	Step.Description =
+		TEXT("Smoke-only intentionally failing versioning migration.");
+	Step.Statements.Add(TEXT("THIS IS NOT VALID SQL;"));
+	return Step;
+}
+
+TArray<FString> MakeSQLUISampleSQLiteMigrationVersioningPolicySmokeMigrationIds()
+{
+	return {
+		TEXT("001_smoke_versioning_a"),
+		TEXT("002_smoke_versioning_b")
+	};
+}
+
+bool DoSQLUISampleSQLiteMigrationVersioningPolicyIdsMatch(
+	const TArray<FString>& ActualIds,
+	const TArray<FString>& ExpectedIds)
+{
+	if (ActualIds.Num() != ExpectedIds.Num())
+	{
+		return false;
+	}
+
+	for (int32 Index = 0; Index < ExpectedIds.Num(); ++Index)
+	{
+		if (ActualIds[Index] != ExpectedIds[Index])
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool PrepareSQLUISampleSQLiteMigrationVersioningPolicyPartialSchema(
+	const FString& DatabasePath,
+	FSQLUISampleSQLiteMigrationVersioningPolicyProbeResult& Result)
+{
+	FSQLUISQLiteMigrationStep Step;
+	Step.MigrationId =
+		FSQLUISQLiteLayoutSchemaMigration::GetInitialLayoutSchemaMigrationId();
+	Step.Description =
+		TEXT("Smoke-only intentionally partial initial schema for versioning coverage.");
+	Step.Statements.Add(
+		TEXT("CREATE TABLE IF NOT EXISTS layouts (")
+		TEXT("layout_id TEXT PRIMARY KEY, ")
+		TEXT("display_name TEXT NOT NULL, ")
+		TEXT("schema_version INTEGER NOT NULL, ")
+		TEXT("b_deleted INTEGER NOT NULL DEFAULT 0")
+		TEXT(");"));
+
+	TArray<FSQLUISQLiteMigrationStep> Steps;
+	Steps.Add(Step);
+	const FSQLUISQLiteMigrationResult MigrationResult =
+		FSQLUISQLiteMigrationRunner::RunMigrations(DatabasePath, Steps, false);
+	if (MigrationResult.bSucceeded)
+	{
+		return true;
+	}
+
+	AppendSQLUISampleSQLiteMigrationVersioningPolicyError(
+		Result,
+		MigrationResult.ErrorMessage.IsEmpty()
+			? TEXT("SQLUI SQLite migration versioning policy probe failed: could not prepare partial schema database.")
+			: MigrationResult.ErrorMessage);
+	return false;
+}
+
+FSQLUISampleSQLiteMigrationVersioningPolicyProbeResult
+RunSQLUISampleSQLiteMigrationVersioningPolicyProbe()
+{
+	FSQLUISampleSQLiteMigrationVersioningPolicyProbeResult Result;
+	DeleteSQLUISampleSQLiteMigrationVersioningPolicyFiles(Result);
+
+	const FString InitialMigrationId =
+		FSQLUISQLiteLayoutSchemaMigration::GetInitialLayoutSchemaMigrationId();
+	const FString LatestKnownMigrationId =
+		FSQLUISQLiteLayoutSchemaVersioning::GetLatestKnownLayoutSchemaMigrationId();
+
+	const FString CurrentSchemaPath =
+		MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePath(TEXT("LayoutSchemaCurrent.db"));
+	const FSQLUISQLiteLayoutSchemaVersionStatus CurrentApplyStatus =
+		FSQLUISQLiteLayoutSchemaVersioning::ApplyKnownLayoutSchemaMigrations(
+			CurrentSchemaPath,
+			true);
+	const FSQLUISQLiteLayoutSchemaVersionStatus CurrentStatus =
+		FSQLUISQLiteLayoutSchemaVersioning::GetLayoutSchemaVersionStatus(CurrentSchemaPath);
+	Result.bCurrentInitialSchemaStatusSucceeded =
+		CurrentApplyStatus.bSucceeded
+		&& CurrentStatus.bSucceeded
+		&& CurrentStatus.bInitialSchemaRecorded
+		&& CurrentStatus.bSchemaObjectsReady
+		&& CurrentStatus.AppliedMigrationIds.Contains(InitialMigrationId);
+	Result.bLatestKnownMigrationMatched =
+		LatestKnownMigrationId == InitialMigrationId
+		&& CurrentStatus.LatestKnownMigrationId == InitialMigrationId;
+	Result.bNoPendingKnownMigrations =
+		CurrentStatus.bSucceeded
+		&& !CurrentStatus.bHasPendingMigrations
+		&& CurrentStatus.PendingMigrationIds.Num() == 0;
+	if (!Result.bCurrentInitialSchemaStatusSucceeded
+		|| !Result.bLatestKnownMigrationMatched
+		|| !Result.bNoPendingKnownMigrations)
+	{
+		AppendSQLUISampleSQLiteMigrationVersioningPolicyError(
+			Result,
+			CurrentStatus.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite migration versioning policy probe failed: current initial schema status was not current.")
+				: CurrentStatus.ErrorMessage);
+	}
+
+	const FString MissingRecordPath =
+		MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePath(TEXT("LayoutSchemaMissingRecord.db"));
+	const FSQLUISQLiteLayoutSchemaInitializationResult MissingRecordInitialResult =
+		FSQLUISQLiteLayoutSchemaMigration::ApplyInitialSchema(MissingRecordPath, true);
+	FString DeleteRecordErrorMessage;
+	const bool bDeletedMissingRecord =
+		MissingRecordInitialResult.bSucceeded
+		&& FSQLUISQLiteLayoutSchemaMigration::DeleteInitialSchemaMigrationRecordForSmokeTest(
+			MissingRecordPath,
+			DeleteRecordErrorMessage);
+	const FSQLUISQLiteLayoutSchemaVersionStatus MissingRecordStatusBefore =
+		FSQLUISQLiteLayoutSchemaVersioning::GetLayoutSchemaVersionStatus(MissingRecordPath);
+	Result.bCompleteSchemaMissingRecordDetected =
+		bDeletedMissingRecord
+		&& MissingRecordStatusBefore.bSucceeded
+		&& MissingRecordStatusBefore.bSchemaObjectsReady
+		&& !MissingRecordStatusBefore.bInitialSchemaRecorded
+		&& MissingRecordStatusBefore.bHasPendingMigrations
+		&& MissingRecordStatusBefore.PendingMigrationIds.Contains(InitialMigrationId);
+	const FSQLUISQLiteLayoutSchemaVersionStatus MissingRecordRepairStatus =
+		FSQLUISQLiteLayoutSchemaVersioning::ApplyKnownLayoutSchemaMigrations(
+			MissingRecordPath,
+			true);
+	int32 MissingRecordCountAfterRepair = 0;
+	FString MissingRecordCountErrorMessage;
+	const bool bCountedMissingRecordAfterRepair =
+		FSQLUISQLiteLayoutSchemaMigration::CountInitialSchemaMigrationRecords(
+			MissingRecordPath,
+			MissingRecordCountAfterRepair,
+			MissingRecordCountErrorMessage);
+	Result.bMissingRecordRepairedNonDestructively =
+		Result.bCompleteSchemaMissingRecordDetected
+		&& MissingRecordRepairStatus.bSucceeded
+		&& MissingRecordRepairStatus.bInitialSchemaRecorded
+		&& MissingRecordRepairStatus.bSchemaObjectsReady
+		&& !MissingRecordRepairStatus.bHasPendingMigrations
+		&& bCountedMissingRecordAfterRepair
+		&& MissingRecordCountAfterRepair == 1;
+	if (!bDeletedMissingRecord && !DeleteRecordErrorMessage.IsEmpty())
+	{
+		AppendSQLUISampleSQLiteMigrationVersioningPolicyError(Result, DeleteRecordErrorMessage);
+	}
+	if (!Result.bCompleteSchemaMissingRecordDetected
+		|| !Result.bMissingRecordRepairedNonDestructively)
+	{
+		AppendSQLUISampleSQLiteMigrationVersioningPolicyError(
+			Result,
+			MissingRecordRepairStatus.ErrorMessage.IsEmpty()
+				? FString::Printf(
+					TEXT("SQLUI SQLite migration versioning policy probe failed: missing migration record was not detected/repaired. CountAfter=%d Counted=%s CountError='%s'."),
+					MissingRecordCountAfterRepair,
+					bCountedMissingRecordAfterRepair ? TEXT("true") : TEXT("false"),
+					*MissingRecordCountErrorMessage)
+				: MissingRecordRepairStatus.ErrorMessage);
+	}
+
+	const FString PartialSchemaPath =
+		MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePath(TEXT("LayoutSchemaPartial.db"));
+	const bool bPartialSchemaPrepared =
+		PrepareSQLUISampleSQLiteMigrationVersioningPolicyPartialSchema(
+			PartialSchemaPath,
+			Result);
+	const FSQLUISQLiteLayoutSchemaVersionStatus PartialSchemaStatus =
+		bPartialSchemaPrepared
+			? FSQLUISQLiteLayoutSchemaVersioning::GetLayoutSchemaVersionStatus(PartialSchemaPath)
+			: FSQLUISQLiteLayoutSchemaVersionStatus();
+	const FSQLUISQLiteLayoutSchemaVersionStatus PartialSchemaApplyStatus =
+		bPartialSchemaPrepared
+			? FSQLUISQLiteLayoutSchemaVersioning::ApplyKnownLayoutSchemaMigrations(PartialSchemaPath, true)
+			: FSQLUISQLiteLayoutSchemaVersionStatus();
+	Result.bPartialSchemaFailedClearly =
+		bPartialSchemaPrepared
+		&& (!PartialSchemaStatus.bSucceeded || !PartialSchemaApplyStatus.bSucceeded)
+		&& (PartialSchemaStatus.ErrorMessage.Contains(TEXT("missing expected schema object"))
+			|| PartialSchemaApplyStatus.ErrorMessage.Contains(TEXT("missing expected schema object")));
+	if (!Result.bPartialSchemaFailedClearly)
+	{
+		AppendSQLUISampleSQLiteMigrationVersioningPolicyError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI SQLite migration versioning policy probe failed: partial schema did not fail clearly. Prepared=%s StatusSucceeded=%s ApplySucceeded=%s StatusError='%s' ApplyError='%s'."),
+				bPartialSchemaPrepared ? TEXT("true") : TEXT("false"),
+				PartialSchemaStatus.bSucceeded ? TEXT("true") : TEXT("false"),
+				PartialSchemaApplyStatus.bSucceeded ? TEXT("true") : TEXT("false"),
+				*PartialSchemaStatus.ErrorMessage,
+				*PartialSchemaApplyStatus.ErrorMessage));
+	}
+
+	const FString OrderedMigrationsPath =
+		MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePath(TEXT("SmokeOrderedMigrations.db"));
+	TArray<FSQLUISQLiteMigrationStep> OrderedSteps;
+	OrderedSteps.Add(MakeSQLUISampleSQLiteMigrationVersioningPolicySmokeStepA());
+	OrderedSteps.Add(MakeSQLUISampleSQLiteMigrationVersioningPolicySmokeStepB());
+	const TArray<FString> SmokeMigrationIds =
+		MakeSQLUISampleSQLiteMigrationVersioningPolicySmokeMigrationIds();
+	const FSQLUISQLiteMigrationResult OrderedMigrationResult =
+		FSQLUISQLiteMigrationRunner::RunMigrations(OrderedMigrationsPath, OrderedSteps, false);
+	const FSQLUISQLiteLayoutSchemaVersionStatus OrderedMigrationStatus =
+		FSQLUISQLiteLayoutSchemaVersioning::GetMigrationVersionStatus(
+			OrderedMigrationsPath,
+			SmokeMigrationIds,
+			false);
+	Result.bSmokeMigrationsAppliedInOrder =
+		OrderedMigrationResult.bSucceeded
+		&& OrderedMigrationStatus.bSucceeded
+		&& DoSQLUISampleSQLiteMigrationVersioningPolicyIdsMatch(
+			OrderedMigrationStatus.AppliedMigrationIds,
+			SmokeMigrationIds)
+		&& !OrderedMigrationStatus.bHasPendingMigrations;
+	const FSQLUISQLiteMigrationResult OrderedMigrationRerunResult =
+		FSQLUISQLiteMigrationRunner::RunMigrations(OrderedMigrationsPath, OrderedSteps, false);
+	const FSQLUISQLiteLayoutSchemaVersionStatus OrderedMigrationRerunStatus =
+		FSQLUISQLiteLayoutSchemaVersioning::GetMigrationVersionStatus(
+			OrderedMigrationsPath,
+			SmokeMigrationIds,
+			false);
+	Result.bSmokeMigrationsIdempotent =
+		OrderedMigrationRerunResult.bSucceeded
+		&& OrderedMigrationRerunResult.AppliedMigrationCount == 0
+		&& DoSQLUISampleSQLiteMigrationVersioningPolicyIdsMatch(
+			OrderedMigrationRerunStatus.AppliedMigrationIds,
+			SmokeMigrationIds)
+		&& !OrderedMigrationRerunStatus.bHasPendingMigrations;
+	if (!Result.bSmokeMigrationsAppliedInOrder || !Result.bSmokeMigrationsIdempotent)
+	{
+		AppendSQLUISampleSQLiteMigrationVersioningPolicyError(
+			Result,
+			OrderedMigrationResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite migration versioning policy probe failed: smoke migrations were not applied in order or rerun idempotently.")
+				: OrderedMigrationResult.ErrorMessage);
+	}
+
+	const FString PendingMigrationPath =
+		MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePath(TEXT("SmokePendingMigration.db"));
+	TArray<FSQLUISQLiteMigrationStep> FirstPendingStepOnly;
+	FirstPendingStepOnly.Add(MakeSQLUISampleSQLiteMigrationVersioningPolicySmokeStepA());
+	const FSQLUISQLiteMigrationResult PendingFirstMigrationResult =
+		FSQLUISQLiteMigrationRunner::RunMigrations(
+			PendingMigrationPath,
+			FirstPendingStepOnly,
+			false);
+	const FSQLUISQLiteLayoutSchemaVersionStatus PendingStatusBefore =
+		FSQLUISQLiteLayoutSchemaVersioning::GetMigrationVersionStatus(
+			PendingMigrationPath,
+			SmokeMigrationIds,
+			false);
+	Result.bSmokePendingMigrationDetected =
+		PendingFirstMigrationResult.bSucceeded
+		&& PendingStatusBefore.bSucceeded
+		&& PendingStatusBefore.bHasPendingMigrations
+		&& PendingStatusBefore.PendingMigrationIds.Num() == 1
+		&& PendingStatusBefore.PendingMigrationIds.Contains(TEXT("002_smoke_versioning_b"));
+	const FSQLUISQLiteMigrationResult PendingApplyAllResult =
+		FSQLUISQLiteMigrationRunner::RunMigrations(
+			PendingMigrationPath,
+			OrderedSteps,
+			false);
+	const FSQLUISQLiteLayoutSchemaVersionStatus PendingStatusAfter =
+		FSQLUISQLiteLayoutSchemaVersioning::GetMigrationVersionStatus(
+			PendingMigrationPath,
+			SmokeMigrationIds,
+			false);
+	Result.bSmokePendingMigrationApplied =
+		PendingApplyAllResult.bSucceeded
+		&& PendingApplyAllResult.AppliedMigrationCount == 1
+		&& PendingStatusAfter.bSucceeded
+		&& !PendingStatusAfter.bHasPendingMigrations
+		&& DoSQLUISampleSQLiteMigrationVersioningPolicyIdsMatch(
+			PendingStatusAfter.AppliedMigrationIds,
+			SmokeMigrationIds);
+	if (!Result.bSmokePendingMigrationDetected || !Result.bSmokePendingMigrationApplied)
+	{
+		AppendSQLUISampleSQLiteMigrationVersioningPolicyError(
+			Result,
+			PendingApplyAllResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite migration versioning policy probe failed: pending smoke migration was not detected/applied.")
+				: PendingApplyAllResult.ErrorMessage);
+	}
+
+	const FString FailingMigrationPath =
+		MakeSQLUISampleSQLiteMigrationVersioningPolicyDatabasePath(TEXT("SmokeFailingMigration.db"));
+	TArray<FSQLUISQLiteMigrationStep> FailingSteps;
+	const FSQLUISQLiteMigrationStep FailingStep =
+		MakeSQLUISampleSQLiteMigrationVersioningPolicyFailingStep();
+	FailingSteps.Add(FailingStep);
+	const FSQLUISQLiteMigrationResult FailingMigrationResult =
+		FSQLUISQLiteMigrationRunner::RunMigrations(
+			FailingMigrationPath,
+			FailingSteps,
+			false);
+	const FSQLUISQLiteLayoutSchemaVersionStatus FailingMigrationStatus =
+		FSQLUISQLiteLayoutSchemaVersioning::GetMigrationVersionStatus(
+			FailingMigrationPath,
+			{ FailingStep.MigrationId },
+			false);
+	Result.bFailingMigrationFailedClearly =
+		!FailingMigrationResult.bSucceeded
+		&& FailingMigrationResult.ErrorMessage.Contains(TEXT("failed"));
+	Result.bFailingMigrationNotRecorded =
+		FailingMigrationStatus.bSucceeded
+		&& !FailingMigrationStatus.AppliedMigrationIds.Contains(FailingStep.MigrationId)
+		&& FailingMigrationStatus.PendingMigrationIds.Contains(FailingStep.MigrationId);
+	if (!Result.bFailingMigrationFailedClearly || !Result.bFailingMigrationNotRecorded)
+	{
+		AppendSQLUISampleSQLiteMigrationVersioningPolicyError(
+			Result,
+			FailingMigrationResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite migration versioning policy probe failed: failing migration was not reported or was recorded.")
+				: FailingMigrationResult.ErrorMessage);
+	}
+
+	Result.bDatabaseFilesRemoved =
+		DeleteSQLUISampleSQLiteMigrationVersioningPolicyFiles(Result)
+		&& !DoesAnySQLUISampleSQLiteMigrationVersioningPolicyFileExist();
+	if (!Result.bDatabaseFilesRemoved)
+	{
+		AppendSQLUISampleSQLiteMigrationVersioningPolicyError(
+			Result,
+			TEXT("SQLUI SQLite migration versioning policy probe failed: probe database files were not removed."));
+	}
+
+	Result.bSucceeded =
+		Result.bCurrentInitialSchemaStatusSucceeded
+		&& Result.bLatestKnownMigrationMatched
+		&& Result.bNoPendingKnownMigrations
+		&& Result.bCompleteSchemaMissingRecordDetected
+		&& Result.bMissingRecordRepairedNonDestructively
+		&& Result.bPartialSchemaFailedClearly
+		&& Result.bSmokeMigrationsAppliedInOrder
+		&& Result.bSmokeMigrationsIdempotent
+		&& Result.bSmokePendingMigrationDetected
+		&& Result.bSmokePendingMigrationApplied
+		&& Result.bFailingMigrationFailedClearly
+		&& Result.bFailingMigrationNotRecorded
+		&& Result.bDatabaseFilesRemoved;
+
+	return Result;
+}
+
 FSQLUISampleSmokeTestLayoutResult ResolveSQLUISampleSmokeTestLayoutDocument(
 	UObject* Outer,
 	const FSQLUISampleSmokeTestRequest& Request)
@@ -6564,6 +7067,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.SQLiteSeedDatabaseCopyPolicyProbe.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI SQLite seed database copy policy probe failed.")
 					: Result.SQLiteSeedDatabaseCopyPolicyProbe.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseSQLiteMigrationVersioningPolicyProbe)
+	{
+		Result.bUsedSQLiteMigrationVersioningPolicyProbe = true;
+		Result.SQLiteMigrationVersioningPolicyProbe =
+			RunSQLUISampleSQLiteMigrationVersioningPolicyProbe();
+		if (!Result.SQLiteMigrationVersioningPolicyProbe.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.SQLiteMigrationVersioningPolicyProbe.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite migration versioning policy probe failed.")
+					: Result.SQLiteMigrationVersioningPolicyProbe.ErrorMessage);
 		}
 	}
 

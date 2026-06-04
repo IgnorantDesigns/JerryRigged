@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Database/SQLUISQLiteMigrationTypes.h"
 
 #include "SQLUISQLiteLayoutSchemaMigration.generated.h"
 
@@ -73,6 +74,10 @@ struct SQLUICORE_API FSQLUISQLiteLayoutSchemaInitializationResult
 class SQLUICORE_API FSQLUISQLiteLayoutSchemaMigration
 {
 public:
+	static FString GetInitialLayoutSchemaMigrationId();
+
+	static FSQLUISQLiteMigrationStep GetInitialLayoutSchemaMigrationStep();
+
 	static FString GetDefaultProbeDatabasePath();
 
 	static FSQLUISQLiteLayoutSchemaMigrationProbeResult RunProbe(

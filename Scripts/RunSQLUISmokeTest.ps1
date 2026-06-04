@@ -48,6 +48,8 @@ param(
 
 	[switch]$UseSQLiteSeedDatabaseCopyPolicyProbe,
 
+	[switch]$UseSQLiteMigrationVersioningPolicyProbe,
+
 	[Alias('?')]
 	[switch]$Help
 )
@@ -140,6 +142,9 @@ Parameters:
   -UseSQLiteSeedDatabaseCopyPolicyProbe
       Run the optional SQLUICore SQLite seed database copy policy probe.
 
+  -UseSQLiteMigrationVersioningPolicyProbe
+      Run the optional SQLUICore SQLite migration versioning policy probe.
+
   -Help, -?
       Show this help.
 
@@ -166,6 +171,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteFactorySchemaInitRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteSchemaInitHardening
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteSeedDatabaseCopyPolicyProbe
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteMigrationVersioningPolicyProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -UnrealEditorCmdPath "C:\UE\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -ProjectPath ".\JerryRigged.uproject"
 '@
@@ -375,6 +381,11 @@ if ($UseSQLiteSchemaInitHardening)
 if ($UseSQLiteSeedDatabaseCopyPolicyProbe)
 {
 	$CommandletArgs += '-SQLiteSeedDatabaseCopyPolicyProbe'
+}
+
+if ($UseSQLiteMigrationVersioningPolicyProbe)
+{
+	$CommandletArgs += '-SQLiteMigrationVersioningPolicyProbe'
 }
 
 $PrintableCommandParts = @($ResolvedUnrealEditorCmdPath) + $CommandletArgs
