@@ -2,11 +2,16 @@
 
 #include "Misc/ScopeLock.h"
 
-void FSQLUIDatabaseAsyncQueue::EnqueueTask(TFunction<void()>&& Task)
+bool FSQLUIDatabaseAsyncQueue::EnqueueTask(TFunction<void()>&& Task)
 {
 	bool bShouldDispatch = false;
 	{
 		FScopeLock Lock(&QueueCriticalSection);
+		if (bShutdown)
+		{
+			return false;
+		}
+
 		PendingTasks.Add(MoveTemp(Task));
 		if (!bTaskRunning)
 		{
@@ -19,6 +24,27 @@ void FSQLUIDatabaseAsyncQueue::EnqueueTask(TFunction<void()>&& Task)
 	{
 		DispatchNextTask();
 	}
+
+	return true;
+}
+
+void FSQLUIDatabaseAsyncQueue::ShutdownAndSuppressCallbacks()
+{
+	FScopeLock Lock(&QueueCriticalSection);
+	bShutdown = true;
+	PendingTasks.Empty();
+}
+
+bool FSQLUIDatabaseAsyncQueue::IsShutdown() const
+{
+	FScopeLock Lock(&QueueCriticalSection);
+	return bShutdown;
+}
+
+bool FSQLUIDatabaseAsyncQueue::ShouldDeliverCompletion() const
+{
+	FScopeLock Lock(&QueueCriticalSection);
+	return !bShutdown;
 }
 
 void FSQLUIDatabaseAsyncQueue::CompleteCurrentTask()
@@ -31,6 +57,13 @@ void FSQLUIDatabaseAsyncQueue::DispatchNextTask()
 	TFunction<void()> NextTask;
 	{
 		FScopeLock Lock(&QueueCriticalSection);
+		if (bShutdown)
+		{
+			PendingTasks.Empty();
+			bTaskRunning = false;
+			return;
+		}
+
 		if (PendingTasks.Num() == 0)
 		{
 			bTaskRunning = false;

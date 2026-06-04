@@ -73,6 +73,8 @@ The callback-style APIs can opt into async execution:
 
 When `bRunCallbackOperationsAsync = true`, those callback methods copy plain request data, enqueue the non-UObject worker helper through a SQLUICore-owned per-repository async queue, run one queued SQLite callback operation at a time off the game thread, then marshal result delivery back to the game thread before invoking the callback. This preserves enqueue order for callback-style `SaveLayout` and `LoadLayout`.
 
+The serialized async queue has an explicit shutdown policy. After shutdown it rejects new work, drops queued work that has not started, lets any already-running worker finish without attempting cancellation, suppresses stale game-thread completion callbacks, and does not dispatch additional queued work. `USQLUISQLiteLayoutRepository` shuts down its queue when reconfigured away from the active async settings and during object destruction.
+
 These methods remain synchronous:
 
 - `ListLayouts`
@@ -80,7 +82,7 @@ These methods remain synchronous:
 - `RemoveLayout`
 - `ClearLayouts`
 
-A full production async service, cancellation policy, shutdown draining, stale-callback handling, and async coverage for the remaining repository operations are still future work.
+A full production async service, cancellation policy, shutdown draining beyond stale-callback suppression, and async coverage for the remaining repository operations are still future work.
 
 ## Smoke Coverage
 
@@ -90,6 +92,7 @@ Current SQLite-related smoke flags are:
 
 - `-UseSQLiteCoreProbe`: proves engine `SQLiteCore` open/close behavior under a smoke-safe path.
 - `-UseDatabaseAsyncProbe`: proves the generic SQLUI database async boundary without SQLite file I/O.
+- `-UseDatabaseAsyncQueueShutdownProbe`: verifies the serialized async queue rejects new work after shutdown, drops pending work, and suppresses stale callbacks.
 - `-UseSQLiteMigrationProbe`: proves the minimal migration runner with a smoke-only migration.
 - `-UseSQLiteLayoutSchemaMigrationProbe`: applies and verifies the planned initial layout schema.
 - `-UseSQLiteLayoutReadProbe`: seeds one layout and verifies list/load mapping against the schema.
@@ -125,7 +128,7 @@ Remaining work includes:
 - Expanding packaged-build validation beyond the latest local Win64 Development pass.
 - Expanding packaged runtime SQLite lifecycle coverage beyond the first local packaged executable smoke.
 - Production async database service design beyond the current per-repository callback queue.
-- Shutdown, cancellation, stale-callback policy, and async coverage for all repository operations.
+- Cancellation, shutdown draining beyond stale-callback suppression, and async coverage for all repository operations.
 - Migration versioning and upgrade paths beyond `001_initial_layout_schema`.
 - Default runtime configuration policy and user-facing database path policy.
 - Seed database copy policy, if seed DBs are added.

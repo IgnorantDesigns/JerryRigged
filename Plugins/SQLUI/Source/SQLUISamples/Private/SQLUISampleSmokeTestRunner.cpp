@@ -1,11 +1,13 @@
 #include "SQLUISampleSmokeTestRunner.h"
 
+#include "Database/SQLUIDatabaseAsyncQueue.h"
 #include "Database/SQLUIDatabaseAsyncRunner.h"
 #include "Database/SQLUISQLiteLayoutReadProbe.h"
 #include "Database/SQLUISQLiteLayoutSchemaMigration.h"
 #include "Database/SQLUISQLiteMigrationRunner.h"
 #include "Database/SQLUISQLiteProbe.h"
 #include "Async/TaskGraphInterfaces.h"
+#include "HAL/Event.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
 #include "HAL/PlatformTime.h"
@@ -4861,6 +4863,247 @@ FSQLUIDatabaseAsyncResult RunSQLUISampleDatabaseAsyncProbe()
 	return SharedState->Result;
 }
 
+void AppendSQLUISampleDatabaseAsyncQueueShutdownProbeError(
+	FSQLUISampleDatabaseAsyncQueueShutdownProbeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+bool DidSQLUISampleDatabaseAsyncQueueShutdownProbeSucceed(
+	const FSQLUISampleDatabaseAsyncQueueShutdownProbeResult& Result)
+{
+	return Result.bSucceeded
+		&& Result.bQueueCreated
+		&& Result.bShutdownRequested
+		&& Result.bQueueReportedShutdown
+		&& Result.bEnqueueAfterShutdownRejected
+		&& Result.bPendingWorkSuppressed
+		&& Result.bRunningCompletionSuppressed
+		&& Result.bNoCallbacksDeliveredAfterShutdown
+		&& Result.bNoDeadlock;
+}
+
+FString MakeSQLUISampleDatabaseAsyncQueueShutdownProbeFailureMessage(
+	const FSQLUISampleDatabaseAsyncQueueShutdownProbeResult& Result)
+{
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		return Result.ErrorMessage;
+	}
+
+	return FString::Printf(
+		TEXT("SQLUI database async queue shutdown probe failed. QueueCreated=%s ShutdownRequested=%s QueueReportedShutdown=%s EnqueueAfterShutdownRejected=%s PendingWorkSuppressed=%s RunningCompletionSuppressed=%s NoCallbacksDeliveredAfterShutdown=%s NoDeadlock=%s"),
+		Result.bQueueCreated ? TEXT("true") : TEXT("false"),
+		Result.bShutdownRequested ? TEXT("true") : TEXT("false"),
+		Result.bQueueReportedShutdown ? TEXT("true") : TEXT("false"),
+		Result.bEnqueueAfterShutdownRejected ? TEXT("true") : TEXT("false"),
+		Result.bPendingWorkSuppressed ? TEXT("true") : TEXT("false"),
+		Result.bRunningCompletionSuppressed ? TEXT("true") : TEXT("false"),
+		Result.bNoCallbacksDeliveredAfterShutdown ? TEXT("true") : TEXT("false"),
+		Result.bNoDeadlock ? TEXT("true") : TEXT("false"));
+}
+
+struct FSQLUISampleDatabaseAsyncQueueShutdownProbeState
+{
+	bool bFirstCallbackDelivered = false;
+	bool bSecondCallbackDelivered = false;
+	bool bPostShutdownCallbackDelivered = false;
+};
+
+FSQLUISampleDatabaseAsyncQueueShutdownProbeResult
+RunSQLUISampleDatabaseAsyncQueueShutdownProbe()
+{
+	FSQLUISampleDatabaseAsyncQueueShutdownProbeResult Result;
+
+	TSharedRef<FSQLUIDatabaseAsyncQueue, ESPMode::ThreadSafe> Queue =
+		MakeShared<FSQLUIDatabaseAsyncQueue, ESPMode::ThreadSafe>();
+	Result.bQueueCreated = true;
+
+	FEvent* FirstWorkStartedEvent = FPlatformProcess::GetSynchEventFromPool(false);
+	FEvent* FirstWorkMayFinishEvent = FPlatformProcess::GetSynchEventFromPool(false);
+	FEvent* FirstWorkFinishedEvent = FPlatformProcess::GetSynchEventFromPool(false);
+	FEvent* SecondWorkStartedEvent = FPlatformProcess::GetSynchEventFromPool(false);
+	if (!FirstWorkStartedEvent
+		|| !FirstWorkMayFinishEvent
+		|| !FirstWorkFinishedEvent
+		|| !SecondWorkStartedEvent)
+	{
+		AppendSQLUISampleDatabaseAsyncQueueShutdownProbeError(
+			Result,
+			TEXT("SQLUI database async queue shutdown probe failed: could not allocate synchronization events."));
+
+		if (FirstWorkStartedEvent)
+		{
+			FPlatformProcess::ReturnSynchEventToPool(FirstWorkStartedEvent);
+		}
+		if (FirstWorkMayFinishEvent)
+		{
+			FPlatformProcess::ReturnSynchEventToPool(FirstWorkMayFinishEvent);
+		}
+		if (FirstWorkFinishedEvent)
+		{
+			FPlatformProcess::ReturnSynchEventToPool(FirstWorkFinishedEvent);
+		}
+		if (SecondWorkStartedEvent)
+		{
+			FPlatformProcess::ReturnSynchEventToPool(SecondWorkStartedEvent);
+		}
+
+		return Result;
+	}
+
+	TSharedRef<FSQLUISampleDatabaseAsyncQueueShutdownProbeState, ESPMode::ThreadSafe> SharedState =
+		MakeShared<FSQLUISampleDatabaseAsyncQueueShutdownProbeState, ESPMode::ThreadSafe>();
+
+	const bool bFirstEnqueued = Queue->EnqueueResult<int32>(
+		[FirstWorkStartedEvent, FirstWorkMayFinishEvent, FirstWorkFinishedEvent]()
+		{
+			FirstWorkStartedEvent->Trigger();
+			FirstWorkMayFinishEvent->Wait(5000);
+			FirstWorkFinishedEvent->Trigger();
+			return 1;
+		},
+		[SharedState](const int32&)
+		{
+			SharedState->bFirstCallbackDelivered = true;
+		});
+	if (!bFirstEnqueued)
+	{
+		AppendSQLUISampleDatabaseAsyncQueueShutdownProbeError(
+			Result,
+			TEXT("SQLUI database async queue shutdown probe failed: first enqueue was rejected before shutdown."));
+	}
+
+	const bool bFirstWorkStarted = bFirstEnqueued && FirstWorkStartedEvent->Wait(5000);
+	if (!bFirstWorkStarted)
+	{
+		AppendSQLUISampleDatabaseAsyncQueueShutdownProbeError(
+			Result,
+			TEXT("SQLUI database async queue shutdown probe failed: first work did not start before timeout."));
+	}
+
+	const bool bSecondEnqueued = Queue->EnqueueResult<int32>(
+		[SecondWorkStartedEvent]()
+		{
+			SecondWorkStartedEvent->Trigger();
+			return 2;
+		},
+		[SharedState](const int32&)
+		{
+			SharedState->bSecondCallbackDelivered = true;
+		});
+	if (!bSecondEnqueued)
+	{
+		AppendSQLUISampleDatabaseAsyncQueueShutdownProbeError(
+			Result,
+			TEXT("SQLUI database async queue shutdown probe failed: second enqueue was rejected before shutdown."));
+	}
+
+	Queue->ShutdownAndSuppressCallbacks();
+	Result.bShutdownRequested = true;
+	Result.bQueueReportedShutdown = Queue->IsShutdown();
+
+	const bool bPostShutdownEnqueued = Queue->EnqueueResult<int32>(
+		[]()
+		{
+			return 3;
+		},
+		[SharedState](const int32&)
+		{
+			SharedState->bPostShutdownCallbackDelivered = true;
+		});
+	Result.bEnqueueAfterShutdownRejected = !bPostShutdownEnqueued;
+	if (!Result.bEnqueueAfterShutdownRejected)
+	{
+		AppendSQLUISampleDatabaseAsyncQueueShutdownProbeError(
+			Result,
+			TEXT("SQLUI database async queue shutdown probe failed: enqueue after shutdown was accepted."));
+	}
+
+	FirstWorkMayFinishEvent->Trigger();
+	Result.bNoDeadlock = !bFirstEnqueued || FirstWorkFinishedEvent->Wait(5000);
+	if (!Result.bNoDeadlock)
+	{
+		AppendSQLUISampleDatabaseAsyncQueueShutdownProbeError(
+			Result,
+			TEXT("SQLUI database async queue shutdown probe failed: running work did not finish after shutdown."));
+	}
+
+	const double PumpStartSeconds = FPlatformTime::Seconds();
+	while ((FPlatformTime::Seconds() - PumpStartSeconds) < 0.5)
+	{
+		FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread);
+		FPlatformProcess::Sleep(0.01f);
+	}
+	FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread);
+
+	Result.bPendingWorkSuppressed = !SecondWorkStartedEvent->Wait(0);
+	Result.bRunningCompletionSuppressed = !SharedState->bFirstCallbackDelivered;
+	Result.bNoCallbacksDeliveredAfterShutdown =
+		!SharedState->bFirstCallbackDelivered
+		&& !SharedState->bSecondCallbackDelivered
+		&& !SharedState->bPostShutdownCallbackDelivered;
+
+	if (!Result.bQueueReportedShutdown)
+	{
+		AppendSQLUISampleDatabaseAsyncQueueShutdownProbeError(
+			Result,
+			TEXT("SQLUI database async queue shutdown probe failed: queue did not report shutdown."));
+	}
+	if (!Result.bPendingWorkSuppressed)
+	{
+		AppendSQLUISampleDatabaseAsyncQueueShutdownProbeError(
+			Result,
+			TEXT("SQLUI database async queue shutdown probe failed: pending work ran after shutdown."));
+	}
+	if (!Result.bRunningCompletionSuppressed)
+	{
+		AppendSQLUISampleDatabaseAsyncQueueShutdownProbeError(
+			Result,
+			TEXT("SQLUI database async queue shutdown probe failed: running work completion callback was delivered after shutdown."));
+	}
+	if (!Result.bNoCallbacksDeliveredAfterShutdown)
+	{
+		AppendSQLUISampleDatabaseAsyncQueueShutdownProbeError(
+			Result,
+			TEXT("SQLUI database async queue shutdown probe failed: one or more callbacks were delivered after shutdown."));
+	}
+
+	Result.bSucceeded =
+		Result.bQueueCreated
+		&& bFirstEnqueued
+		&& bFirstWorkStarted
+		&& bSecondEnqueued
+		&& Result.bShutdownRequested
+		&& Result.bQueueReportedShutdown
+		&& Result.bEnqueueAfterShutdownRejected
+		&& Result.bPendingWorkSuppressed
+		&& Result.bRunningCompletionSuppressed
+		&& Result.bNoCallbacksDeliveredAfterShutdown
+		&& Result.bNoDeadlock;
+
+	if (Result.bNoDeadlock || !bFirstEnqueued)
+	{
+		FPlatformProcess::ReturnSynchEventToPool(FirstWorkStartedEvent);
+		FPlatformProcess::ReturnSynchEventToPool(FirstWorkMayFinishEvent);
+		FPlatformProcess::ReturnSynchEventToPool(FirstWorkFinishedEvent);
+		FPlatformProcess::ReturnSynchEventToPool(SecondWorkStartedEvent);
+	}
+
+	return Result;
+}
+
 FString MakeSQLUISampleLayoutFailureMessage(
 	const FSQLUISampleSmokeTestLayoutResult& LayoutResult)
 {
@@ -5079,6 +5322,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 			AddSQLUISampleSmokeTestError(
 				Result,
 				MakeSQLUISampleDatabaseAsyncProbeFailureMessage(Result.DatabaseAsyncProbe));
+		}
+	}
+
+	if (Request.bUseDatabaseAsyncQueueShutdownProbe)
+	{
+		Result.bUsedDatabaseAsyncQueueShutdownProbe = true;
+		Result.DatabaseAsyncQueueShutdownProbe =
+			RunSQLUISampleDatabaseAsyncQueueShutdownProbe();
+		if (!DidSQLUISampleDatabaseAsyncQueueShutdownProbeSucceed(
+			Result.DatabaseAsyncQueueShutdownProbe))
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				MakeSQLUISampleDatabaseAsyncQueueShutdownProbeFailureMessage(
+					Result.DatabaseAsyncQueueShutdownProbe));
 		}
 	}
 
