@@ -1,6 +1,6 @@
 # SQLUI SQLite Backend Evaluation
 
-This document records the SQLite backend evaluation that led SQLUI to use engine `SQLiteCore` as the active runtime candidate. The original backend evaluation was documentation-only; the current code now includes SQLiteCore wiring, repository operations, factory selection, an explicit runtime configuration resolver, opt-in schema initialization, serialized opt-in async callback execution with queue shutdown/stale-callback suppression for `LoadLayout` and `SaveLayout`, local smoke coverage, a local packaged-build validation scaffold, and an opt-in packaged runtime SQLite lifecycle smoke. SQLite is still not the default backend, and this work still does not add migrations inside the factory, widgets, maps, assets, CI, or persistent database files.
+This document records the SQLite backend evaluation that led SQLUI to use engine `SQLiteCore` as the active runtime candidate. The original backend evaluation was documentation-only; the current code now includes SQLiteCore wiring, repository operations, factory selection, an explicit runtime configuration resolver, an explicit seed database copy policy helper, opt-in schema initialization, serialized opt-in async callback execution with queue shutdown/stale-callback suppression for `LoadLayout` and `SaveLayout`, local smoke coverage, a local packaged-build validation scaffold, and an opt-in packaged runtime SQLite lifecycle smoke. SQLite is still not the default backend, and this work still does not add migrations inside the factory, widgets, maps, assets, CI, source-controlled seed databases, or persistent database files.
 
 For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 For the local packaged-build validation scaffold, see [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md).
@@ -220,6 +220,8 @@ The repository implementation:
 - Has optional smoke coverage for schema initialization hardening: missing database with creation disabled, empty database with creation enabled, already-initialized database idempotence, complete schema with missing migration record, partial schema failure behavior, and read-only init-blocked protection.
 - Has a SQLUICore runtime configuration resolver that maps explicit backend, path, and SQLite command-line flags into repository factory settings while keeping `InMemory` as the default and SQLite non-default.
 - Has optional smoke coverage for runtime config parsing, SQLite path resolution, missing-path unavailable behavior, invalid-backend fallback, and a factory-created SQLite save through explicit runtime config.
+- Has a SQLUICore seed database copy policy helper that can explicitly copy a closed seed DB into a writable target path, preserve existing targets without overwrite, overwrite only when requested, fail for missing seed or same-path inputs, and map runtime config seed flags into a copy request without copying.
+- Has optional smoke coverage for seed copy/no-overwrite/overwrite/missing-seed/same-path behavior and verifies copied targets are readable through the SQLite repository.
 - Has optional packaged runtime smoke coverage that launches the packaged executable, creates a SQLite repository through the factory, runs save/list/load/remove/clear under a packaged runtime `Saved/SQLUI/PackagedRuntimeSmoke/...` path, verifies success from the runtime log, and removes the smoke database.
 
 The repository implementation does not:
@@ -237,6 +239,7 @@ Remaining blockers before promoting SQLite to production/default persistence:
 - Production SQLite service lifecycle, shutdown draining beyond stale-callback suppression, and cancellation policy.
 - Production migration versioning and upgrade paths beyond the initial schema and hardening smoke slice.
 - Production/user-facing runtime settings and database path policy beyond the first explicit resolver.
+- Product seed database asset location, packaging, versioning, and upgrade policy beyond the first explicit copy helper.
 
 ## Evaluation Criteria
 
@@ -434,11 +437,12 @@ Before promoting SQLite from explicit opt-in backend to broader runtime use, con
 - Error reporting confirmed.
 - License and notice requirements confirmed.
 - Smoke-test strategy confirmed.
+- Explicit seed-copy policy confirmed for any source seed DBs.
 - Backend-unavailable behavior confirmed for builds without SQLite enabled.
 
 ## Decision Record
 
-Current status: engine `SQLiteCore` is the active backend candidate and current implementation basis. SQLUI now has explicit SQLite repository factory selection, opt-in schema initialization with targeted edge-case hardening, a passing local packaged-build validation run for UE 5.7 Win64 Development, and a first opt-in packaged runtime SQLite lifecycle smoke, but SQLite is not the default backend.
+Current status: engine `SQLiteCore` is the active backend candidate and current implementation basis. SQLUI now has explicit SQLite repository factory selection, opt-in schema initialization with targeted edge-case hardening, an explicit seed database copy policy helper, a passing local packaged-build validation run for UE 5.7 Win64 Development, and a first opt-in packaged runtime SQLite lifecycle smoke, but SQLite is not the default backend.
 
 Preferred candidate: engine-provided `SQLiteCore`, wrapped by a small SQLUI Core-owned async database boundary.
 
@@ -464,6 +468,7 @@ Future SQLite hardening PRs may still touch:
 - A SQLUI Core async database service or wrapper around the chosen backend.
 - Production cancellation and service shutdown behavior beyond the current per-repository queue suppression policy.
 - Production migration versioning and upgrade paths for later schema changes.
+- Product seed database packaging/versioning policy if seed DBs are shipped.
 - Packaged-build validation and any target-platform fixes.
 - Additional smoke coverage for production migration and async lifecycle behavior.
 - Documentation updates reflecting the implemented path.

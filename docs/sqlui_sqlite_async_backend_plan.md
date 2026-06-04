@@ -206,16 +206,16 @@ Migration failures should fail closed. A repository operation should not continu
 
 ## Seed-Copy Timing
 
-Seed-copy support is deferred, but the timing should be defined before implementation.
+SQLUICore now has `FSQLUISQLiteSeedDatabaseCopy`, an explicit file-copy policy helper for copying a closed seed database into a writable target path. Repository/factory startup integration for product seed databases is still deferred, so the timing rules below remain the guidance for future production integration.
 
 Expected seed-copy rules:
 
 - Source-controlled seed databases are read-only inputs.
 - Writable copies live under `Saved/SQLUI/...`.
 - Seed copy runs before opening the writable database for mutation.
-- If a writable copy already exists, migrate it instead of overwriting it.
+- If a writable copy already exists, preserve it unless overwrite is explicitly configured.
 - If the seed copy fails, return a backend-unavailable or operation failure result with a clear `ErrorMessage`.
-- Seed copy should run on the worker side because it is file-system work and can be slow.
+- Seed copy should run on the worker side when integrated into production startup because it is file-system work and can be slow.
 
 The repository factory may later accept seed path settings, but widgets should never see those paths.
 
@@ -304,6 +304,8 @@ The optional database async queue shutdown probe exercises `FSQLUIDatabaseAsyncQ
 The optional SQLite factory layout repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteFactoryRepository`, requests `ESQLUILayoutRepositoryBackend::SQLite` through `USQLUILayoutRepositoryFactory`, configures async callback execution through factory settings, verifies repository lifecycle behavior, verifies missing-path selection reports unavailable behavior, closes all database handles, and removes the file. It proves explicit factory selection without running migrations or creating database files inside the factory.
 
 The optional SQLite factory schema-init repository smoke path starts with no database under `Saved/SQLUI/SmokeTests/SQLiteFactorySchemaInitRepository`, requests `ESQLUILayoutRepositoryBackend::SQLite` through `USQLUILayoutRepositoryFactory`, enables repository-owned schema initialization and database creation through `SQLiteSettings`, verifies callback-style `SaveLayout` initializes the schema and creates the database, verifies list/load/remove/clear behavior, verifies a missing database without schema-init settings fails without creating a file, closes all database handles, and removes the file. It proves the first opt-in schema initialization slice without moving migration logic into the factory.
+
+The optional SQLite seed database copy policy probe prepares a closed seed database under `Saved/SQLUI/SmokeTests/SQLiteSeedDatabaseCopyPolicy`, exercises the SQLUICore seed copy helper for missing-target copy, existing-target preserve, explicit overwrite, missing-seed failure, same-path failure, and runtime config mapping, verifies copied targets are readable through the SQLite repository, closes all database handles, and removes the files. It proves the explicit file-copy policy only; production async startup integration remains future work.
 
 Future SQLite smoke coverage should continue to prove:
 
