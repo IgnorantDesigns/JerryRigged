@@ -34,6 +34,8 @@ Runtime-facing code can choose a repository backend through `FSQLUILayoutReposit
 
 `FSQLUILayoutRepositoryFactorySettings` includes `SQLiteSettings` for the SQLite backend. Those settings are passed to `USQLUISQLiteLayoutRepository` without running migrations or creating database files in the factory. If `Backend = SQLite` is requested with an empty `SQLiteSettings.DatabasePath`, the factory returns the existing unavailable repository behavior instead of silently falling back to another backend. Schema initialization remains repository-owned and opt-in through SQLite settings.
 
+`FSQLUISQLiteLayoutSchemaVersioning` is the SQLUICore schema status/versioning helper for known SQLite layout migrations. The known production migration set is currently only `001_initial_layout_schema`; the helper reports applied and pending known ids, can detect complete schemas with a missing migration row, and fails clearly for partial schemas. It does not add a real production v2 schema migration and does not run inside `USQLUILayoutRepositoryFactory`.
+
 The factory falls back to the transient package when no valid outer is supplied. It is the runtime selection boundary for current sample code and later storage implementations. Widgets should stay behind repository/runtime-context APIs and should not select concrete storage classes themselves.
 
 `FSQLUISQLiteSeedDatabaseCopy` is a separate SQLUICore pre-repository file policy helper. It can copy a closed SQLite seed database into a writable runtime database path when a caller explicitly requests copy-if-missing or overwrite behavior. It does not open SQLite, run schema initialization, seed data, create repositories, or run inside `USQLUILayoutRepositoryFactory`. Widgets should never call it directly.
@@ -98,7 +100,7 @@ Current supported behavior:
 - `bCreateDatabaseIfMissing` defaults to `false`; the repository creates a missing database only when both schema-init settings are explicitly enabled.
 - Async callback execution currently covers only `LoadLayout` and `SaveLayout`; `LoadLayoutById`, `ListLayouts`, `RemoveLayout`, and `ClearLayouts` remain synchronous.
 
-Unsupported behavior remains explicit. `SaveLayout`, `RemoveLayout`, and `ClearLayouts` return clear read-only failures when `bReadOnly = true`; read-only mode does not create or initialize schemas. This repository is selected by `USQLUILayoutRepositoryFactory` only when SQLite is explicitly requested. It has local smoke coverage for the current lifecycle, but packaged-build validation, full production async service behavior, and migration upgrades beyond the initial schema remain future work.
+Unsupported behavior remains explicit. `SaveLayout`, `RemoveLayout`, and `ClearLayouts` return clear read-only failures when `bReadOnly = true`; read-only mode does not create or initialize schemas. This repository is selected by `USQLUILayoutRepositoryFactory` only when SQLite is explicitly requested. It has local smoke coverage for the current lifecycle and a first migration status/versioning helper, but broader packaged validation, full production async service behavior, and actual future schema upgrades remain future work.
 
 ## Result Types
 
@@ -180,12 +182,13 @@ Current paths are:
 - SQLite factory layout repository smoke path: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteFactoryRepository`, requests `ESQLUILayoutRepositoryBackend::SQLite` through `USQLUILayoutRepositoryFactory`, verifies a SQLite repository is created only with a configured database path, exercises `SaveLayout`, `ListLayouts`, `LoadLayout`, `RemoveLayout`, and `ClearLayouts`, verifies missing path selection reports unavailable behavior, removes the database, and passes the default layout through the widget pipeline.
 - SQLite factory schema-init repository smoke path: SQLUISamples starts with no database under `Saved/SQLUI/SmokeTests/SQLiteFactorySchemaInitRepository`, requests `ESQLUILayoutRepositoryBackend::SQLite` through `USQLUILayoutRepositoryFactory`, enables `bInitializeSchemaIfMissing` and `bCreateDatabaseIfMissing` in `SQLiteSettings`, verifies repository `SaveLayout` creates and initializes the schema, exercises `ListLayouts`, `LoadLayout`, `RemoveLayout`, and `ClearLayouts`, verifies a missing database without schema-init settings fails without creating a file, removes database files, and passes the default layout through the widget pipeline.
 - SQLite schema-init hardening proof: SQLUISamples writes only under `Saved/SQLUI/SmokeTests/SQLiteSchemaInitHardening` and verifies schema initialization refuses missing databases when creation is disabled, initializes empty databases only when creation is enabled, treats already-initialized databases idempotently without duplicate migration rows, records a missing initial migration row for a complete schema non-destructively, fails clearly for partial schemas with missing expected objects, blocks read-only repository initialization before file creation, removes database files, and passes the default layout through the widget pipeline.
+- SQLite migration versioning policy proof: SQLUISamples writes only under `Saved/SQLUI/SmokeTests/SQLiteMigrationVersioningPolicy` and verifies current status for `001_initial_layout_schema`, complete-schema/missing-record detection and repair, partial-schema failure, ordered and idempotent smoke-only migrations, pending migration detection, failing migration reporting, database cleanup, and the default widget pipeline.
 
 The default, JSON fixture, in-memory, JSON file, and unavailable paths do not use SQLite. SQLite smoke paths are optional and write only under their `Saved/SQLUI/SmokeTests/...` directories. No smoke path uses Content, maps, viewport attachment, or durable project assets.
 
 ## SQLite Runtime Status
 
-The current SQLite runtime status is consolidated in [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md). In short, SQLite is explicitly selectable through the repository factory, supports the current layout repository lifecycle, can opt into schema initialization, and can opt into serialized async execution for callback-style `LoadLayout` and `SaveLayout`. SQLite is still not the default backend, the factory still passes settings only, and full production async service behavior and migration upgrades beyond the initial schema remain open.
+The current SQLite runtime status is consolidated in [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md). In short, SQLite is explicitly selectable through the repository factory, supports the current layout repository lifecycle, can opt into schema initialization, has a first schema version/status helper for known migrations, and can opt into serialized async execution for callback-style `LoadLayout` and `SaveLayout`. SQLite is still not the default backend, the factory still passes settings only, and full production async service behavior plus actual future schema migration upgrades remain open.
 
 Local packaged-build validation is documented in [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md). That script is a local `RunUAT BuildCookRun` scaffold for checking project packaging compatibility with SQLUI and SQLiteCore wiring; it does not add CI or packaged runtime SQLite lifecycle smoke automation.
 
@@ -205,7 +208,7 @@ The SQLite implementation should:
 - Preserve the current document validation boundary before saving and after loading.
 - Use `Saved/SQLUI/...` for writable runtime database state, with explicit seed-copy behavior handled before repository mutation.
 
-SQLite repository smoke coverage is broad enough for the current local lifecycle, but production migration versioning and upgrade paths, full async database execution, shutdown behavior, and packaged-build validation should happen in later implementation work.
+SQLite repository smoke coverage is broad enough for the current local lifecycle, and the first migration version/status framework exists. Actual future production migrations, full async database execution, broader shutdown behavior, and broader packaged validation should happen in later implementation work.
 
 ## Suggested Next Steps
 
@@ -214,6 +217,6 @@ Near-term implementation work can stay small and repository-focused:
 1. Run and expand packaged-build validation for the `SQLiteCore` path on target platforms.
 2. Extend the async database boundary beyond callback-style `LoadLayout` and `SaveLayout` before using SQLite for normal runtime persistence.
 3. Keep SQLite factory selection explicitly configured and unavailable when required settings are missing.
-4. Harden migration versioning, upgrade behavior, and database file handling in SQLUICore, not in widgets.
+4. Add actual future schema migrations, upgrade behavior, and database file handling in SQLUICore, not in widgets.
 5. Define product seed database asset/package/version rules before shipping source-controlled seed DBs.
 6. Extend lifecycle features through repository contracts instead of exposing storage details to widgets.
