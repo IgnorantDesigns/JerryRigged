@@ -2,7 +2,7 @@
 
 The SQLUI sample smoke test commandlet runs the current sample runtime widget pipeline in a transient commandlet world. It creates the sample widget catalog, variable store, runtime context, and layout request, then reports whether the root widget and pipeline steps succeeded.
 
-For the consolidated current SQLite runtime state, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md). For local packaged-build validation, see [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md). This document remains the command reference for local editor commandlet smoke paths and expected log lines.
+For the concise SQLite phase status and roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md). For the consolidated current SQLite runtime state, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md). For local packaged-build validation, see [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md). This document remains the command reference for local editor commandlet smoke paths and expected log lines.
 
 By default, the smoke test uses the existing in-memory C++ layout document. It can also run the built-in SQLUISamples JSON layout fixture, which deserializes a tiny `SQLUI.FilterBox` layout through SQLUICore's layout JSON helpers before running the same runtime widget pipeline.
 

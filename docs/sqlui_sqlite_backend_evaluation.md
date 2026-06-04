@@ -2,6 +2,7 @@
 
 This document records the SQLite backend evaluation that led SQLUI to use engine `SQLiteCore` as the active runtime candidate. The original backend evaluation was documentation-only; the current code now includes SQLiteCore wiring, repository operations, factory selection, an explicit runtime configuration resolver, an explicit seed database copy policy helper, opt-in schema initialization, a migration version/status helper for the known layout schema migration set, serialized opt-in async callback execution with queue shutdown/stale-callback suppression for `LoadLayout` and `SaveLayout`, local smoke coverage, a local packaged-build validation scaffold, and an opt-in packaged runtime SQLite lifecycle smoke. SQLite is still not the default backend, and this work still does not add migrations inside the factory, widgets, maps, assets, CI, source-controlled seed databases, or persistent database files.
 
+For the concise phase status and roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md).
 For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 For the local packaged-build validation scaffold, see [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md).
 

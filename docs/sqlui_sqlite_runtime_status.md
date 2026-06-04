@@ -4,6 +4,7 @@ This is the current-state reference for SQLUI's SQLite layout repository work. I
 
 Related docs:
 
+- [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md) summarizes the current phase status, validation matrix, safety boundaries, and recommended next slices.
 - [`sqlui_repository_architecture.md`](sqlui_repository_architecture.md) describes the repository boundary and available backends.
 - [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md) describes the SQLite schema and repository-operation mapping.
 - [`sqlui_sqlite_async_backend_plan.md`](sqlui_sqlite_async_backend_plan.md) describes the async/threading direction.
