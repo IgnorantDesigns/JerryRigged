@@ -6,6 +6,8 @@ This document describes the local packaged-build validation scaffold for JerryRi
 
 `Scripts/RunSQLUIPackagedBuildValidation.ps1` runs Unreal AutomationTool `BuildCookRun` for the JerryRigged project. The goal is to verify that the project can build, cook, stage, package, and archive locally with the SQLUI plugin and engine `SQLiteCore` wiring enabled.
 
+When `-RunPackagedSQLiteSmoke` is passed, the script also launches the packaged executable with `-SQLUIPackagedRuntimeSQLiteSmoke` and verifies the runtime log contains the packaged SQLite lifecycle success line.
+
 This validation is intended to catch packaging and dependency issues around:
 
 - JerryRigged as the host project.
@@ -21,14 +23,12 @@ This is local validation only. It is not CI, and it does not assume an Unreal bu
 This scaffold does not:
 
 - Add GitHub Actions or CI.
-- Add packaged runtime smoke automation.
-- Launch the packaged executable.
-- Prove SQLite repository lifecycle behavior inside a packaged runtime.
-- Verify packaged runtime database paths under `Saved/SQLUI`.
+- Launch the packaged executable by default.
+- Run packaged runtime SQLite lifecycle smoke unless `-RunPackagedSQLiteSmoke` is explicitly passed.
 - Add maps, Content assets, packaged outputs, database files, or generated files to source control.
-- Change SQLUI runtime behavior.
+- Change normal game startup behavior unless `-SQLUIPackagedRuntimeSQLiteSmoke` is present.
 
-Run this validation before treating SQLite as packaged-runtime-ready, but do not treat a successful package alone as proof of packaged SQLite lifecycle behavior.
+Run this validation before treating SQLite as packaged-runtime-ready, but do not treat a successful package alone as proof of packaged SQLite lifecycle behavior. Use `-RunPackagedSQLiteSmoke` for the first packaged runtime SQLite repository lifecycle proof.
 
 ## Output Location
 
@@ -45,6 +45,12 @@ Saved/SQLUI/PackagedValidation/Win64/Development/Stage
 Saved/SQLUI/PackagedValidation/Win64/Development/Archive
 ```
 
+The default packaged runtime smoke log path is:
+
+```text
+Saved/SQLUI/PackagedValidation/Win64/Development/RuntimeSmoke/SQLUIPackagedRuntimeSQLiteSmoke.log
+```
+
 Unreal may still write normal local build artifacts such as logs, build products, Derived Data Cache, or intermediate files according to standard Unreal packaging behavior. Those outputs are generated files and should not be committed.
 
 ## Run Validation
@@ -59,6 +65,12 @@ To remove only the packaged-validation stage/archive output before running:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput
+```
+
+To build/package and then run the packaged SQLite lifecycle smoke:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedSQLiteSmoke
 ```
 
 To use a direct AutomationTool path:
@@ -92,8 +104,9 @@ The script:
 - Prints the exact `RunUAT BuildCookRun` command before running it.
 - Runs `BuildCookRun` with `-nop4`, `-utf8output`, `-stage`, `-build`, `-cook`, `-pak`, `-package`, and `-archive` by default.
 - Uses `Saved/SQLUI/PackagedValidation/...` for stage and archive output by default.
-- Returns the AutomationTool exit code.
+- Returns the AutomationTool exit code unless packaged runtime smoke is requested and BuildCookRun succeeds.
 - Refuses `-CleanPackageOutput` outside `Saved/SQLUI/PackagedValidation`.
+- When `-RunPackagedSQLiteSmoke` is passed, locates the packaged executable, launches it with `-SQLUIPackagedRuntimeSQLiteSmoke`, waits for completion, and verifies the runtime smoke log.
 
 Optional switches:
 
@@ -101,12 +114,50 @@ Optional switches:
 - `-NoCook`: omits `-cook`; use only when cooked content already exists.
 - `-SkipPackage`: omits `-pak`, `-package`, `-archive`, and `-archivedirectory`; the command still stages.
 - `-CleanPackageOutput`: removes only resolved validation stage/archive directories before running.
+- `-RunPackagedSQLiteSmoke`: launches the packaged executable after BuildCookRun succeeds and verifies the packaged runtime SQLite lifecycle log.
+- `-PackagedSmokeTimeoutSeconds`: overrides the packaged runtime smoke process timeout. The default is `120`.
+- `-PackagedSmokeLogPath`: overrides the packaged runtime smoke log path. The resolved path must stay under `Saved/SQLUI/PackagedValidation`.
 
 ## Interpreting Results
 
 Success means AutomationTool returned exit code `0` for the requested BuildCookRun command. That proves the selected local machine, engine install, project checkout, SQLUI modules, and SQLiteCore wiring survived the requested package path.
 
+When `-RunPackagedSQLiteSmoke` is enabled, success also requires the packaged process to exit cleanly and the runtime smoke log to contain:
+
+```text
+SQLUI packaged runtime SQLite smoke succeeded.
+```
+
 Failure means AutomationTool returned a non-zero exit code. Check the command output and Unreal logs for the first meaningful build, cook, staging, package, plugin, or dependency error. Do not treat script failure as a SQLUI runtime failure unless the logs point to SQLUI or SQLiteCore specifically.
+
+With `-RunPackagedSQLiteSmoke`, failure can also mean the packaged executable could not be found, timed out, returned a non-zero exit code, failed to write the smoke log, logged `SQLUI packaged runtime SQLite smoke failed:`, or never logged the success line.
+
+## Packaged Runtime SQLite Smoke
+
+`-RunPackagedSQLiteSmoke` is the first packaged runtime SQLUI SQLite lifecycle proof. It runs only when the packaged executable is launched with:
+
+```text
+-SQLUIPackagedRuntimeSQLiteSmoke
+```
+
+The flag is inspected by the runtime SQLUISamples module. Normal startup is unchanged when the flag is absent.
+
+The packaged runtime smoke resolves a database under the packaged runtime project saved directory:
+
+```text
+<ProjectSavedDir>/SQLUI/PackagedRuntimeSmoke/SQLiteLifecycle/SQLUIPackagedRuntimeSQLiteLifecycle.db
+```
+
+It deletes any existing smoke database and SQLite sidecar files, creates a SQLite repository through `USQLUILayoutRepositoryFactory`, enables schema initialization and database creation through repository settings, then verifies:
+
+- `SaveLayout`
+- `ListLayouts`
+- `LoadLayout`
+- `RemoveLayout`
+- `ClearLayouts`
+- database and sidecar cleanup
+
+The packaged runtime smoke requests process exit when finished. Success is recorded by both a clean packaged process exit and the runtime log success line.
 
 ## Latest Local Result
 
@@ -133,7 +184,7 @@ AutomationTool exited with ExitCode=0.
 SQLUI packaged-build validation exit code: 0.
 ```
 
-This records local BuildCookRun package compatibility for the installed UE 5.7 toolchain and Win64 Development validation path. It still does not prove packaged runtime SQLite lifecycle execution inside the packaged executable.
+This records local BuildCookRun package compatibility for the installed UE 5.7 toolchain and Win64 Development validation path. Package build validation without `-RunPackagedSQLiteSmoke` still does not prove packaged runtime SQLite lifecycle execution inside the packaged executable.
 
 ## Troubleshooting Local Linker Failures
 
@@ -195,9 +246,8 @@ Packaged-build validation is only one step toward packaged SQLite readiness.
 
 Future work still includes:
 
-- Packaged runtime SQLite lifecycle smoke automation.
 - Target-platform coverage beyond local Win64 Development.
 - CI automation if Unreal-capable build agents become available.
-- Packaged runtime database path verification under `Saved/SQLUI`.
+- Broader packaged runtime database path coverage beyond the first `Saved/SQLUI/PackagedRuntimeSmoke` lifecycle proof.
 - Production async database service, queue, cancellation, and shutdown hardening.
 - Migration upgrade/versioning validation beyond the initial schema.
