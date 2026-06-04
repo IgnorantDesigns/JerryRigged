@@ -2,8 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "Layout/SQLUILayoutRepository.h"
+#include "Templates/SharedPointer.h"
 
 #include "SQLUISQLiteLayoutRepository.generated.h"
+
+class FSQLUIDatabaseAsyncQueue;
 
 USTRUCT(BlueprintType)
 struct SQLUICORE_API FSQLUISQLiteLayoutRepositorySettings
@@ -57,6 +60,10 @@ public:
 	FSQLUILayoutRepositoryClearResult ClearLayouts();
 
 private:
+	TSharedRef<FSQLUIDatabaseAsyncQueue, ESPMode::ThreadSafe> GetOrCreateAsyncQueue();
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Layout Repository", meta = (AllowPrivateAccess = "true"))
 	FSQLUISQLiteLayoutRepositorySettings Settings;
+
+	TSharedPtr<FSQLUIDatabaseAsyncQueue, ESPMode::ThreadSafe> AsyncQueue;
 };

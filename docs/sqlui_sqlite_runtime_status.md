@@ -71,7 +71,7 @@ The callback-style APIs can opt into async execution:
 - `LoadLayout`
 - `SaveLayout`
 
-When `bRunCallbackOperationsAsync = true`, those callback methods copy plain request data, run the non-UObject worker helper off the game thread, then marshal result delivery back to the game thread before invoking the callback.
+When `bRunCallbackOperationsAsync = true`, those callback methods copy plain request data, enqueue the non-UObject worker helper through a SQLUICore-owned per-repository async queue, run one queued SQLite callback operation at a time off the game thread, then marshal result delivery back to the game thread before invoking the callback. This preserves enqueue order for callback-style `SaveLayout` and `LoadLayout`.
 
 These methods remain synchronous:
 
@@ -80,7 +80,7 @@ These methods remain synchronous:
 - `RemoveLayout`
 - `ClearLayouts`
 
-A full production async service, serialized queue, cancellation policy, shutdown draining, and stale-callback handling beyond the first callback slice are still future work.
+A full production async service, cancellation policy, shutdown draining, stale-callback handling, and async coverage for the remaining repository operations are still future work.
 
 ## Smoke Coverage
 
@@ -99,6 +99,7 @@ Current SQLite-related smoke flags are:
 - `-UseSQLiteClearLayoutsRepository`: verifies destructive scoped `ClearLayouts`.
 - `-UseSQLiteFullLifecycleRepository`: exercises save, list, load, update/revision, remove, and clear in one workflow.
 - `-UseSQLiteAsyncCallbackRepository`: verifies opt-in async callback `SaveLayout` and `LoadLayout`.
+- `-UseSQLiteSerializedAsyncCallbackRepository`: verifies queued async callback saves and load are delivered in enqueue order.
 - `-UseSQLiteFactoryLayoutRepository`: verifies explicit factory-created SQLite repository behavior.
 - `-UseSQLiteFactorySchemaInitRepository`: verifies opt-in repository-owned schema initialization through factory settings.
 - `-UseSQLiteSchemaInitHardening`: verifies schema-init edge cases and read-only init blocking.
@@ -123,8 +124,8 @@ Remaining work includes:
 
 - Expanding packaged-build validation beyond the latest local Win64 Development pass.
 - Expanding packaged runtime SQLite lifecycle coverage beyond the first local packaged executable smoke.
-- Production async database service or queue design.
-- Shutdown, cancellation, and stale-callback policy for all repository operations.
+- Production async database service design beyond the current per-repository callback queue.
+- Shutdown, cancellation, stale-callback policy, and async coverage for all repository operations.
 - Migration versioning and upgrade paths beyond `001_initial_layout_schema`.
 - Default runtime configuration policy and user-facing database path policy.
 - Seed database copy policy, if seed DBs are added.
