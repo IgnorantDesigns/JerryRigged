@@ -108,6 +108,33 @@ Success means AutomationTool returned exit code `0` for the requested BuildCookR
 
 Failure means AutomationTool returned a non-zero exit code. Check the command output and Unreal logs for the first meaningful build, cook, staging, package, plugin, or dependency error. Do not treat script failure as a SQLUI runtime failure unless the logs point to SQLUI or SQLiteCore specifically.
 
+## Latest Local Result
+
+The earlier unresolved `__std_*` linker failure was observed when UBT selected non-preferred Visual Studio 2022 MSVC toolchains for the local UE 5.7 package run.
+
+The local machine now has these Visual Studio 2022 MSVC toolsets installed:
+
+```text
+14.29.30133
+14.38.33130
+14.44.35207
+```
+
+Installing the UE 5.7-preferred Visual Studio 2022 MSVC `14.44.x` toolchain resolved the local packaged validation failure. The latest local validation command was:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput
+```
+
+That run completed build, cook, stage, package, and archive, then exited with:
+
+```text
+AutomationTool exited with ExitCode=0.
+SQLUI packaged-build validation exit code: 0.
+```
+
+This records local BuildCookRun package compatibility for the installed UE 5.7 toolchain and Win64 Development validation path. It still does not prove packaged runtime SQLite lifecycle execution inside the packaged executable.
+
 ## Troubleshooting Local Linker Failures
 
 AutomationTool and UnrealBuildTool logs are the source of truth for the selected compiler, linker, Windows SDK, and preferred-toolchain warnings. The script prints shell-visible `cl.exe` and `link.exe` versions when they are available on `PATH`, but UBT may still select a different Visual Studio toolchain.
@@ -151,9 +178,11 @@ The same UBT log showed:
 - The failing link command using that toolchain's `link.exe` with `JerryRigged.exe.rsp`.
 - The first unresolved references coming from Unreal/engine or engine-plugin objects such as `Module.LiveCoding.cpp.obj`, `Module.TraceAnalysis.cpp.obj`, `Module.GeometryAlgorithms.*.cpp.obj`, `reverb_onset_compensator.cc.obj`, and `reverb_node.cc.obj`.
 
-That evidence indicated a local Visual Studio/MSVC toolchain or runtime-library mismatch in this run, not a SQLUI SQLite repository runtime failure. Do not treat this symbol pattern as a SQLUI or SQLiteCore bug unless the UBT log points to SQLUI or SQLiteCore objects.
+That evidence indicated a local Visual Studio/MSVC toolchain or runtime-library mismatch in that run, not a SQLUI SQLite repository runtime failure. Installing the UE 5.7-preferred Visual Studio 2022 MSVC `14.44.x` toolchain resolved the local failure, and the latest local packaged validation passed with UAT exit code `0`.
 
-Recommended local follow-up:
+These troubleshooting notes remain useful for future toolchain mismatch cases. Do not treat this symbol pattern as a SQLUI or SQLiteCore bug unless the UBT log points to SQLUI or SQLiteCore objects.
+
+Recommended local follow-up if unresolved `__std_*` linker symbols appear again:
 
 1. Install or select the UE 5.7 preferred MSVC toolchain reported by UBT for the machine.
 2. Ensure the matching MSVC libraries and Windows SDK components are installed through Visual Studio Installer.

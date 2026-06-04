@@ -1,6 +1,6 @@
 # SQLUI SQLite Backend Evaluation
 
-This document records the SQLite backend evaluation that led SQLUI to use engine `SQLiteCore` as the active runtime candidate. The original backend evaluation was documentation-only; the current code now includes SQLiteCore wiring, repository operations, factory selection, opt-in schema initialization, opt-in async callback execution for `LoadLayout` and `SaveLayout`, and local smoke coverage. SQLite is still not the default backend, and this work still does not add migrations inside the factory, packaged validation, widgets, maps, assets, CI, or persistent database files.
+This document records the SQLite backend evaluation that led SQLUI to use engine `SQLiteCore` as the active runtime candidate. The original backend evaluation was documentation-only; the current code now includes SQLiteCore wiring, repository operations, factory selection, opt-in schema initialization, opt-in async callback execution for `LoadLayout` and `SaveLayout`, local smoke coverage, and a local packaged-build validation scaffold. SQLite is still not the default backend, and this work still does not add migrations inside the factory, packaged runtime lifecycle smoke, widgets, maps, assets, CI, or persistent database files.
 
 For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 For the local packaged-build validation scaffold, see [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md).
@@ -19,13 +19,14 @@ This evaluation compares backend options and captures why the smallest safe path
 ## Non-Goals
 
 - Do not treat current local smoke coverage as packaged-build or production-service validation.
+- Do not treat the local packaged-build pass as packaged runtime SQLite lifecycle validation.
 - Do not make SQLite the default repository backend.
 - Do not create SQLite databases unless repository schema initialization and database creation are both explicitly enabled.
 - Do not add dependencies beyond the engine `SQLiteCore` plugin/module wiring already used by SQLUICore.
 - Do not add Marketplace dependencies, third-party Unreal plugins, or vendored third-party source.
 - Do not modify widgets, CI, assets, maps, or persistent database files.
 - Do not open, create, or write SQLite databases outside the optional smoke-safe probe paths under `Saved/SQLUI/SmokeTests/...`.
-- Do not treat this evaluation as proof that packaged builds work. Packaging still needs validation.
+- Do not treat one local packaged-build pass as full target-platform packaged readiness.
 
 ## Local Verification
 
@@ -56,10 +57,11 @@ Verified local findings:
 - `SQLiteSupport` public headers expose `FSQLiteDatabaseConnection` and `FSQLiteResultSet` through the older `FDataBaseConnection` and `FDataBaseRecordSet` style abstraction.
 - At the time of the original evaluation, the JerryRigged project and SQLUI plugin did not declare SQLite plugin/module dependencies. The availability proof below now adds minimal `SQLiteCore` wiring to SQLUI only.
 
-Important limitations:
+Important limitations from the original local inspection:
 
-- This was a local source/header/descriptor inspection, not a packaged build test.
-- Runtime module type is verified, but target-platform packaging behavior for JerryRigged remains unverified.
+- That inspection was a local source/header/descriptor inspection, not a packaged build test.
+- A later local packaged-build validation pass now proves UE 5.7 Win64 Development BuildCookRun compatibility for this checkout after installing the preferred MSVC `14.44.x` toolchain.
+- Target-platform packaging beyond that local Win64 Development path and packaged runtime SQLite lifecycle behavior remain unverified.
 - Threading guarantees beyond the public API and build comments still need production hardening around SQLUI's worker boundary.
 - No third-party Marketplace plugin was inspected locally for this evaluation.
 
@@ -223,9 +225,11 @@ The repository implementation does not:
 - Run migrations or create database files inside `USQLUILayoutRepositoryFactory`.
 - Modify widgets or default smoke-test behavior.
 
+The local packaged-build validation scaffold now passes for the documented UE 5.7 Win64 Development run after installing the UE 5.7-preferred Visual Studio 2022 MSVC `14.44.x` toolchain. The earlier unresolved `__std_*` linker failure was observed with non-preferred MSVC toolchains, not with SQLUI or SQLiteCore objects in the first linker errors.
+
 Remaining blockers before promoting SQLite to production/default persistence:
 
-- Running packaged-build validation across the intended target platforms.
+- Expanding packaged-build validation across intended target platforms.
 - Packaged runtime SQLite lifecycle execution.
 - Production SQLite worker boundary and shutdown policy.
 - Production migration versioning and upgrade paths beyond the initial schema and hardening smoke slice.
@@ -259,8 +263,8 @@ Each option is compared against:
 Assessment:
 
 - UE 5.7 compatibility: Strong locally. The plugin and headers are present in the installed UE 5.7 tree.
-- Runtime support: Promising. The module type is `Runtime`, but project integration and packaging still need validation.
-- Packaged build behavior: Requires verification in a real implementation PR. The local installed tree contains runtime build artifacts, but SQLUI still needs to prove packaging after adding the dependency.
+- Runtime support: Promising. The module type is `Runtime`, and local UE 5.7 Win64 Development BuildCookRun validation now passes.
+- Packaged build behavior: Verified locally for UE 5.7 Win64 Development after installing the preferred MSVC `14.44.x` toolchain; other target platforms and packaged runtime execution still need validation.
 - Platform support: Likely tied to Unreal's engine-supported SQLite configuration. Target platforms must be checked when implementation begins.
 - Threading and connection ownership: Suitable if SQLUI owns one worker-side connection per database file and serializes operations. The custom-platform build comment warns against multiple open `FSQLiteDatabase` handles to the same file in that mode.
 - Path control: Good. `FSQLiteDatabase::Open` accepts a filename, so SQLUI can resolve paths under `Saved/SQLUI/...` before opening.
@@ -271,8 +275,8 @@ Assessment:
 - Dependency/build footprint: Low relative to third-party or vendored options because the engine already provides the plugin.
 - Maintainability: Strongest candidate. Epic maintains the wrapper with the engine version.
 - Smoke-test/commandlet compatibility: Promising, but must be verified with SQLUI smoke paths after implementation.
-- Risk level: Medium-low, mostly because packaging, platform, and threading behavior still need proof in this project.
-- Recommendation: Preferred candidate, pending packaged-build and smoke-test verification.
+- Risk level: Medium-low, mostly because additional target-platform packaging, packaged runtime lifecycle, and production threading behavior still need proof in this project.
+- Recommendation: Preferred candidate; local packaged-build and smoke-test coverage exist, while packaged runtime lifecycle and broader target coverage still need proof.
 
 ### Option 2: SQLUI-Owned Wrapper Around `SQLiteCore`
 
@@ -282,7 +286,7 @@ Assessment:
 
 - UE 5.7 compatibility: Same as `SQLiteCore`, with a smaller SQLUI-facing surface.
 - Runtime support: Same runtime promise as `SQLiteCore`, with SQLUI controlling when the dependency is introduced.
-- Packaged build behavior: Requires the same packaged-build validation as direct `SQLiteCore`.
+- Packaged build behavior: Inherits the local UE 5.7 Win64 Development packaged-build pass from the direct `SQLiteCore` path; other targets and packaged runtime lifecycle still need validation.
 - Platform support: Same as `SQLiteCore`.
 - Threading and connection ownership: Strong. SQLUI can enforce one worker-side connection context and serialize operations regardless of caller behavior.
 - Path control: Strong. SQLUI can centralize `Saved/SQLUI/...` path resolution before opening the database.
@@ -303,7 +307,7 @@ Assessment:
 Assessment:
 
 - UE 5.7 compatibility: Present locally in UE 5.7.
-- Runtime support: Module type is `Runtime`, but integration and packaging still need verification.
+- Runtime support: Module type is `Runtime`, but SQLUI uses `SQLiteCore` directly; this secondary path has not been separately packaged or lifecycle tested.
 - Packaged build behavior: Requires validation.
 - Platform support: Inherits `SQLiteCore` platform behavior and adds the `DatabaseSupport` abstraction.
 - Threading and connection ownership: Needs verification. SQLUI would still need its own worker boundary and serialized connection ownership.
@@ -382,15 +386,15 @@ Assessment:
 - Maintainability: Good for interim sample/runtime persistence, not enough for durable layout history and query features.
 - Smoke-test/commandlet compatibility: Already covered by current smoke paths.
 - Risk level: Low for deferral, medium for product goals if SQLite is needed soon.
-- Recommendation: Safe fallback if engine SQLite packaging or threading questions cannot be answered in the next implementation PR.
+- Recommendation: Safe fallback if engine SQLite packaged runtime lifecycle, target-platform coverage, or threading questions block production use.
 
 ## Comparison Matrix
 
 | Option | UE 5.7 Verification | Runtime / Packaging | Threading Fit | Path Control | Migrations / Raw SQL | Transactions | Footprint | Maintainability | Risk | Recommendation |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Engine `SQLiteCore` | Verified present locally | Runtime module verified; packaging requires proof | Good with one worker-owned connection; concurrency caveat verified in Build.cs | Good | Good | Good through SQL | Low | Strong | Medium-low | Active candidate; packaging proof still needed |
-| SQLUI wrapper around `SQLiteCore` | Same as `SQLiteCore` | Same as `SQLiteCore` | Strongest because SQLUI owns the boundary | Strong | Strong | Strong | Low-small | Strong | Low-medium | Smallest safe implementation shape |
-| Engine `SQLiteSupport` | Verified present locally | Runtime module verified; packaging requires proof | Acceptable but less direct | Acceptable | Acceptable | Acceptable | Medium | Acceptable | Medium | Secondary engine option |
+| Engine `SQLiteCore` | Verified present locally | Runtime module verified; local UE 5.7 Win64 Development packaging passes | Good with one worker-owned connection; concurrency caveat verified in Build.cs | Good | Good | Good through SQL | Low | Strong | Medium-low | Active candidate; packaged runtime lifecycle still needed |
+| SQLUI wrapper around `SQLiteCore` | Same as `SQLiteCore` | Same as `SQLiteCore`; local packaged-build pass exists | Strongest because SQLUI owns the boundary | Strong | Strong | Strong | Low-small | Strong | Low-medium | Smallest safe implementation shape |
+| Engine `SQLiteSupport` | Verified present locally | Runtime module verified; not separately used or packaged by SQLUI | Acceptable but less direct | Acceptable | Acceptable | Acceptable | Medium | Acceptable | Medium | Secondary engine option |
 | Third-party plugin | Not verified | Unknown until candidate tested | Unknown | Must verify | Must verify | Must verify | Medium-high | Varies | Medium-high | Avoid unless clearly superior |
 | Vendored SQLite | Not needed yet | Controllable but costly | Controllable | Good | Good | Good | High | Weak unless necessary | High | Avoid unless engine support fails |
 | Defer and keep JSON file | Already implemented | Already in current scope | Simple, no DB thread | Good | Not applicable | Not applicable | None | Good interim | Low for deferral | Fallback if SQLite verification blocks |
@@ -401,7 +405,7 @@ The conservative recommendation is:
 
 1. Treat engine-provided `SQLiteCore` as the preferred candidate because it is verified in the local UE 5.7 install, exposes direct runtime C++ database and prepared-statement APIs, supports raw SQL, supports explicit file paths, and keeps dependency footprint smaller than third-party or vendored paths.
 2. Implement SQLUI's own small wrapper and async database boundary around `SQLiteCore` rather than letting repository or widget code use `FSQLiteDatabase` directly.
-3. Keep SQLite explicit and non-default until packaged build behavior, target-platform support, and production threading/shutdown rules are validated.
+3. Keep SQLite explicit and non-default until packaged runtime lifecycle behavior, target-platform support beyond the local Win64 Development pass, and production threading/shutdown rules are validated.
 4. Keep JSON-file persistence available as the safe lightweight runtime persistence path if any remaining `SQLiteCore` validation item fails.
 
 Do not choose a Marketplace or third-party dependency unless it clearly beats `SQLiteCore` on runtime packaging, threading, licensing, platform coverage, and maintenance. Do not vendor SQLite unless engine-provided support is absent or unsuitable for SQLUI's runtime requirements.
@@ -414,8 +418,9 @@ Before promoting SQLite from explicit opt-in backend to broader runtime use, con
 - Runtime module dependency identified.
 - Required plugin descriptor changes identified.
 - `Build.cs` impact understood.
-- Packaging impact understood for the first supported targets.
-- Local packaged-build validation run for the first supported targets.
+- Packaging impact understood for the first supported target.
+- Local packaged-build validation passed for UE 5.7 Win64 Development after installing the preferred MSVC `14.44.x` toolchain.
+- Local packaged-build validation expanded for any additional supported targets.
 - Threading rules confirmed.
 - Single-connection or connection-pool policy confirmed.
 - Database path behavior confirmed under `Saved/SQLUI/...`.
@@ -428,7 +433,7 @@ Before promoting SQLite from explicit opt-in backend to broader runtime use, con
 
 ## Decision Record
 
-Current status: engine `SQLiteCore` is the active backend candidate and current implementation basis. SQLUI now has explicit SQLite repository factory selection, opt-in schema initialization with targeted edge-case hardening, and a local packaged-build validation scaffold, but SQLite is not the default backend and packaged runtime lifecycle validation remains open.
+Current status: engine `SQLiteCore` is the active backend candidate and current implementation basis. SQLUI now has explicit SQLite repository factory selection, opt-in schema initialization with targeted edge-case hardening, and a passing local packaged-build validation run for UE 5.7 Win64 Development, but SQLite is not the default backend and packaged runtime lifecycle validation remains open.
 
 Preferred candidate: engine-provided `SQLiteCore`, wrapped by a small SQLUI Core-owned async database boundary.
 
@@ -442,7 +447,7 @@ Reasons:
 
 Blocking questions:
 
-- Does adding `SQLiteCore` to SQLUI package cleanly for JerryRigged's target platforms?
+- Does adding `SQLiteCore` to SQLUI package cleanly for every intended target platform beyond the latest local Win64 Development pass?
 - Does the `SQLiteCore.uplugin` descriptor require project/plugin descriptor changes beyond a module dependency?
 - Are there platform-specific restrictions from `Target.bCompileCustomSQLitePlatform` that affect SQLUI's desired concurrency model?
 - Should SQLUI use only one worker-owned database connection per repository scope, or is a later read/write split safe on the first supported platforms?
