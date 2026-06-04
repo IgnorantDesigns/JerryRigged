@@ -1,0 +1,162 @@
+# SQLUI SQLite Phase Status And Roadmap
+
+This document is the concise phase-level status for SQLUI's SQLite durable backend work. It summarizes what is implemented, what has local validation, which boundaries remain explicit, and which follow-up slices should come next.
+
+For deeper reference, see:
+
+- [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md) for the full current runtime status.
+- [`sqlui_repository_architecture.md`](sqlui_repository_architecture.md) for repository boundaries and backend selection.
+- [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md) for schema details.
+- [`sqlui_sqlite_async_backend_plan.md`](sqlui_sqlite_async_backend_plan.md) for async and shutdown policy.
+- [`sqlui_smoke_test.md`](sqlui_smoke_test.md) for local editor smoke commands.
+- [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) for packaged build and packaged runtime smoke validation.
+
+## Current Status
+
+The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in repository backend:
+
+- `USQLUISQLiteLayoutRepository` exists in SQLUICore.
+- SQLite supports `SaveLayout`, `LoadLayout`, `LoadLayoutById`, `ListLayouts`, soft-delete `RemoveLayout`, and destructive scoped `ClearLayouts`.
+- SQLite is selectable through `USQLUILayoutRepositoryFactory` only when `ESQLUILayoutRepositoryBackend::SQLite` is explicitly requested and a database path is configured.
+- SQLite remains non-default. The runtime config resolver defaults to `InMemory`.
+- Schema initialization and database creation are repository-owned and opt-in.
+- The current known production migration set is only `001_initial_layout_schema`.
+- `LoadLayout` and `SaveLayout` callback APIs can opt into serialized async execution with shutdown/stale-callback suppression.
+- `ListLayouts`, `LoadLayoutById`, `RemoveLayout`, and `ClearLayouts` remain synchronous.
+- Local Win64 Development packaged BuildCookRun validation has passed.
+- An explicit packaged runtime SQLite lifecycle smoke exists and runs only with `-RunPackagedSQLiteSmoke` / `-SQLUIPackagedRuntimeSQLiteSmoke`.
+
+This is still not a default production persistence policy. Runtime integration, user-facing settings, broader platform validation, production async service hardening, and actual future schema upgrades remain future work.
+
+## Implemented Capabilities
+
+| Capability | Current status | Notes |
+| --- | --- | --- |
+| SQLiteCore availability proof | Implemented | SQLUICore compiles/links against engine `SQLiteCore`. |
+| SQLite open/close probe | Implemented | Smoke-safe path under `Saved/SQLUI/SmokeTests/SQLiteCoreProbe`. |
+| Initial schema migration | Implemented | `001_initial_layout_schema` creates planned layout tables/indexes. |
+| Schema init and hardening | Implemented | Opt-in repository-owned initialization with edge-case smoke coverage. |
+| Read/list/load mapping | Implemented | Metadata, tags, current revision JSON, deserialization, and validation. |
+| Save/update revisions | Implemented | `SaveLayout` creates immutable revisions and updates current metadata/tags. |
+| Remove soft-delete | Implemented | `RemoveLayout` sets `layouts.b_deleted = 1` and preserves revisions. |
+| Clear destructive scoped cleanup | Implemented | Deletes layouts plus dependent revision/tag/checkpoint/preview rows for the configured DB scope. |
+| Full lifecycle smoke | Implemented | Exercises save/list/load/update/remove/clear in one workflow. |
+| Read-only rejection | Implemented | Save/remove/clear reject clearly when `bReadOnly = true`. |
+| Async callback SaveLayout/LoadLayout | Implemented | Opt-in only through SQLite settings. |
+| Serialized async callback queue | Implemented | Per-repository FIFO queue for callback-style SQLite save/load operations. |
+| Queue shutdown/stale callback suppression | Implemented | Rejects new work after shutdown, drops pending work, suppresses stale completion callbacks. |
+| Factory selection | Implemented | Explicit SQLite backend selection; SQLite is not default. |
+| Runtime config resolver | Implemented | Parses explicit backend/path/schema/async/seed flags; defaults to `InMemory`. |
+| Seed database copy policy | Implemented | Explicit pre-repository closed-file copy helper; not factory-owned. |
+| Migration version/status framework | Implemented | Reports known/applied/pending status for current known migration set. |
+| Packaged build validation | Implemented locally | Local Win64 Development BuildCookRun validation passed with UE 5.7 preferred MSVC toolchain. |
+| Packaged runtime SQLite smoke | Implemented locally | Optional packaged executable lifecycle smoke passes when explicitly requested. |
+
+## Validation Matrix
+
+| Area | Validation path / script flag | Current status | Notes |
+| --- | --- | --- | --- |
+| Default editor smoke | `RunSQLUISmokeTest.ps1` | Covered | Uses in-memory C++ document, not SQLite. |
+| In-memory repository | `-UseInMemoryLayoutRepository` | Covered | Proves non-SQLite repository behavior remains available. |
+| JSON-file repository | `-UseJsonFileLayoutRepository` | Covered | Proves file repository remains available. |
+| SQLiteCore open/close | `-UseSQLiteCoreProbe` | Covered | Creates and removes a temporary probe DB. |
+| Generic async boundary | `-UseDatabaseAsyncProbe` | Covered | No SQLite file I/O. |
+| Async queue shutdown | `-UseDatabaseAsyncQueueShutdownProbe` | Covered | Proves reject/drop/stale-callback suppression behavior. |
+| Runtime config resolver | `-UseLayoutRepositoryRuntimeConfigProbe` | Covered | Verifies explicit config parsing and default `InMemory` policy. |
+| SQLite migration runner | `-UseSQLiteMigrationProbe` | Covered | Smoke-only migration runner proof. |
+| Layout schema migration | `-UseSQLiteLayoutSchemaMigrationProbe` | Covered | Applies and verifies `001_initial_layout_schema`. |
+| SQLite layout read probe | `-UseSQLiteLayoutReadProbe` | Covered | Seeds one layout and verifies list/load mapping. |
+| Read-only SQLite repository | `-UseSQLiteReadOnlyLayoutRepository` | Covered | Verifies read behavior and write rejection. |
+| SQLite SaveLayout | `-UseSQLiteSaveLayoutRepository` | Covered | Verifies saves, revision update, list, and load. |
+| SQLite RemoveLayout | `-UseSQLiteRemoveLayoutRepository` | Covered | Verifies soft-delete and revision preservation. |
+| SQLite ClearLayouts | `-UseSQLiteClearLayoutsRepository` | Covered | Verifies active and soft-deleted rows are cleared with dependents. |
+| SQLite full lifecycle | `-UseSQLiteFullLifecycleRepository` | Covered | Combined repository lifecycle smoke. |
+| Async callback repository | `-UseSQLiteAsyncCallbackRepository` | Covered | Proves opt-in async callback save/load. |
+| Serialized async callbacks | `-UseSQLiteSerializedAsyncCallbackRepository` | Covered | Proves callback order and latest revision readback. |
+| Factory-created SQLite repository | `-UseSQLiteFactoryLayoutRepository` | Covered | Proves explicit factory selection and missing-path unavailable behavior. |
+| Factory schema initialization | `-UseSQLiteFactorySchemaInitRepository` | Covered | Proves opt-in DB creation/schema initialization via repository settings. |
+| Schema-init hardening | `-UseSQLiteSchemaInitHardening` | Covered | Missing DB, empty DB, initialized DB, missing row, partial schema, read-only protection. |
+| Seed-copy policy | `-UseSQLiteSeedDatabaseCopyPolicyProbe` | Covered | Verifies copy-if-missing, preserve, overwrite, missing seed, same-path failure. |
+| Migration versioning policy | `-UseSQLiteMigrationVersioningPolicyProbe` | Covered | Verifies current status, missing-row repair, partial failure, pending/failing smoke migrations. |
+| Packaged build validation | `RunSQLUIPackagedBuildValidation.ps1 -CleanPackageOutput` | Local Win64 Development covered | Passed after installing UE 5.7 preferred MSVC `14.44.x`. |
+| Packaged runtime SQLite smoke | `RunSQLUIPackagedBuildValidation.ps1 -CleanPackageOutput -RunPackagedSQLiteSmoke` | Local Win64 Development covered | Launches packaged executable with `-SQLUIPackagedRuntimeSQLiteSmoke`. |
+
+## Runtime And Packaging Status
+
+The local packaged validation path now proves that this checkout can build, cook, stage, package, and archive with SQLUI and engine `SQLiteCore` wiring enabled for the documented local Win64 Development scenario.
+
+The packaged runtime SQLite smoke goes one step further: it launches the packaged executable with an explicit smoke flag, creates a factory-configured SQLite repository, runs save/list/load/remove/clear under the packaged runtime saved directory, verifies the success log, and removes the smoke database.
+
+This does not yet prove:
+
+- Target-platform coverage beyond the local validation target.
+- Long-running packaged gameplay persistence behavior.
+- Production async service lifecycle, cancellation, or shutdown draining.
+- Product DB path UX and runtime settings flow.
+- Future migration upgrade transforms beyond `001_initial_layout_schema`.
+
+## Safety Boundaries
+
+The current SQLite path keeps these boundaries:
+
+- SQLite is not the default backend.
+- Factory selection is explicit through `ESQLUILayoutRepositoryBackend::SQLite`.
+- `FSQLUILayoutRepositoryRuntimeConfigResolver` defaults to `InMemory`.
+- The factory passes settings only.
+- The factory does not run migrations.
+- The factory does not copy seed databases.
+- The factory does not create database files directly.
+- Schema initialization is repository-owned and opt-in.
+- A missing database can be created only when `bInitializeSchemaIfMissing = true`, `bCreateDatabaseIfMissing = true`, and `bReadOnly = false`.
+- Read-only mode blocks schema-initialization writes.
+- Seed copying is explicit and outside the factory.
+- No source-controlled database files are required.
+- Widgets should not know SQL, table names, SQLite connections, DB file paths, worker queues, or concrete storage details.
+- JerryRigged remains a thin host.
+- Normal startup does not use SQLite unless future runtime code explicitly opts in.
+- Packaged runtime smoke runs only with the explicit `-SQLUIPackagedRuntimeSQLiteSmoke` command-line flag.
+- Editor smoke DB writes stay under `Saved/SQLUI/SmokeTests/...` and remove DB files afterward.
+- Packaged runtime smoke DB writes stay under packaged runtime `Saved/SQLUI/PackagedRuntimeSmoke/...` and remove DB files afterward.
+
+## What Is Still Explicit / Non-Default
+
+SQLite requires a deliberate selection path:
+
+1. Choose SQLite through factory settings, runtime config, or direct repository construction in tests/smoke paths.
+2. Provide a database path.
+3. Enable writable behavior with `bReadOnly = false` when writes are intended.
+4. Enable schema initialization only when the caller wants the repository to prepare a missing/empty DB.
+5. Enable async callback execution only when the caller wants callback-style `SaveLayout`/`LoadLayout` to run through the serialized queue.
+6. Run seed-copy preparation explicitly before repository mutation if a seed DB is used.
+
+The safe default remains non-SQLite.
+
+## Remaining Work
+
+Prioritized remaining work:
+
+1. Production/user-facing runtime settings surface and integration policy.
+2. Product database path policy and UX, including where user layouts should live and how users/admins inspect or reset them.
+3. Actual future schema migrations and data transforms beyond `001_initial_layout_schema`.
+4. Production async database service design beyond the current per-repository callback queue.
+5. Cancellation and shutdown draining beyond stale-callback suppression.
+6. Async APIs or async wrappers for `ListLayouts`, `LoadLayoutById`, `RemoveLayout`, and `ClearLayouts` if runtime workflows require them.
+7. Seed database asset packaging, versioning, and upgrade policy if seed DBs are shipped.
+8. Broader packaged target-platform validation beyond local Win64 Development.
+9. CI only if Unreal-capable build agents become available.
+10. Optional lifecycle features: history APIs, checkpoints, previews, restore flows, richer search, and retention policy.
+
+## Recommended Next Slices
+
+Suggested next PRs, in priority order:
+
+1. Runtime settings surface / integration policy proof.
+   Keep SQLite opt-in, keep `InMemory` as the safe default, and keep widgets away from SQLite settings and paths.
+2. Production async service design doc or small scaffold.
+   Decide whether the current per-repository callback queue is enough or whether SQLUI needs a longer-lived DB service for production runtime use.
+3. SQLite history/checkpoint/previews API planning.
+   Keep this docs/design first, then add repository contracts only when product workflows need them.
+4. Broader packaged validation target matrix docs.
+   Record intended platforms and local validation commands without adding CI yet.
+5. First real v2 migration.
+   Add this only when there is an actual schema change and a matching data-transform/compatibility policy.

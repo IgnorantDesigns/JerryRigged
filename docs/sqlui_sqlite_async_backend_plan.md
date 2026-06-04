@@ -2,7 +2,7 @@
 
 This document describes the async and backend boundary for the SQLite-backed SQLUI layout repository. The original plan was documentation-only; the current code now includes the SQLite repository, a non-UObject worker-safe operation helper, serialized opt-in async execution with shutdown/stale-callback suppression for callback-style `LoadLayout` and `SaveLayout`, and explicit factory selection for configured SQLite database paths. Direct return-value methods, `ListLayouts`, `RemoveLayout`, and `ClearLayouts` are still synchronous. The project still does not have a full persistent database service, migrations inside the factory, widgets that know SQLite details, maps, assets, CI, or persistent database files.
 
-For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
+For the concise phase status and roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md). For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 
 ## Purpose
 

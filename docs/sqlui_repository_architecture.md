@@ -4,7 +4,7 @@ SQLUI layout persistence sits behind repository interfaces. Runtime widget code 
 
 This boundary keeps `SQLUI.Widgets` focused on building and updating UMG widgets, keeps `SQLUI.Core` responsible for data access contracts, and lets the project swap storage implementations without rewriting widget or runtime pipeline code.
 
-For the consolidated current SQLite runtime state, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
+For the consolidated SQLite phase roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md). For the deeper current runtime state, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 
 ## Repository Boundary
 
@@ -190,13 +190,13 @@ The default, JSON fixture, in-memory, JSON file, and unavailable paths do not us
 
 The current SQLite runtime status is consolidated in [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md). In short, SQLite is explicitly selectable through the repository factory, supports the current layout repository lifecycle, can opt into schema initialization, has a first schema version/status helper for known migrations, and can opt into serialized async execution for callback-style `LoadLayout` and `SaveLayout`. SQLite is still not the default backend, the factory still passes settings only, and full production async service behavior plus actual future schema migration upgrades remain open.
 
-Local packaged-build validation is documented in [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md). That script is a local `RunUAT BuildCookRun` scaffold for checking project packaging compatibility with SQLUI and SQLiteCore wiring; it does not add CI or packaged runtime SQLite lifecycle smoke automation.
+Local packaged-build validation is documented in [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md). That script is a local `RunUAT BuildCookRun` scaffold for checking project packaging compatibility with SQLUI and SQLiteCore wiring, and it can optionally launch the packaged executable SQLite lifecycle smoke through an explicit flag. It does not add CI or change normal startup.
 
 The SQLite schema is documented in [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md). That document defines the current planned tables, keys, indexes, revision/history behavior, soft-delete semantics for normal remove operations, destructive clear behavior for scoped cleanup, migration/versioning expectations, validation boundaries, threading expectations, and repository-operation mapping.
 
 The async/backend implementation plan is documented in [`sqlui_sqlite_async_backend_plan.md`](sqlui_sqlite_async_backend_plan.md). That document defines the intended game-thread and worker-thread responsibilities, callback delivery rules, UObject lifetime and shutdown safety, database connection and transaction ownership, migration and seed-copy timing, result mapping, unavailable-backend behavior, logging expectations, smoke-test implications, repository factory fit, and remaining production async work.
 
-The SQLite backend evaluation is documented in [`sqlui_sqlite_backend_evaluation.md`](sqlui_sqlite_backend_evaluation.md). That document compares engine-provided SQLite support, a SQLUI-owned wrapper around engine SQLite APIs, third-party plugins, vendored SQLite, and continued JSON-file persistence. Engine `SQLiteCore` is the active candidate and current implementation basis; packaged-build validation and production hardening remain open.
+The SQLite backend evaluation is documented in [`sqlui_sqlite_backend_evaluation.md`](sqlui_sqlite_backend_evaluation.md). That document compares engine-provided SQLite support, a SQLUI-owned wrapper around engine SQLite APIs, third-party plugins, vendored SQLite, and continued JSON-file persistence. Engine `SQLiteCore` is the active candidate and current implementation basis; local Win64 Development packaged-build and packaged runtime smoke validation exist, while broader target-platform validation and production hardening remain open.
 
 The SQLite implementation should:
 

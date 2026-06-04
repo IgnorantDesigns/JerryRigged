@@ -2,6 +2,8 @@
 
 This document describes the local packaged-build validation scaffold for JerryRigged and SQLUI SQLite readiness checks.
 
+For the concise SQLite phase status and roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md).
+
 ## Purpose
 
 `Scripts/RunSQLUIPackagedBuildValidation.ps1` runs Unreal AutomationTool `BuildCookRun` for the JerryRigged project. The goal is to verify that the project can build, cook, stage, package, and archive locally with the SQLUI plugin and engine `SQLiteCore` wiring enabled.

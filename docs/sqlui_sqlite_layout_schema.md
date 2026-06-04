@@ -2,7 +2,7 @@
 
 This document describes the SQLite layout schema used by SQLUI's SQLite repository work. The original schema draft was documentation-only; SQLUICore now has an initial schema migration helper, schema-init hardening coverage, a migration version/status helper, SQLite read/list/load probes, and `USQLUISQLiteLayoutRepository` operations that use this schema for save, list, load, soft-delete remove, and scoped clear behavior.
 
-For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
+For the concise phase status and roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md). For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 
 ## Purpose
 
