@@ -2913,6 +2913,367 @@ FSQLUISampleSQLiteAsyncCallbackRepositorySmokeResult RunSQLUISampleSQLiteAsyncCa
 	return Result;
 }
 
+void AppendSQLUISampleSQLiteSerializedAsyncCallbackRepositoryError(
+	FSQLUISampleSQLiteSerializedAsyncCallbackRepositorySmokeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleSQLiteSerializedAsyncCallbackRepositoryDatabasePath()
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("SQLiteSerializedAsyncCallbackRepository"),
+		TEXT("SQLiteSerializedAsyncCallbackRepository.db"));
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+bool DeleteSQLUISampleSQLiteSerializedAsyncCallbackRepositoryFiles(
+	const FString& DatabasePath,
+	FSQLUISampleSQLiteSerializedAsyncCallbackRepositorySmokeResult& Result)
+{
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleSQLiteSerializedAsyncCallbackRepositoryError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite serialized async callback repository smoke failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+FSQLUILayoutDocument MakeSQLUISampleSQLiteSerializedAsyncCallbackRepositoryDocument()
+{
+	FSQLUILayoutDocument Document = MakeSQLUISampleSQLiteSaveLayoutRepositoryDocument();
+	Document.Version.Label = TEXT("SQLite Serialized Async Callback Repository Probe");
+	Document.Metadata.LayoutId = TEXT("sqlui.smoke.sqlite-serialized-async-callback-repository");
+	Document.Metadata.DisplayName = TEXT("SQLUI SQLite Serialized Async Callback Repository Probe");
+	Document.Metadata.Description = TEXT("Smoke/probe layout for SQLite serialized async callback repository mapping.");
+	Document.Metadata.Tags.Reset();
+	Document.Metadata.Tags.Add(TEXT("sqlite"));
+	Document.Metadata.Tags.Add(TEXT("smoke"));
+	Document.Metadata.Tags.Add(TEXT("serialized-async-callback"));
+	Document.Metadata.SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteSerializedAsyncCallbackRepository"));
+	Document.RootWidgetId = TEXT("SQLUI.SQLite.SerializedAsyncCallbackRepository.Root");
+
+	if (Document.Nodes.Num() > 0)
+	{
+		Document.Nodes[0].WidgetId = Document.RootWidgetId;
+		Document.Nodes[0].Properties.Add(TEXT("Text"), Document.Metadata.DisplayName);
+		Document.Nodes[0].Tags.Reset();
+		Document.Nodes[0].Tags.Add(TEXT("sqlite"));
+		Document.Nodes[0].Tags.Add(TEXT("serialized-async-callback"));
+		Document.Nodes[0].SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteSerializedAsyncCallbackRepository"));
+	}
+
+	return Document;
+}
+
+FSQLUILayoutDocument MakeSQLUISampleSQLiteSerializedAsyncCallbackRepositoryUpdatedDocument(
+	const FSQLUILayoutDocument& OriginalDocument)
+{
+	FSQLUILayoutDocument UpdatedDocument = OriginalDocument;
+	UpdatedDocument.Version.Label = TEXT("SQLite Serialized Async Callback Repository Probe Updated");
+	UpdatedDocument.Metadata.DisplayName = TEXT("SQLUI SQLite Serialized Async Callback Repository Probe Updated");
+	UpdatedDocument.Metadata.Description = TEXT("Updated smoke/probe layout for SQLite serialized async callback repository mapping.");
+	UpdatedDocument.Metadata.UpdatedAtUtc = TEXT("2026-05-30T00:02:00Z");
+	UpdatedDocument.Metadata.Tags.Reset();
+	UpdatedDocument.Metadata.Tags.Add(TEXT("sqlite"));
+	UpdatedDocument.Metadata.Tags.Add(TEXT("smoke"));
+	UpdatedDocument.Metadata.Tags.Add(TEXT("serialized-async-callback"));
+	UpdatedDocument.Metadata.Tags.Add(TEXT("updated"));
+
+	if (UpdatedDocument.Nodes.Num() > 0)
+	{
+		UpdatedDocument.Nodes[0].Properties.Add(TEXT("Text"), UpdatedDocument.Metadata.DisplayName);
+		UpdatedDocument.Nodes[0].Tags.Reset();
+		UpdatedDocument.Nodes[0].Tags.Add(TEXT("sqlite"));
+		UpdatedDocument.Nodes[0].Tags.Add(TEXT("serialized-async-callback"));
+		UpdatedDocument.Nodes[0].Tags.Add(TEXT("updated"));
+	}
+
+	return UpdatedDocument;
+}
+
+struct FSQLUISampleSQLiteSerializedAsyncCallbackRepositoryState
+{
+	FSQLUILayoutSaveResult FirstSaveResult;
+	FSQLUILayoutSaveResult SecondSaveResult;
+	FSQLUILayoutLoadResult LoadResult;
+	bool bFirstSaveCallbackDelivered = false;
+	bool bSecondSaveCallbackDelivered = false;
+	bool bLoadCallbackDelivered = false;
+	bool bFirstSaveDeliveredOnGameThread = false;
+	bool bSecondSaveDeliveredOnGameThread = false;
+	bool bLoadDeliveredOnGameThread = false;
+	TArray<FString> CallbackOrder;
+};
+
+FSQLUISampleSQLiteSerializedAsyncCallbackRepositorySmokeResult
+RunSQLUISampleSQLiteSerializedAsyncCallbackRepositorySmoke(UObject* Outer)
+{
+	FSQLUISampleSQLiteSerializedAsyncCallbackRepositorySmokeResult Result;
+	Result.DatabasePath = MakeSQLUISampleSQLiteSerializedAsyncCallbackRepositoryDatabasePath();
+
+	const FSQLUISQLiteLayoutSchemaMigrationProbeResult SchemaResult =
+		FSQLUISQLiteLayoutSchemaMigration::RunProbe(Result.DatabasePath, false);
+	Result.bDatabasePrepared = SchemaResult.bSucceeded && SchemaResult.bMigrationSucceeded;
+	if (!Result.bDatabasePrepared)
+	{
+		AppendSQLUISampleSQLiteSerializedAsyncCallbackRepositoryError(
+			Result,
+			SchemaResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite serialized async callback repository smoke failed: could not prepare probe database.")
+				: SchemaResult.ErrorMessage);
+		Result.bDatabaseRemoved =
+			DeleteSQLUISampleSQLiteSerializedAsyncCallbackRepositoryFiles(Result.DatabasePath, Result);
+		return Result;
+	}
+
+	USQLUISQLiteLayoutRepository* Repository =
+		NewObject<USQLUISQLiteLayoutRepository>(IsValid(Outer) ? Outer : GetTransientPackage());
+	if (!IsValid(Repository))
+	{
+		AppendSQLUISampleSQLiteSerializedAsyncCallbackRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite serialized async callback repository smoke failed: could not create repository object."));
+		Result.bDatabaseRemoved =
+			DeleteSQLUISampleSQLiteSerializedAsyncCallbackRepositoryFiles(Result.DatabasePath, Result);
+		return Result;
+	}
+
+	FSQLUISQLiteLayoutRepositorySettings RepositorySettings;
+	RepositorySettings.DatabasePath = Result.DatabasePath;
+	RepositorySettings.bReadOnly = false;
+	RepositorySettings.bRunCallbackOperationsAsync = true;
+	Repository->Configure(RepositorySettings);
+
+	const FSQLUILayoutDocument FirstDocument =
+		MakeSQLUISampleSQLiteSerializedAsyncCallbackRepositoryDocument();
+	const FSQLUILayoutDocument UpdatedDocument =
+		MakeSQLUISampleSQLiteSerializedAsyncCallbackRepositoryUpdatedDocument(FirstDocument);
+
+	TSharedRef<FSQLUISampleSQLiteSerializedAsyncCallbackRepositoryState, ESPMode::ThreadSafe> SharedState =
+		MakeShared<FSQLUISampleSQLiteSerializedAsyncCallbackRepositoryState, ESPMode::ThreadSafe>();
+	SharedState->FirstSaveResult.SavedLayoutId = FirstDocument.Metadata.LayoutId;
+	SharedState->SecondSaveResult.SavedLayoutId = UpdatedDocument.Metadata.LayoutId;
+	SharedState->LoadResult.Document.Metadata.LayoutId = UpdatedDocument.Metadata.LayoutId;
+
+	Repository->SaveLayout(
+		FirstDocument,
+		FSQLUILayoutSaveCompleteDelegate::CreateLambda(
+			[SharedState](const FSQLUILayoutSaveResult& InSaveResult)
+			{
+				SharedState->FirstSaveResult = InSaveResult;
+				SharedState->bFirstSaveDeliveredOnGameThread = IsInGameThread();
+				SharedState->CallbackOrder.Add(TEXT("Save1"));
+				SharedState->bFirstSaveCallbackDelivered = true;
+			}));
+
+	Repository->SaveLayout(
+		UpdatedDocument,
+		FSQLUILayoutSaveCompleteDelegate::CreateLambda(
+			[SharedState](const FSQLUILayoutSaveResult& InSaveResult)
+			{
+				SharedState->SecondSaveResult = InSaveResult;
+				SharedState->bSecondSaveDeliveredOnGameThread = IsInGameThread();
+				SharedState->CallbackOrder.Add(TEXT("Save2"));
+				SharedState->bSecondSaveCallbackDelivered = true;
+			}));
+
+	Repository->LoadLayout(
+		UpdatedDocument.Metadata.LayoutId,
+		FSQLUILayoutLoadCompleteDelegate::CreateLambda(
+			[SharedState](const FSQLUILayoutLoadResult& InLoadResult)
+			{
+				SharedState->LoadResult = InLoadResult;
+				SharedState->bLoadDeliveredOnGameThread = IsInGameThread();
+				SharedState->CallbackOrder.Add(TEXT("Load"));
+				SharedState->bLoadCallbackDelivered = true;
+			}));
+
+	const bool bAllCallbacksDelivered =
+		WaitForSQLUISampleSmokeCallback(
+			[SharedState]()
+			{
+				return SharedState->bFirstSaveCallbackDelivered
+					&& SharedState->bSecondSaveCallbackDelivered
+					&& SharedState->bLoadCallbackDelivered;
+			});
+	if (!bAllCallbacksDelivered)
+	{
+		AppendSQLUISampleSQLiteSerializedAsyncCallbackRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite serialized async callback repository smoke failed: one or more callbacks timed out."));
+	}
+
+	Result.bFirstSaveCallbackDelivered = SharedState->bFirstSaveCallbackDelivered;
+	Result.bSecondSaveCallbackDelivered = SharedState->bSecondSaveCallbackDelivered;
+	Result.bLoadCallbackDelivered = SharedState->bLoadCallbackDelivered;
+	Result.CallbackOrder = SharedState->CallbackOrder;
+
+	Result.SavedLayoutId = SharedState->SecondSaveResult.SavedLayoutId;
+	Result.bFirstSaveSucceeded =
+		Result.bFirstSaveCallbackDelivered
+		&& SharedState->FirstSaveResult.bSucceeded
+		&& SharedState->FirstSaveResult.SavedLayoutId == FirstDocument.Metadata.LayoutId
+		&& SharedState->FirstSaveResult.Validation.bIsValid;
+	if (Result.bFirstSaveCallbackDelivered && !Result.bFirstSaveSucceeded)
+	{
+		AppendSQLUISampleSQLiteSerializedAsyncCallbackRepositoryError(
+			Result,
+			SharedState->FirstSaveResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite serialized async callback repository smoke failed: first SaveLayout failed.")
+				: SharedState->FirstSaveResult.ErrorMessage);
+	}
+
+	Result.bSecondSaveSucceeded =
+		Result.bSecondSaveCallbackDelivered
+		&& SharedState->SecondSaveResult.bSucceeded
+		&& SharedState->SecondSaveResult.SavedLayoutId == UpdatedDocument.Metadata.LayoutId
+		&& SharedState->SecondSaveResult.Validation.bIsValid;
+	if (Result.bSecondSaveCallbackDelivered && !Result.bSecondSaveSucceeded)
+	{
+		AppendSQLUISampleSQLiteSerializedAsyncCallbackRepositoryError(
+			Result,
+			SharedState->SecondSaveResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite serialized async callback repository smoke failed: second SaveLayout failed.")
+				: SharedState->SecondSaveResult.ErrorMessage);
+	}
+
+	Result.bLoadSucceeded =
+		Result.bLoadCallbackDelivered
+		&& SharedState->LoadResult.bSucceeded;
+	Result.LoadedLayoutId = SharedState->LoadResult.Document.Metadata.LayoutId;
+	Result.bLatestRevisionLoaded =
+		Result.bLoadSucceeded
+		&& SharedState->LoadResult.Validation.bIsValid
+		&& SharedState->LoadResult.Document.Metadata.LayoutId == UpdatedDocument.Metadata.LayoutId
+		&& SharedState->LoadResult.Document.Metadata.DisplayName == UpdatedDocument.Metadata.DisplayName
+		&& DoesSQLUISampleLayoutMetadataAndTagsMatch(
+			SharedState->LoadResult.Document.Metadata,
+			UpdatedDocument.Metadata)
+		&& SharedState->LoadResult.Document.Version.Revision == 2;
+	if (Result.bLoadCallbackDelivered && !Result.bLoadSucceeded)
+	{
+		AppendSQLUISampleSQLiteSerializedAsyncCallbackRepositoryError(
+			Result,
+			SharedState->LoadResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite serialized async callback repository smoke failed: LoadLayout failed.")
+				: SharedState->LoadResult.ErrorMessage);
+	}
+	else if (Result.bLoadSucceeded && !Result.bLatestRevisionLoaded)
+	{
+		AppendSQLUISampleSQLiteSerializedAsyncCallbackRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite serialized async callback repository smoke failed: LoadLayout did not return the updated revision 2 document."));
+	}
+
+	Result.bCallbacksDeliveredInOrder =
+		Result.CallbackOrder.Num() == 3
+		&& Result.CallbackOrder[0] == TEXT("Save1")
+		&& Result.CallbackOrder[1] == TEXT("Save2")
+		&& Result.CallbackOrder[2] == TEXT("Load");
+	if (bAllCallbacksDelivered && !Result.bCallbacksDeliveredInOrder)
+	{
+		AppendSQLUISampleSQLiteSerializedAsyncCallbackRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite serialized async callback repository smoke failed: callbacks were not delivered in enqueue order."));
+	}
+
+	Result.bCallbacksDeliveredOnGameThread =
+		Result.bFirstSaveCallbackDelivered
+		&& SharedState->bFirstSaveDeliveredOnGameThread
+		&& Result.bSecondSaveCallbackDelivered
+		&& SharedState->bSecondSaveDeliveredOnGameThread
+		&& Result.bLoadCallbackDelivered
+		&& SharedState->bLoadDeliveredOnGameThread;
+	if (bAllCallbacksDelivered && !Result.bCallbacksDeliveredOnGameThread)
+	{
+		AppendSQLUISampleSQLiteSerializedAsyncCallbackRepositoryError(
+			Result,
+			TEXT("SQLUI SQLite serialized async callback repository smoke failed: callbacks were not delivered on the game thread."));
+	}
+
+	if (Result.bLatestRevisionLoaded)
+	{
+		const FSQLUILayoutRepositoryListResult ListAfterCallbacksResult =
+			Repository->ListLayouts();
+		Result.bListAfterSerializedCallbacksSucceeded = ListAfterCallbacksResult.bSucceeded;
+		Result.ListedLayoutCount = ListAfterCallbacksResult.Layouts.Num();
+		if (!Result.bListAfterSerializedCallbacksSucceeded)
+		{
+			AppendSQLUISampleSQLiteSerializedAsyncCallbackRepositoryError(
+				Result,
+				ListAfterCallbacksResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite serialized async callback repository smoke failed: ListLayouts failed after serialized callbacks.")
+					: ListAfterCallbacksResult.ErrorMessage);
+		}
+		else
+		{
+			Result.bListedUpdatedMetadataFound =
+				DoesSQLUISampleLayoutMetadataListContainMetadataAndTags(
+					ListAfterCallbacksResult.Layouts,
+					UpdatedDocument.Metadata);
+			if (!Result.bListedUpdatedMetadataFound)
+			{
+				AppendSQLUISampleSQLiteSerializedAsyncCallbackRepositoryError(
+					Result,
+					TEXT("SQLUI SQLite serialized async callback repository smoke failed: ListLayouts did not include updated metadata and tags after serialized callbacks."));
+			}
+		}
+	}
+
+	Result.bDatabaseRemoved =
+		DeleteSQLUISampleSQLiteSerializedAsyncCallbackRepositoryFiles(Result.DatabasePath, Result);
+
+	Result.bSucceeded =
+		Result.bDatabasePrepared
+		&& Result.bFirstSaveCallbackDelivered
+		&& Result.bFirstSaveSucceeded
+		&& Result.bSecondSaveCallbackDelivered
+		&& Result.bSecondSaveSucceeded
+		&& Result.bLoadCallbackDelivered
+		&& Result.bLoadSucceeded
+		&& Result.bCallbacksDeliveredInOrder
+		&& Result.bCallbacksDeliveredOnGameThread
+		&& Result.bLatestRevisionLoaded
+		&& Result.bListAfterSerializedCallbacksSucceeded
+		&& Result.bListedUpdatedMetadataFound
+		&& Result.bDatabaseRemoved;
+
+	return Result;
+}
+
 void AppendSQLUISampleSQLiteFactoryLayoutRepositoryError(
 	FSQLUISampleSQLiteFactoryLayoutRepositorySmokeResult& Result,
 	const FString& ErrorMessage)
@@ -4857,6 +5218,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.SQLiteAsyncCallbackRepository.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI SQLite async callback repository smoke failed.")
 					: Result.SQLiteAsyncCallbackRepository.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseSQLiteSerializedAsyncCallbackRepository)
+	{
+		Result.bUsedSQLiteSerializedAsyncCallbackRepository = true;
+		Result.SQLiteSerializedAsyncCallbackRepository =
+			RunSQLUISampleSQLiteSerializedAsyncCallbackRepositorySmoke(Outer);
+		if (!Result.SQLiteSerializedAsyncCallbackRepository.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.SQLiteSerializedAsyncCallbackRepository.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite serialized async callback repository smoke failed.")
+					: Result.SQLiteSerializedAsyncCallbackRepository.ErrorMessage);
 		}
 	}
 

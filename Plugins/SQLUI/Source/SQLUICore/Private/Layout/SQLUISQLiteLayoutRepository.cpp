@@ -1,6 +1,6 @@
 #include "Layout/SQLUISQLiteLayoutRepository.h"
 
-#include "Database/SQLUIDatabaseAsyncRunner.h"
+#include "Database/SQLUIDatabaseAsyncQueue.h"
 #include "Layout/SQLUISQLiteLayoutRepositoryWorker.h"
 
 namespace
@@ -27,7 +27,9 @@ void USQLUISQLiteLayoutRepository::LoadLayout(
 			MakeSQLUISQLiteLayoutRepositoryWorkerSettings(Settings);
 		const FString LayoutIdCopy = LayoutId;
 
-		FSQLUIDatabaseAsyncRunner::RunResultAsync<FSQLUILayoutLoadResult>(
+		TSharedRef<FSQLUIDatabaseAsyncQueue, ESPMode::ThreadSafe> Queue =
+			GetOrCreateAsyncQueue();
+		Queue->EnqueueResult<FSQLUILayoutLoadResult>(
 			[WorkerSettings, LayoutIdCopy]()
 			{
 				return FSQLUISQLiteLayoutRepositoryWorker::LoadLayoutById(
@@ -55,7 +57,9 @@ void USQLUISQLiteLayoutRepository::SaveLayout(
 		const FSQLUILayoutDocument DocumentCopy = Document;
 		const bool bReadOnly = Settings.bReadOnly;
 
-		FSQLUIDatabaseAsyncRunner::RunResultAsync<FSQLUILayoutSaveResult>(
+		TSharedRef<FSQLUIDatabaseAsyncQueue, ESPMode::ThreadSafe> Queue =
+			GetOrCreateAsyncQueue();
+		Queue->EnqueueResult<FSQLUILayoutSaveResult>(
 			[WorkerSettings, DocumentCopy, bReadOnly]()
 			{
 				if (bReadOnly)
@@ -93,6 +97,10 @@ void USQLUISQLiteLayoutRepository::Configure(
 	const FSQLUISQLiteLayoutRepositorySettings& InSettings)
 {
 	Settings = InSettings;
+	if (!Settings.bRunCallbackOperationsAsync)
+	{
+		AsyncQueue.Reset();
+	}
 }
 
 FSQLUISQLiteLayoutRepositorySettings USQLUISQLiteLayoutRepository::GetSettings() const
@@ -141,4 +149,15 @@ FSQLUILayoutRepositoryClearResult USQLUISQLiteLayoutRepository::ClearLayouts()
 
 	return FSQLUISQLiteLayoutRepositoryWorker::ClearLayouts(
 		MakeSQLUISQLiteLayoutRepositoryWorkerSettings(Settings));
+}
+
+TSharedRef<FSQLUIDatabaseAsyncQueue, ESPMode::ThreadSafe>
+USQLUISQLiteLayoutRepository::GetOrCreateAsyncQueue()
+{
+	if (!AsyncQueue.IsValid())
+	{
+		AsyncQueue = MakeShared<FSQLUIDatabaseAsyncQueue, ESPMode::ThreadSafe>();
+	}
+
+	return AsyncQueue.ToSharedRef();
 }

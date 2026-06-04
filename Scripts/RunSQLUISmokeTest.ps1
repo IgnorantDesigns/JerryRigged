@@ -34,6 +34,8 @@ param(
 
 	[switch]$UseSQLiteAsyncCallbackRepository,
 
+	[switch]$UseSQLiteSerializedAsyncCallbackRepository,
+
 	[switch]$UseSQLiteFactoryLayoutRepository,
 
 	[switch]$UseSQLiteFactorySchemaInitRepository,
@@ -111,6 +113,9 @@ Parameters:
   -UseSQLiteAsyncCallbackRepository
       Run the optional SQLUICore SQLite async callback repository smoke path.
 
+  -UseSQLiteSerializedAsyncCallbackRepository
+      Run the optional SQLUICore SQLite serialized async callback repository smoke path.
+
   -UseSQLiteFactoryLayoutRepository
       Run the optional SQLUICore SQLite factory layout repository smoke path.
 
@@ -139,6 +144,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteClearLayoutsRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteFullLifecycleRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteAsyncCallbackRepository
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteSerializedAsyncCallbackRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteFactoryLayoutRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteFactorySchemaInitRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteSchemaInitHardening
@@ -316,6 +322,11 @@ if ($UseSQLiteFullLifecycleRepository)
 if ($UseSQLiteAsyncCallbackRepository)
 {
 	$CommandletArgs += '-SQLiteAsyncCallbackRepository'
+}
+
+if ($UseSQLiteSerializedAsyncCallbackRepository)
+{
+	$CommandletArgs += '-SQLiteSerializedAsyncCallbackRepository'
 }
 
 if ($UseSQLiteFactoryLayoutRepository)

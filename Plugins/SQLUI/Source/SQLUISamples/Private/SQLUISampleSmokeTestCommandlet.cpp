@@ -1445,6 +1445,124 @@ void LogSQLUISampleSmokeTestSQLiteAsyncCallbackRepositoryResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteSerializedAsyncCallbackRepositoryResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteSerializedAsyncCallbackRepository)
+	{
+		return;
+	}
+
+	const FSQLUISampleSQLiteSerializedAsyncCallbackRepositorySmokeResult& RepositoryResult =
+		Result.SQLiteSerializedAsyncCallbackRepository;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository database path: '%s'"),
+		*RepositoryResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository database prepared: %s"),
+		RepositoryResult.bDatabasePrepared ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository first save callback delivered: %s"),
+		RepositoryResult.bFirstSaveCallbackDelivered ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository first save succeeded: %s"),
+		RepositoryResult.bFirstSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository second save callback delivered: %s"),
+		RepositoryResult.bSecondSaveCallbackDelivered ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository second save succeeded: %s"),
+		RepositoryResult.bSecondSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository load callback delivered: %s"),
+		RepositoryResult.bLoadCallbackDelivered ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository load succeeded: %s"),
+		RepositoryResult.bLoadSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository callbacks delivered in order: %s"),
+		RepositoryResult.bCallbacksDeliveredInOrder ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository callbacks delivered on game thread: %s"),
+		RepositoryResult.bCallbacksDeliveredOnGameThread ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository latest revision loaded: %s"),
+		RepositoryResult.bLatestRevisionLoaded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository list after serialized callbacks succeeded: %s"),
+		RepositoryResult.bListAfterSerializedCallbacksSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository listed updated metadata found: %s"),
+		RepositoryResult.bListedUpdatedMetadataFound ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository saved layout id: '%s' loaded layout id: '%s' listed layout count: %d callback order: '%s'"),
+		*RepositoryResult.SavedLayoutId,
+		*RepositoryResult.LoadedLayoutId,
+		RepositoryResult.ListedLayoutCount,
+		*FString::Join(RepositoryResult.CallbackOrder, TEXT(",")));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite serialized async callback repository database removed: %s"),
+		RepositoryResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (RepositoryResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite serialized async callback repository succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite serialized async callback repository failed: %s"),
+			*RepositoryResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestSQLiteFactoryLayoutRepositoryResult(
 	const FSQLUISampleSmokeTestResult& Result)
 {
@@ -1858,6 +1976,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteClearLayoutsRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteFullLifecycleRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteAsyncCallbackRepositoryResult(Result);
+	LogSQLUISampleSmokeTestSQLiteSerializedAsyncCallbackRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteFactoryLayoutRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteFactorySchemaInitRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteSchemaInitHardeningResult(Result);
@@ -1963,6 +2082,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteAsyncCallbackRepository =
 		FParse::Param(*Params, TEXT("UseSQLiteAsyncCallbackRepository"))
 		|| FParse::Param(*Params, TEXT("SQLiteAsyncCallbackRepository"));
+	const bool bUseSQLiteSerializedAsyncCallbackRepository =
+		FParse::Param(*Params, TEXT("UseSQLiteSerializedAsyncCallbackRepository"))
+		|| FParse::Param(*Params, TEXT("SQLiteSerializedAsyncCallbackRepository"));
 	const bool bUseSQLiteFactoryLayoutRepository =
 		FParse::Param(*Params, TEXT("UseSQLiteFactoryLayoutRepository"))
 		|| FParse::Param(*Params, TEXT("SQLiteFactoryLayoutRepository"));
@@ -2051,6 +2173,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite async callback repository selected: true"));
 	}
 
+	if (bUseSQLiteSerializedAsyncCallbackRepository)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite serialized async callback repository selected: true"));
+	}
+
 	if (bUseSQLiteFactoryLayoutRepository)
 	{
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite factory layout repository selected: true"));
@@ -2093,6 +2220,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteClearLayoutsRepository = bUseSQLiteClearLayoutsRepository;
 		Request.bUseSQLiteFullLifecycleRepository = bUseSQLiteFullLifecycleRepository;
 		Request.bUseSQLiteAsyncCallbackRepository = bUseSQLiteAsyncCallbackRepository;
+		Request.bUseSQLiteSerializedAsyncCallbackRepository = bUseSQLiteSerializedAsyncCallbackRepository;
 		Request.bUseSQLiteFactoryLayoutRepository = bUseSQLiteFactoryLayoutRepository;
 		Request.bUseSQLiteFactorySchemaInitRepository = bUseSQLiteFactorySchemaInitRepository;
 		Request.bUseSQLiteSchemaInitHardening = bUseSQLiteSchemaInitHardening;

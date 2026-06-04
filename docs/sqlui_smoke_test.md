@@ -34,6 +34,8 @@ The optional SQLite full lifecycle repository smoke path opens a temporary SQLit
 
 The optional SQLite async callback repository smoke path opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\SQLiteAsyncCallbackRepository`, prepares it with the planned schema, configures `USQLUISQLiteLayoutRepository` with `bReadOnly = false` and `bRunCallbackOperationsAsync = true`, saves and loads one probe-only layout through the callback-style APIs, verifies the callbacks are delivered on the game thread, verifies synchronous `ListLayouts` metadata and tags afterward, and removes the probe database file. This proves opt-in async callback execution for `LoadLayout` and `SaveLayout` without changing default synchronous behavior or making `ListLayouts`, `RemoveLayout`, or `ClearLayouts` async.
 
+The optional SQLite serialized async callback repository smoke path opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\SQLiteSerializedAsyncCallbackRepository`, prepares it with the planned schema, configures `USQLUISQLiteLayoutRepository` with `bReadOnly = false` and `bRunCallbackOperationsAsync = true`, enqueues two callback-style `SaveLayout` calls followed immediately by a callback-style `LoadLayout`, verifies callbacks are delivered on the game thread in enqueue order, verifies the loaded document is the second revision with updated metadata and tags, verifies synchronous `ListLayouts` metadata afterward, and removes the probe database file. This proves the opt-in async callback path is serialized for `SaveLayout` and `LoadLayout` without changing default synchronous behavior or making direct return-value methods async.
+
 The optional SQLite factory layout repository smoke path opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\SQLiteFactoryRepository`, prepares it with the planned schema, requests `ESQLUILayoutRepositoryBackend::SQLite` through `USQLUILayoutRepositoryFactory`, verifies the factory creates `USQLUISQLiteLayoutRepository`, exercises save/list/load/remove/clear behavior through that factory-created repository, verifies missing SQLite database path selection reports unavailable behavior, and removes the probe database file. This proves explicit SQLite factory selection without making SQLite the default backend or running migrations inside the factory.
 
 The optional SQLite factory schema-init repository smoke path starts with no database under `Saved\SQLUI\SmokeTests\SQLiteFactorySchemaInitRepository`, requests `ESQLUILayoutRepositoryBackend::SQLite` through `USQLUILayoutRepositoryFactory`, configures `USQLUISQLiteLayoutRepository` with `bInitializeSchemaIfMissing = true` and `bCreateDatabaseIfMissing = true`, verifies `SaveLayout` creates and initializes the database through repository behavior, verifies list/load/remove/clear behavior, verifies a missing database without schema-init settings fails without creating a file, and removes the probe database files. This proves schema initialization remains opt-in and outside the factory.
@@ -44,7 +46,7 @@ This is a local developer workflow only. It is not CI yet, and it does not assum
 
 Packaged-build and packaged runtime validation are separate from these editor commandlet smoke paths. Use [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) to run the local `RunUAT BuildCookRun` scaffold, and pass `-RunPackagedSQLiteSmoke` when you need the packaged executable to run the SQLUI SQLite lifecycle smoke.
 
-The smoke test does not edit maps, levels, Content, persistent database files, or the viewport. It attaches no widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory. The SQLiteCore probe writes only under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe` and removes `SQLiteCoreProbe.db` after the check. The SQLite migration probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe` and removes `SQLiteMigrationProbe.db` after the check. The SQLite layout schema migration probe writes only under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe` and removes `LayoutSchemaMigrationProbe.db` after the check. The SQLite layout read probe writes only under `Saved\SQLUI\SmokeTests\LayoutReadProbe` and removes `LayoutReadProbe.db` after the check. The SQLite read-only layout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteReadOnlyRepository` and removes `SQLiteReadOnlyRepository.db` after the check. The SQLite SaveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSaveLayoutRepository` and removes `SQLiteSaveLayoutRepository.db` after the check. The SQLite RemoveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteRemoveLayoutRepository` and removes `SQLiteRemoveLayoutRepository.db` after the check. The SQLite ClearLayouts repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteClearLayoutsRepository` and removes `SQLiteClearLayoutsRepository.db` after the check. The SQLite full lifecycle repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFullLifecycleRepository` and removes `SQLiteFullLifecycleRepository.db` after the check. The SQLite async callback repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteAsyncCallbackRepository` and removes `SQLiteAsyncCallbackRepository.db` after the check. The SQLite factory layout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFactoryRepository` and removes `SQLiteFactoryRepository.db` after the check. The SQLite factory schema-init repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFactorySchemaInitRepository` and removes `SQLiteFactorySchemaInitRepository.db`, `SQLiteFactorySchemaInitRepositoryMissing.db`, and SQLite sidecar files after the check. The SQLite schema-init hardening smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSchemaInitHardening` and removes `MissingCreateDisabled.db`, `EmptyCreateEnabled.db`, `AlreadyInitialized.db`, `CompleteSchemaMissingMigration.db`, `PartialSchema.db`, `ReadOnlyInitBlocked.db`, and SQLite sidecar files after the check. The database async probe does not perform file I/O.
+The smoke test does not edit maps, levels, Content, persistent database files, or the viewport. It attaches no widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory. The SQLiteCore probe writes only under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe` and removes `SQLiteCoreProbe.db` after the check. The SQLite migration probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe` and removes `SQLiteMigrationProbe.db` after the check. The SQLite layout schema migration probe writes only under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe` and removes `LayoutSchemaMigrationProbe.db` after the check. The SQLite layout read probe writes only under `Saved\SQLUI\SmokeTests\LayoutReadProbe` and removes `LayoutReadProbe.db` after the check. The SQLite read-only layout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteReadOnlyRepository` and removes `SQLiteReadOnlyRepository.db` after the check. The SQLite SaveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSaveLayoutRepository` and removes `SQLiteSaveLayoutRepository.db` after the check. The SQLite RemoveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteRemoveLayoutRepository` and removes `SQLiteRemoveLayoutRepository.db` after the check. The SQLite ClearLayouts repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteClearLayoutsRepository` and removes `SQLiteClearLayoutsRepository.db` after the check. The SQLite full lifecycle repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFullLifecycleRepository` and removes `SQLiteFullLifecycleRepository.db` after the check. The SQLite async callback repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteAsyncCallbackRepository` and removes `SQLiteAsyncCallbackRepository.db` after the check. The SQLite serialized async callback repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSerializedAsyncCallbackRepository` and removes `SQLiteSerializedAsyncCallbackRepository.db` after the check. The SQLite factory layout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFactoryRepository` and removes `SQLiteFactoryRepository.db` after the check. The SQLite factory schema-init repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFactorySchemaInitRepository` and removes `SQLiteFactorySchemaInitRepository.db`, `SQLiteFactorySchemaInitRepositoryMissing.db`, and SQLite sidecar files after the check. The SQLite schema-init hardening smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSchemaInitHardening` and removes `MissingCreateDisabled.db`, `EmptyCreateEnabled.db`, `AlreadyInitialized.db`, `CompleteSchemaMissingMigration.db`, `PartialSchema.db`, `ReadOnlyInitBlocked.db`, and SQLite sidecar files after the check. The database async probe does not perform file I/O.
 
 ## Build JerryRiggedEditor
 
@@ -251,6 +253,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 The commandlet also accepts `-SQLiteAsyncCallbackRepository` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
 This path proves opt-in async callback execution only. It instantiates the SQLite repository directly and does not exercise repository factory selection, async `ListLayouts`, async `RemoveLayout`, async `ClearLayouts`, Content changes, map edits, or persistent database files.
+
+## Run The SQLite Serialized Async Callback Repository Smoke Test
+
+The SQLite serialized async callback repository path keeps the same transient commandlet flow, prepares a temporary database under `Saved\SQLUI\SmokeTests\SQLiteSerializedAsyncCallbackRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false` and `bRunCallbackOperationsAsync = true`, enqueues two `SaveLayout` callbacks and one `LoadLayout` callback without waiting between calls, verifies callback order and game-thread delivery, verifies the loaded document is revision 2 with updated metadata and tags, verifies `ListLayouts` metadata afterward, removes the probe database file, and then runs the same default runtime widget pipeline:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteSerializedAsyncCallbackRepository
+```
+
+The commandlet also accepts `-SQLiteSerializedAsyncCallbackRepository` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
+
+This path proves serialized opt-in async callback execution only. It instantiates the SQLite repository directly and does not exercise repository factory selection, async `ListLayouts`, async `RemoveLayout`, async `ClearLayouts`, Content changes, map edits, or persistent database files.
 
 ## Run The SQLite Factory Layout Repository Smoke Test
 
@@ -595,6 +609,31 @@ SQLUI sample smoke test created widget count: 1
 ```
 
 After the smoke test succeeds, `Saved\SQLUI\SmokeTests\SQLiteAsyncCallbackRepository\SQLiteAsyncCallbackRepository.db` should not exist.
+
+For the SQLite serialized async callback repository smoke test, also look for:
+
+```text
+SQLUI SQLite serialized async callback repository selected: true
+SQLUI SQLite serialized async callback repository database prepared: true
+SQLUI SQLite serialized async callback repository first save callback delivered: true
+SQLUI SQLite serialized async callback repository first save succeeded: true
+SQLUI SQLite serialized async callback repository second save callback delivered: true
+SQLUI SQLite serialized async callback repository second save succeeded: true
+SQLUI SQLite serialized async callback repository load callback delivered: true
+SQLUI SQLite serialized async callback repository load succeeded: true
+SQLUI SQLite serialized async callback repository callbacks delivered in order: true
+SQLUI SQLite serialized async callback repository callbacks delivered on game thread: true
+SQLUI SQLite serialized async callback repository latest revision loaded: true
+SQLUI SQLite serialized async callback repository list after serialized callbacks succeeded: true
+SQLUI SQLite serialized async callback repository listed updated metadata found: true
+SQLUI SQLite serialized async callback repository database removed: true
+SQLUI SQLite serialized async callback repository succeeded.
+SQLUI sample smoke test commandlet succeeded.
+SQLUI sample smoke test root widget valid: true
+SQLUI sample smoke test created widget count: 1
+```
+
+After the smoke test succeeds, `Saved\SQLUI\SmokeTests\SQLiteSerializedAsyncCallbackRepository\SQLiteSerializedAsyncCallbackRepository.db` should not exist.
 
 For the SQLite factory layout repository smoke test, also look for:
 

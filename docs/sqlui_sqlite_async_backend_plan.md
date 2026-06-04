@@ -1,6 +1,6 @@
 # SQLUI SQLite Async Backend Plan
 
-This document describes the async and backend boundary for the SQLite-backed SQLUI layout repository. The original plan was documentation-only; the current code now includes the SQLite repository, a non-UObject worker-safe operation helper, opt-in async execution for callback-style `LoadLayout` and `SaveLayout`, and explicit factory selection for configured SQLite database paths. Direct return-value methods, `ListLayouts`, `RemoveLayout`, and `ClearLayouts` are still synchronous. The project still does not have a full persistent database service, migrations inside the factory, widgets that know SQLite details, maps, assets, CI, or persistent database files.
+This document describes the async and backend boundary for the SQLite-backed SQLUI layout repository. The original plan was documentation-only; the current code now includes the SQLite repository, a non-UObject worker-safe operation helper, serialized opt-in async execution for callback-style `LoadLayout` and `SaveLayout`, and explicit factory selection for configured SQLite database paths. Direct return-value methods, `ListLayouts`, `RemoveLayout`, and `ClearLayouts` are still synchronous. The project still does not have a full persistent database service, migrations inside the factory, widgets that know SQLite details, maps, assets, CI, or persistent database files.
 
 For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 
@@ -60,7 +60,7 @@ This boundary can be implemented with whichever Unreal async primitive best fits
 
 The current scaffold proves only the boundary shape. `FSQLUIDatabaseAsyncRunner` accepts immutable request data, runs a simulated database-style task on a background thread, and marshals `FSQLUIDatabaseAsyncResult` back to the game thread before invoking the callback. It deliberately does not open SQLite, execute SQL, write files, manage migrations, or expose a repository backend.
 
-The SQLite repository database operations now also sit behind `FSQLUISQLiteLayoutRepositoryWorker`, a non-UObject helper that accepts plain settings/request data and returns existing repository result structs. `USQLUISQLiteLayoutRepository` invokes the helper synchronously by default. When `FSQLUISQLiteLayoutRepositorySettings::bRunCallbackOperationsAsync` is true, callback-style `LoadLayout` and `SaveLayout` enqueue that helper through the SQLUI database async boundary and marshal results back to the game thread before invoking callbacks. Direct return-value methods and the other repository operations remain synchronous.
+The SQLite repository database operations now also sit behind `FSQLUISQLiteLayoutRepositoryWorker`, a non-UObject helper that accepts plain settings/request data and returns existing repository result structs. `USQLUISQLiteLayoutRepository` invokes the helper synchronously by default. When `FSQLUISQLiteLayoutRepositorySettings::bRunCallbackOperationsAsync` is true, callback-style `LoadLayout` and `SaveLayout` enqueue that helper through `FSQLUIDatabaseAsyncQueue`. The queue runs one callback operation at a time in enqueue order, executes worker work off the game thread, and marshals results back to the game thread before invoking callbacks. Direct return-value methods and the other repository operations remain synchronous.
 
 ## Game-Thread Responsibilities
 
@@ -293,7 +293,9 @@ The optional SQLite ClearLayouts repository smoke path prepares a temporary data
 
 The optional SQLite full lifecycle repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteFullLifecycleRepository`, points `USQLUISQLiteLayoutRepository` at it with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, `LoadLayout`, revision update behavior, soft-delete `RemoveLayout`, destructive scoped `ClearLayouts`, revision preservation, and empty schema rows after clear, closes all database handles, and removes the file. It proves the currently supported SQLite lifecycle works through the repository wrapper and non-UObject worker helper.
 
-The optional SQLite async callback repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteAsyncCallbackRepository`, points `USQLUISQLiteLayoutRepository` at it with `bReadOnly = false` and `bRunCallbackOperationsAsync = true`, verifies callback-style `SaveLayout` and `LoadLayout` complete through the async boundary, verifies callbacks are delivered on the game thread, verifies synchronous metadata readback afterward, closes all database handles, and removes the file. It proves the first async SQLite callback execution slice while async `ListLayouts`, async `RemoveLayout`, async `ClearLayouts`, cancellation, and a full production queue remain future work.
+The optional SQLite async callback repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteAsyncCallbackRepository`, points `USQLUISQLiteLayoutRepository` at it with `bReadOnly = false` and `bRunCallbackOperationsAsync = true`, verifies callback-style `SaveLayout` and `LoadLayout` complete through the async boundary, verifies callbacks are delivered on the game thread, verifies synchronous metadata readback afterward, closes all database handles, and removes the file. It proves the first async SQLite callback execution slice.
+
+The optional SQLite serialized async callback repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteSerializedAsyncCallbackRepository`, points `USQLUISQLiteLayoutRepository` at it with `bReadOnly = false` and `bRunCallbackOperationsAsync = true`, enqueues two callback-style `SaveLayout` calls followed by one callback-style `LoadLayout`, verifies callbacks are delivered on the game thread in enqueue order, verifies the load sees the second saved revision with updated metadata/tags, verifies synchronous metadata readback afterward, closes all database handles, and removes the file. It proves callback-style SQLite repository operations are serialized while async `ListLayouts`, async `RemoveLayout`, async `ClearLayouts`, cancellation, shutdown draining, and a full production service remain future work.
 
 The optional SQLite factory layout repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteFactoryRepository`, requests `ESQLUILayoutRepositoryBackend::SQLite` through `USQLUILayoutRepositoryFactory`, configures async callback execution through factory settings, verifies repository lifecycle behavior, verifies missing-path selection reports unavailable behavior, closes all database handles, and removes the file. It proves explicit factory selection without running migrations or creating database files inside the factory.
 
@@ -359,7 +361,7 @@ Evaluate candidate SQLite backends against the selection criteria. Propose the m
 
 ### Phase 2: Async Database Service Boundary
 
-Use the minimal SQLUI Core-owned async scaffold, the new `FSQLUISQLiteLayoutRepositoryWorker` helper, and the opt-in async callback slice as the starting point, then harden them for real SQLite work. The implementation PR should decide whether the simple task-graph runner remains sufficient or whether SQLite needs a serialized worker queue, explicit cancellation tokens, or a longer-lived database service boundary.
+Use the minimal SQLUI Core-owned async scaffold, the new `FSQLUISQLiteLayoutRepositoryWorker` helper, and the serialized opt-in async callback slice as the starting point, then harden them for real SQLite work. The implementation PR should decide what cancellation tokens, shutdown behavior, stale-callback policy, and longer-lived database service boundary are needed beyond the current per-repository FIFO callback queue.
 
 ### Phase 3: Migration Runner
 
@@ -387,7 +389,7 @@ The following decisions remain intentionally deferred:
 
 - Whether to continue with only engine `SQLiteCore` or add another backend after new evidence.
 - Whether SQLite support is always compiled or feature-gated.
-- Exact async primitive or worker queue implementation.
+- Full production async primitive or service design beyond the current callback queue.
 - Database path settings names and defaults.
 - Seed database settings shape.
 - Whether migrations run lazily or during explicit initialization.
