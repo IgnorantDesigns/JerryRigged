@@ -119,7 +119,7 @@ The SQLite path is implemented enough for repository-shaped local smoke coverage
 
 Remaining work includes:
 
-- Running and expanding the local packaged-build validation scaffold for target platforms.
+- Expanding packaged-build validation beyond the latest local Win64 Development pass.
 - Packaged runtime SQLite lifecycle execution inside a built executable.
 - Production async database service or queue design.
 - Shutdown, cancellation, and stale-callback policy for all repository operations.
@@ -128,10 +128,12 @@ Remaining work includes:
 - Seed database copy policy, if seed DBs are added.
 - Optional lifecycle features such as history APIs, checkpoints, previews, restore flows, and richer search.
 
-## Not Yet Production/Packaged Validated
+## Packaged Validation Status
 
 Local smoke tests prove commandlet behavior and temporary database cleanup. The packaged-build validation scaffold in [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) provides a repeatable local `RunUAT BuildCookRun` command for checking package compatibility with SQLUI and SQLiteCore wiring.
 
-That scaffold does not yet prove packaged runtime SQLite lifecycle execution, packaged runtime database path behavior under `Saved/SQLUI`, platform coverage beyond the requested local target, long-running database service behavior, or production migration upgrades.
+The latest local Win64 Development packaged-build validation passed after installing the UE 5.7-preferred Visual Studio 2022 MSVC `14.44.x` toolchain. That pass proves the local BuildCookRun path can build, cook, stage, package, and archive with SQLUI and SQLiteCore wiring enabled.
+
+That scaffold still does not prove packaged runtime SQLite lifecycle execution, packaged runtime database path behavior under `Saved/SQLUI`, platform coverage beyond the requested local target, long-running database service behavior, or production migration upgrades.
 
 Until those items are validated, SQLite should stay explicitly configured, not default.
