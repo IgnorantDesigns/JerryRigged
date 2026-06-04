@@ -1,6 +1,6 @@
 # SQLUI SQLite Backend Evaluation
 
-This document records the SQLite backend evaluation that led SQLUI to use engine `SQLiteCore` as the active runtime candidate. The original backend evaluation was documentation-only; the current code now includes SQLiteCore wiring, repository operations, factory selection, opt-in schema initialization, serialized opt-in async callback execution with queue shutdown/stale-callback suppression for `LoadLayout` and `SaveLayout`, local smoke coverage, a local packaged-build validation scaffold, and an opt-in packaged runtime SQLite lifecycle smoke. SQLite is still not the default backend, and this work still does not add migrations inside the factory, widgets, maps, assets, CI, or persistent database files.
+This document records the SQLite backend evaluation that led SQLUI to use engine `SQLiteCore` as the active runtime candidate. The original backend evaluation was documentation-only; the current code now includes SQLiteCore wiring, repository operations, factory selection, an explicit runtime configuration resolver, opt-in schema initialization, serialized opt-in async callback execution with queue shutdown/stale-callback suppression for `LoadLayout` and `SaveLayout`, local smoke coverage, a local packaged-build validation scaffold, and an opt-in packaged runtime SQLite lifecycle smoke. SQLite is still not the default backend, and this work still does not add migrations inside the factory, widgets, maps, assets, CI, or persistent database files.
 
 For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 For the local packaged-build validation scaffold, see [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md).
@@ -218,6 +218,8 @@ The repository implementation:
 - Supports opt-in schema initialization through repository settings, allowing a writable repository to create and initialize an empty configured database only when `bInitializeSchemaIfMissing` and `bCreateDatabaseIfMissing` are both enabled.
 - Has optional smoke coverage for factory-created SQLite schema initialization and missing-database-without-init failure behavior.
 - Has optional smoke coverage for schema initialization hardening: missing database with creation disabled, empty database with creation enabled, already-initialized database idempotence, complete schema with missing migration record, partial schema failure behavior, and read-only init-blocked protection.
+- Has a SQLUICore runtime configuration resolver that maps explicit backend, path, and SQLite command-line flags into repository factory settings while keeping `InMemory` as the default and SQLite non-default.
+- Has optional smoke coverage for runtime config parsing, SQLite path resolution, missing-path unavailable behavior, invalid-backend fallback, and a factory-created SQLite save through explicit runtime config.
 - Has optional packaged runtime smoke coverage that launches the packaged executable, creates a SQLite repository through the factory, runs save/list/load/remove/clear under a packaged runtime `Saved/SQLUI/PackagedRuntimeSmoke/...` path, verifies success from the runtime log, and removes the smoke database.
 
 The repository implementation does not:
@@ -234,6 +236,7 @@ Remaining blockers before promoting SQLite to production/default persistence:
 - Expanding packaged runtime SQLite lifecycle coverage beyond the first local packaged executable smoke.
 - Production SQLite service lifecycle, shutdown draining beyond stale-callback suppression, and cancellation policy.
 - Production migration versioning and upgrade paths beyond the initial schema and hardening smoke slice.
+- Production/user-facing runtime settings and database path policy beyond the first explicit resolver.
 
 ## Evaluation Criteria
 

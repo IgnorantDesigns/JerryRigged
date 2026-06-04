@@ -496,6 +496,103 @@ void LogSQLUISampleSmokeTestDatabaseAsyncQueueShutdownProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestLayoutRepositoryRuntimeConfigProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedLayoutRepositoryRuntimeConfigProbe)
+	{
+		return;
+	}
+
+	const FSQLUISampleLayoutRepositoryRuntimeConfigProbeResult& ProbeResult =
+		Result.LayoutRepositoryRuntimeConfigProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime config probe database path: '%s'"),
+		*ProbeResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime config probe default backend in-memory: %s"),
+		ProbeResult.bDefaultBackendInMemory ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime config probe JSON file backend parsed: %s"),
+		ProbeResult.bJsonFileBackendParsed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime config probe SQLite backend parsed: %s"),
+		ProbeResult.bSQLiteBackendParsed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime config probe relative SQLite path resolved under Saved: %s"),
+		ProbeResult.bRelativeSQLitePathResolvedUnderSaved ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime config probe absolute SQLite path preserved: %s"),
+		ProbeResult.bAbsoluteSQLitePathPreserved ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime config probe SQLite flags parsed: %s"),
+		ProbeResult.bSQLiteFlagsParsed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime config probe SQLite missing path unavailable: %s"),
+		ProbeResult.bSQLiteMissingPathUnavailable ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime config probe invalid backend falls back to default: %s"),
+		ProbeResult.bInvalidBackendFallsBackToDefault ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime config probe factory created SQLite repository: %s"),
+		ProbeResult.bFactoryCreatedSQLiteRepository ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime config probe factory SQLite save succeeded: %s"),
+		ProbeResult.bFactorySQLiteSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime config probe database removed: %s"),
+		ProbeResult.bDatabaseRemoved ? TEXT("true") : TEXT("false"));
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout repository runtime config probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI layout repository runtime config probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(
 	const FSQLUISampleSmokeTestResult& Result)
 {
@@ -2041,6 +2138,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteCoreProbeResult(Result);
 	LogSQLUISampleSmokeTestDatabaseAsyncProbeResult(Result);
 	LogSQLUISampleSmokeTestDatabaseAsyncQueueShutdownProbeResult(Result);
+	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeConfigProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(Result);
@@ -2132,6 +2230,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseDatabaseAsyncQueueShutdownProbe =
 		FParse::Param(*Params, TEXT("UseDatabaseAsyncQueueShutdownProbe"))
 		|| FParse::Param(*Params, TEXT("DatabaseAsyncQueueShutdownProbe"));
+	const bool bUseLayoutRepositoryRuntimeConfigProbe =
+		FParse::Param(*Params, TEXT("UseLayoutRepositoryRuntimeConfigProbe"))
+		|| FParse::Param(*Params, TEXT("LayoutRepositoryRuntimeConfigProbe"));
 	const bool bUseSQLiteMigrationProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteMigrationProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteMigrationProbe"));
@@ -2208,6 +2309,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	if (bUseDatabaseAsyncQueueShutdownProbe)
 	{
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI database async queue shutdown probe selected: true"));
+	}
+
+	if (bUseLayoutRepositoryRuntimeConfigProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout repository runtime config probe selected: true"));
 	}
 
 	if (bUseSQLiteMigrationProbe)
@@ -2294,6 +2400,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteCoreProbe = bUseSQLiteCoreProbe;
 		Request.bUseDatabaseAsyncProbe = bUseDatabaseAsyncProbe;
 		Request.bUseDatabaseAsyncQueueShutdownProbe = bUseDatabaseAsyncQueueShutdownProbe;
+		Request.bUseLayoutRepositoryRuntimeConfigProbe = bUseLayoutRepositoryRuntimeConfigProbe;
 		Request.bUseSQLiteMigrationProbe = bUseSQLiteMigrationProbe;
 		Request.bUseSQLiteLayoutSchemaMigrationProbe = bUseSQLiteLayoutSchemaMigrationProbe;
 		Request.bUseSQLiteLayoutReadProbe = bUseSQLiteLayoutReadProbe;

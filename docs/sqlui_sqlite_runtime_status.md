@@ -43,6 +43,33 @@ The factory passes settings only. It does not:
 
 If SQLite is requested without a required database path, the factory returns the existing unavailable repository behavior.
 
+## Runtime Configuration Policy
+
+`FSQLUILayoutRepositoryRuntimeConfigResolver` is the first SQLUICore-owned storage selection policy layer above the repository factory. It maps explicit runtime config values or command-line options into `FSQLUILayoutRepositoryFactorySettings`; it does not create repositories, directories, schema, or database files.
+
+The resolver default is `InMemory`. SQLite is never selected by default, and SQLite schema initialization, database creation, and async callback execution all remain disabled unless explicitly requested.
+
+Supported command-line options include:
+
+- `-SQLUILayoutRepositoryBackend=InMemory`
+- `-SQLUILayoutRepositoryBackend=JsonFile`
+- `-SQLUILayoutRepositoryBackend=SQLite`
+- `-SQLUILayoutRepositoryBackend=Unavailable`
+- `-SQLUIJsonFileLayoutRepositoryDir="<path>"`
+- `-SQLUISQLiteLayoutRepositoryPath="<path>"`
+- `-SQLUISQLiteLayoutRepositoryReadOnly`
+- `-SQLUISQLiteLayoutRepositoryInitializeSchema`
+- `-SQLUISQLiteLayoutRepositoryCreateDatabase`
+- `-SQLUISQLiteLayoutRepositoryAsyncCallbacks`
+
+When a SQLite database path is relative, the resolver normalizes it under:
+
+```text
+Saved/SQLUI/LayoutRepositories
+```
+
+Absolute SQLite paths are normalized and preserved. The helper also exposes the explicit `Default` token for callers that intentionally want the safe filename `LayoutRepository.sqlite` under the same `Saved/SQLUI/LayoutRepositories` scope. An empty SQLite path stays empty so explicit SQLite factory selection reports unavailable behavior instead of falling back to another backend.
+
 ## Schema Initialization
 
 Schema initialization is repository-owned and opt-in. Defaults preserve the older prepared-database behavior:
@@ -93,6 +120,7 @@ Current SQLite-related smoke flags are:
 - `-UseSQLiteCoreProbe`: proves engine `SQLiteCore` open/close behavior under a smoke-safe path.
 - `-UseDatabaseAsyncProbe`: proves the generic SQLUI database async boundary without SQLite file I/O.
 - `-UseDatabaseAsyncQueueShutdownProbe`: verifies the serialized async queue rejects new work after shutdown, drops pending work, and suppresses stale callbacks.
+- `-UseLayoutRepositoryRuntimeConfigProbe`: verifies default/config parsing, SQLite path resolution, missing-path unavailable behavior, and a factory-created SQLite save from explicit runtime config.
 - `-UseSQLiteMigrationProbe`: proves the minimal migration runner with a smoke-only migration.
 - `-UseSQLiteLayoutSchemaMigrationProbe`: applies and verifies the planned initial layout schema.
 - `-UseSQLiteLayoutReadProbe`: seeds one layout and verifies list/load mapping against the schema.
@@ -130,7 +158,7 @@ Remaining work includes:
 - Production async database service design beyond the current per-repository callback queue.
 - Cancellation, shutdown draining beyond stale-callback suppression, and async coverage for all repository operations.
 - Migration versioning and upgrade paths beyond `001_initial_layout_schema`.
-- Default runtime configuration policy and user-facing database path policy.
+- User-facing runtime configuration surfaces and production database path policy.
 - Seed database copy policy, if seed DBs are added.
 - Optional lifecycle features such as history APIs, checkpoints, previews, restore flows, and richer search.
 

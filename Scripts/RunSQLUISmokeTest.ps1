@@ -18,6 +18,8 @@ param(
 
 	[switch]$UseDatabaseAsyncQueueShutdownProbe,
 
+	[switch]$UseLayoutRepositoryRuntimeConfigProbe,
+
 	[switch]$UseSQLiteMigrationProbe,
 
 	[switch]$UseSQLiteLayoutSchemaMigrationProbe,
@@ -91,6 +93,9 @@ Parameters:
   -UseDatabaseAsyncQueueShutdownProbe
       Run the optional SQLUICore database async queue shutdown/stale-callback probe.
 
+  -UseLayoutRepositoryRuntimeConfigProbe
+      Run the optional SQLUICore layout repository runtime config policy probe.
+
   -UseSQLiteMigrationProbe
       Run the optional SQLUICore SQLite migration-runner probe.
 
@@ -141,6 +146,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteCoreProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseDatabaseAsyncProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseDatabaseAsyncQueueShutdownProbe
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseLayoutRepositoryRuntimeConfigProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteMigrationProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteLayoutSchemaMigrationProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteLayoutReadProbe
@@ -288,6 +294,11 @@ if ($UseDatabaseAsyncProbe)
 if ($UseDatabaseAsyncQueueShutdownProbe)
 {
 	$CommandletArgs += '-DatabaseAsyncQueueShutdownProbe'
+}
+
+if ($UseLayoutRepositoryRuntimeConfigProbe)
+{
+	$CommandletArgs += '-LayoutRepositoryRuntimeConfigProbe'
 }
 
 if ($UseSQLiteMigrationProbe)

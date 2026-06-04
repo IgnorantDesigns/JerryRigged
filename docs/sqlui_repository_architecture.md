@@ -21,6 +21,8 @@ Widgets, widget factories, and runtime pipeline code should depend on layout doc
 
 Runtime-facing code can choose a repository backend through `FSQLUILayoutRepositoryFactorySettings` and `USQLUILayoutRepositoryFactory`.
 
+`FSQLUILayoutRepositoryRuntimeConfigResolver` is the SQLUICore storage-selection policy helper above the factory. It turns explicit runtime config values or command-line options into `FSQLUILayoutRepositoryFactorySettings` while keeping `InMemory` as the default, keeping SQLite non-default, resolving relative SQLite paths under `Saved/SQLUI/LayoutRepositories`, and leaving all repository creation, schema initialization, and file creation to later factory/repository behavior.
+
 `ESQLUILayoutRepositoryBackend` currently supports:
 
 - `Unavailable`: creates `USQLUILayoutRepository`, which reports `bBackendUnavailable` for load and save.
@@ -164,6 +166,7 @@ Current paths are:
 - In-memory repository round trip: the factory selects `InMemory`, the JSON fixture is saved into `USQLUIInMemoryLayoutRepository`, loaded back by layout id, and passed into the widget pipeline.
 - JSON file repository round trip: the factory selects `JsonFile`, the JSON fixture is saved into `USQLUIJsonFileLayoutRepository`, loaded back by layout id, removed from `Saved/SQLUI/SmokeTests/Layouts`, and passed into the widget pipeline.
 - Unavailable repository selection: repository smoke paths also select `Unavailable` and verify load/save report `bBackendUnavailable` cleanly.
+- Runtime repository config probe: SQLUISamples exercises `FSQLUILayoutRepositoryRuntimeConfigResolver` directly, verifies default `InMemory` behavior, JSON/SQLite command-line parsing, SQLite path resolution, missing-path unavailable behavior, invalid-backend fallback, and a factory-created SQLite save through explicit settings under `Saved/SQLUI/SmokeTests/LayoutRepositoryRuntimeConfig`.
 - SQLite read-only repository smoke path: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, instantiates `USQLUISQLiteLayoutRepository` directly, verifies `ListLayouts` metadata and tags, verifies `LoadLayout` deserializes and validates the document, verifies unsupported `SaveLayout`, `RemoveLayout`, and `ClearLayouts` calls are rejected without mutating the prepared database, removes the database, and passes the default layout through the widget pipeline.
 - SQLite SaveLayout repository smoke path: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteSaveLayoutRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, and `LoadLayout`, saves the same layout id a second time, verifies the latest revision and updated metadata are read back, removes the database, and passes the default layout through the widget pipeline.
 - SQLite RemoveLayout repository smoke path: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteRemoveLayoutRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, `LoadLayout`, and soft-delete `RemoveLayout`, verifies the removed layout disappears from list/load while revisions remain preserved, removes the database, and passes the default layout through the widget pipeline.
