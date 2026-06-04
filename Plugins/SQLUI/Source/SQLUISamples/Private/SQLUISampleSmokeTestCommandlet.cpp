@@ -423,6 +423,79 @@ void LogSQLUISampleSmokeTestDatabaseAsyncProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestDatabaseAsyncQueueShutdownProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedDatabaseAsyncQueueShutdownProbe)
+	{
+		return;
+	}
+
+	const FSQLUISampleDatabaseAsyncQueueShutdownProbeResult& ProbeResult =
+		Result.DatabaseAsyncQueueShutdownProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI database async queue shutdown probe queue created: %s"),
+		ProbeResult.bQueueCreated ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI database async queue shutdown probe shutdown requested: %s"),
+		ProbeResult.bShutdownRequested ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI database async queue shutdown probe queue reported shutdown: %s"),
+		ProbeResult.bQueueReportedShutdown ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI database async queue shutdown probe enqueue after shutdown rejected: %s"),
+		ProbeResult.bEnqueueAfterShutdownRejected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI database async queue shutdown probe pending work suppressed: %s"),
+		ProbeResult.bPendingWorkSuppressed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI database async queue shutdown probe running completion suppressed: %s"),
+		ProbeResult.bRunningCompletionSuppressed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI database async queue shutdown probe no callbacks delivered after shutdown: %s"),
+		ProbeResult.bNoCallbacksDeliveredAfterShutdown ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI database async queue shutdown probe no deadlock: %s"),
+		ProbeResult.bNoDeadlock ? TEXT("true") : TEXT("false"));
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI database async queue shutdown probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI database async queue shutdown probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(
 	const FSQLUISampleSmokeTestResult& Result)
 {
@@ -1967,6 +2040,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestJsonFileRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteCoreProbeResult(Result);
 	LogSQLUISampleSmokeTestDatabaseAsyncProbeResult(Result);
+	LogSQLUISampleSmokeTestDatabaseAsyncQueueShutdownProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(Result);
@@ -2055,6 +2129,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseDatabaseAsyncProbe =
 		FParse::Param(*Params, TEXT("UseDatabaseAsyncProbe"))
 		|| FParse::Param(*Params, TEXT("DatabaseAsyncProbe"));
+	const bool bUseDatabaseAsyncQueueShutdownProbe =
+		FParse::Param(*Params, TEXT("UseDatabaseAsyncQueueShutdownProbe"))
+		|| FParse::Param(*Params, TEXT("DatabaseAsyncQueueShutdownProbe"));
 	const bool bUseSQLiteMigrationProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteMigrationProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteMigrationProbe"));
@@ -2126,6 +2203,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	if (bUseDatabaseAsyncProbe)
 	{
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI database async probe selected: true"));
+	}
+
+	if (bUseDatabaseAsyncQueueShutdownProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI database async queue shutdown probe selected: true"));
 	}
 
 	if (bUseSQLiteMigrationProbe)
@@ -2211,6 +2293,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseJsonFileLayoutRepository = bUseJsonFileLayoutRepository;
 		Request.bUseSQLiteCoreProbe = bUseSQLiteCoreProbe;
 		Request.bUseDatabaseAsyncProbe = bUseDatabaseAsyncProbe;
+		Request.bUseDatabaseAsyncQueueShutdownProbe = bUseDatabaseAsyncQueueShutdownProbe;
 		Request.bUseSQLiteMigrationProbe = bUseSQLiteMigrationProbe;
 		Request.bUseSQLiteLayoutSchemaMigrationProbe = bUseSQLiteLayoutSchemaMigrationProbe;
 		Request.bUseSQLiteLayoutReadProbe = bUseSQLiteLayoutReadProbe;

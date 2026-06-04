@@ -11,15 +11,21 @@ class SQLUICORE_API FSQLUIDatabaseAsyncQueue
 {
 public:
 	template<typename ResultType>
-	void EnqueueResult(
+	bool EnqueueResult(
 		TFunction<ResultType()> Work,
 		TFunction<void(const ResultType&)> Completion)
 	{
 		TSharedRef<FSQLUIDatabaseAsyncQueue, ESPMode::ThreadSafe> Queue = AsShared();
 
-		EnqueueTask(
+		return EnqueueTask(
 			[Queue, Work = MoveTemp(Work), Completion = MoveTemp(Completion)]() mutable
 			{
+				if (Queue->IsShutdown())
+				{
+					Queue->CompleteCurrentTask();
+					return;
+				}
+
 				AsyncTask(
 					ENamedThreads::AnyBackgroundThreadNormalTask,
 					[Queue, Work = MoveTemp(Work), Completion = MoveTemp(Completion)]() mutable
@@ -30,19 +36,27 @@ public:
 							ENamedThreads::GameThread,
 							[Queue, Completion = MoveTemp(Completion), Result]() mutable
 							{
-								Completion(Result);
+								if (Queue->ShouldDeliverCompletion())
+								{
+									Completion(Result);
+								}
 								Queue->CompleteCurrentTask();
 							});
 					});
 			});
 	}
 
+	void ShutdownAndSuppressCallbacks();
+	bool IsShutdown() const;
+
 private:
-	void EnqueueTask(TFunction<void()>&& Task);
+	bool EnqueueTask(TFunction<void()>&& Task);
+	bool ShouldDeliverCompletion() const;
 	void CompleteCurrentTask();
 	void DispatchNextTask();
 
-	FCriticalSection QueueCriticalSection;
+	mutable FCriticalSection QueueCriticalSection;
 	TArray<TFunction<void()>> PendingTasks;
 	bool bTaskRunning = false;
+	bool bShutdown = false;
 };

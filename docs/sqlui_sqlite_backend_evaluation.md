@@ -1,6 +1,6 @@
 # SQLUI SQLite Backend Evaluation
 
-This document records the SQLite backend evaluation that led SQLUI to use engine `SQLiteCore` as the active runtime candidate. The original backend evaluation was documentation-only; the current code now includes SQLiteCore wiring, repository operations, factory selection, opt-in schema initialization, serialized opt-in async callback execution for `LoadLayout` and `SaveLayout`, local smoke coverage, a local packaged-build validation scaffold, and an opt-in packaged runtime SQLite lifecycle smoke. SQLite is still not the default backend, and this work still does not add migrations inside the factory, widgets, maps, assets, CI, or persistent database files.
+This document records the SQLite backend evaluation that led SQLUI to use engine `SQLiteCore` as the active runtime candidate. The original backend evaluation was documentation-only; the current code now includes SQLiteCore wiring, repository operations, factory selection, opt-in schema initialization, serialized opt-in async callback execution with queue shutdown/stale-callback suppression for `LoadLayout` and `SaveLayout`, local smoke coverage, a local packaged-build validation scaffold, and an opt-in packaged runtime SQLite lifecycle smoke. SQLite is still not the default backend, and this work still does not add migrations inside the factory, widgets, maps, assets, CI, or persistent database files.
 
 For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 For the local packaged-build validation scaffold, see [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md).
@@ -212,7 +212,7 @@ The repository implementation:
 - Is available through a third optional smoke-test flag that prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteRemoveLayoutRepository`, verifies `SaveLayout`, `ListLayouts`, `LoadLayout`, and soft-delete `RemoveLayout`, verifies the removed layout disappears from list/load, verifies revisions remain preserved, and removes the database.
 - Is available through a fourth optional smoke-test flag that prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteClearLayoutsRepository`, verifies `SaveLayout`, soft-delete `RemoveLayout`, `ListLayouts`, `LoadLayout`, and destructive scoped `ClearLayouts`, verifies active and soft-deleted layout rows plus dependent schema rows are removed, and removes the database.
 - Is available through a full lifecycle optional smoke-test flag that verifies save, list, load, revision update, soft-delete remove, clear, revision preservation, and empty schema tables after clear.
-- Supports serialized opt-in async callback execution for SQLite `LoadLayout` and `SaveLayout`.
+- Supports serialized opt-in async callback execution for SQLite `LoadLayout` and `SaveLayout`, including queue shutdown behavior that rejects new work, drops pending work, and suppresses stale completions.
 - Is selectable through `USQLUILayoutRepositoryFactory` only when `ESQLUILayoutRepositoryBackend::SQLite` is explicitly requested and `SQLiteSettings.DatabasePath` is configured.
 - Has optional smoke coverage for factory-created SQLite repository lifecycle behavior and missing-path unavailable behavior.
 - Supports opt-in schema initialization through repository settings, allowing a writable repository to create and initialize an empty configured database only when `bInitializeSchemaIfMissing` and `bCreateDatabaseIfMissing` are both enabled.
@@ -232,7 +232,7 @@ Remaining blockers before promoting SQLite to production/default persistence:
 
 - Expanding packaged-build validation across intended target platforms.
 - Expanding packaged runtime SQLite lifecycle coverage beyond the first local packaged executable smoke.
-- Production SQLite worker boundary and shutdown policy.
+- Production SQLite service lifecycle, shutdown draining beyond stale-callback suppression, and cancellation policy.
 - Production migration versioning and upgrade paths beyond the initial schema and hardening smoke slice.
 
 ## Evaluation Criteria
@@ -459,6 +459,7 @@ Blocking questions:
 Future SQLite hardening PRs may still touch:
 
 - A SQLUI Core async database service or wrapper around the chosen backend.
+- Production cancellation and service shutdown behavior beyond the current per-repository queue suppression policy.
 - Production migration versioning and upgrade paths for later schema changes.
 - Packaged-build validation and any target-platform fixes.
 - Additional smoke coverage for production migration and async lifecycle behavior.

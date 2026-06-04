@@ -1,6 +1,6 @@
 # SQLUI SQLite Async Backend Plan
 
-This document describes the async and backend boundary for the SQLite-backed SQLUI layout repository. The original plan was documentation-only; the current code now includes the SQLite repository, a non-UObject worker-safe operation helper, serialized opt-in async execution for callback-style `LoadLayout` and `SaveLayout`, and explicit factory selection for configured SQLite database paths. Direct return-value methods, `ListLayouts`, `RemoveLayout`, and `ClearLayouts` are still synchronous. The project still does not have a full persistent database service, migrations inside the factory, widgets that know SQLite details, maps, assets, CI, or persistent database files.
+This document describes the async and backend boundary for the SQLite-backed SQLUI layout repository. The original plan was documentation-only; the current code now includes the SQLite repository, a non-UObject worker-safe operation helper, serialized opt-in async execution with shutdown/stale-callback suppression for callback-style `LoadLayout` and `SaveLayout`, and explicit factory selection for configured SQLite database paths. Direct return-value methods, `ListLayouts`, `RemoveLayout`, and `ClearLayouts` are still synchronous. The project still does not have a full persistent database service, migrations inside the factory, widgets that know SQLite details, maps, assets, CI, or persistent database files.
 
 For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 
@@ -60,7 +60,7 @@ This boundary can be implemented with whichever Unreal async primitive best fits
 
 The current scaffold proves only the boundary shape. `FSQLUIDatabaseAsyncRunner` accepts immutable request data, runs a simulated database-style task on a background thread, and marshals `FSQLUIDatabaseAsyncResult` back to the game thread before invoking the callback. It deliberately does not open SQLite, execute SQL, write files, manage migrations, or expose a repository backend.
 
-The SQLite repository database operations now also sit behind `FSQLUISQLiteLayoutRepositoryWorker`, a non-UObject helper that accepts plain settings/request data and returns existing repository result structs. `USQLUISQLiteLayoutRepository` invokes the helper synchronously by default. When `FSQLUISQLiteLayoutRepositorySettings::bRunCallbackOperationsAsync` is true, callback-style `LoadLayout` and `SaveLayout` enqueue that helper through `FSQLUIDatabaseAsyncQueue`. The queue runs one callback operation at a time in enqueue order, executes worker work off the game thread, and marshals results back to the game thread before invoking callbacks. Direct return-value methods and the other repository operations remain synchronous.
+The SQLite repository database operations now also sit behind `FSQLUISQLiteLayoutRepositoryWorker`, a non-UObject helper that accepts plain settings/request data and returns existing repository result structs. `USQLUISQLiteLayoutRepository` invokes the helper synchronously by default. When `FSQLUISQLiteLayoutRepositorySettings::bRunCallbackOperationsAsync` is true, callback-style `LoadLayout` and `SaveLayout` enqueue that helper through `FSQLUIDatabaseAsyncQueue`. The queue runs one callback operation at a time in enqueue order, executes worker work off the game thread, and marshals results back to the game thread before invoking callbacks. The queue now rejects new work after shutdown, drops pending work, lets already-running worker work finish without cancellation, and suppresses stale completion callbacks. Direct return-value methods and the other repository operations remain synchronous.
 
 ## Game-Thread Responsibilities
 
@@ -142,6 +142,8 @@ Recommended safety mechanisms:
 - Close the database connection only on the worker side after queued operations are complete or safely abandoned.
 
 `BeginDestroy`, subsystem shutdown, or an explicit repository shutdown method should prevent new requests from being accepted and should make pending completions harmless.
+
+The current per-repository `FSQLUIDatabaseAsyncQueue` implements the first explicit policy slice: `ShutdownAndSuppressCallbacks` rejects future enqueues, drops queued work that has not started, allows running worker work to finish, suppresses its stale game-thread completion callback, and prevents any further dispatch. `USQLUISQLiteLayoutRepository` calls that shutdown path during `BeginDestroy` and when `Configure` replaces or disables the active async queue.
 
 ## Cancellation and Stale Callback Behavior
 
@@ -295,7 +297,9 @@ The optional SQLite full lifecycle repository smoke path prepares a temporary da
 
 The optional SQLite async callback repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteAsyncCallbackRepository`, points `USQLUISQLiteLayoutRepository` at it with `bReadOnly = false` and `bRunCallbackOperationsAsync = true`, verifies callback-style `SaveLayout` and `LoadLayout` complete through the async boundary, verifies callbacks are delivered on the game thread, verifies synchronous metadata readback afterward, closes all database handles, and removes the file. It proves the first async SQLite callback execution slice.
 
-The optional SQLite serialized async callback repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteSerializedAsyncCallbackRepository`, points `USQLUISQLiteLayoutRepository` at it with `bReadOnly = false` and `bRunCallbackOperationsAsync = true`, enqueues two callback-style `SaveLayout` calls followed by one callback-style `LoadLayout`, verifies callbacks are delivered on the game thread in enqueue order, verifies the load sees the second saved revision with updated metadata/tags, verifies synchronous metadata readback afterward, closes all database handles, and removes the file. It proves callback-style SQLite repository operations are serialized while async `ListLayouts`, async `RemoveLayout`, async `ClearLayouts`, cancellation, shutdown draining, and a full production service remain future work.
+The optional SQLite serialized async callback repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteSerializedAsyncCallbackRepository`, points `USQLUISQLiteLayoutRepository` at it with `bReadOnly = false` and `bRunCallbackOperationsAsync = true`, enqueues two callback-style `SaveLayout` calls followed by one callback-style `LoadLayout`, verifies callbacks are delivered on the game thread in enqueue order, verifies the load sees the second saved revision with updated metadata/tags, verifies synchronous metadata readback afterward, closes all database handles, and removes the file. It proves callback-style SQLite repository operations are serialized while async `ListLayouts`, async `RemoveLayout`, async `ClearLayouts`, cancellation, shutdown draining beyond stale-callback suppression, and a full production service remain future work.
+
+The optional database async queue shutdown probe exercises `FSQLUIDatabaseAsyncQueue` directly without SQLite file I/O. It verifies shutdown reports active, rejects new enqueues, drops pending work, suppresses a stale completion from already-running work, and completes without deadlock. It proves the first shutdown/stale-callback policy slice while cancellation tokens, priorities, retries, and production service shutdown remain future work.
 
 The optional SQLite factory layout repository smoke path prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteFactoryRepository`, requests `ESQLUILayoutRepositoryBackend::SQLite` through `USQLUILayoutRepositoryFactory`, configures async callback execution through factory settings, verifies repository lifecycle behavior, verifies missing-path selection reports unavailable behavior, closes all database handles, and removes the file. It proves explicit factory selection without running migrations or creating database files inside the factory.
 
@@ -309,7 +313,7 @@ Future SQLite smoke coverage should continue to prove:
 - `SaveLayout`, `LoadLayout`, `ListLayouts`, `RemoveLayout`, and `ClearLayouts` preserve the same lifecycle semantics as current repositories.
 - SQLite operations complete without blocking the runtime widget pipeline.
 - Result callbacks are delivered on the game thread.
-- Shutdown or stale callback behavior is safe and logged.
+- Full production shutdown, cancellation, and stale-callback behavior is safe and logged.
 
 SQLite smoke tests should not add maps, Content assets, editor tooling, CI, or durable database files to source control.
 
@@ -361,7 +365,7 @@ Evaluate candidate SQLite backends against the selection criteria. Propose the m
 
 ### Phase 2: Async Database Service Boundary
 
-Use the minimal SQLUI Core-owned async scaffold, the new `FSQLUISQLiteLayoutRepositoryWorker` helper, and the serialized opt-in async callback slice as the starting point, then harden them for real SQLite work. The implementation PR should decide what cancellation tokens, shutdown behavior, stale-callback policy, and longer-lived database service boundary are needed beyond the current per-repository FIFO callback queue.
+Use the minimal SQLUI Core-owned async scaffold, the new `FSQLUISQLiteLayoutRepositoryWorker` helper, the serialized opt-in async callback slice, and the queue shutdown/stale-callback policy as the starting point, then harden them for real SQLite work. Later implementation should decide what cancellation tokens, shutdown draining, and longer-lived database service boundary are needed beyond the current per-repository FIFO callback queue.
 
 ### Phase 3: Migration Runner
 

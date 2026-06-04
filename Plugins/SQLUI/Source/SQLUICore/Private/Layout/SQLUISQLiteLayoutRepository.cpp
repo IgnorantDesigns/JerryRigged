@@ -5,6 +5,9 @@
 
 namespace
 {
+const TCHAR* SQLUISQLiteAsyncQueueShutdownMessage =
+	TEXT("SQLite layout repository async queue is shut down.");
+
 FSQLUISQLiteLayoutRepositoryWorkerSettings MakeSQLUISQLiteLayoutRepositoryWorkerSettings(
 	const FSQLUISQLiteLayoutRepositorySettings& Settings)
 {
@@ -15,6 +18,49 @@ FSQLUISQLiteLayoutRepositoryWorkerSettings MakeSQLUISQLiteLayoutRepositoryWorker
 	WorkerSettings.bAllowSchemaInitializationWrites = !Settings.bReadOnly;
 	return WorkerSettings;
 }
+
+bool ShouldShutdownSQLUISQLiteAsyncQueueForSettings(
+	const FSQLUISQLiteLayoutRepositorySettings& CurrentSettings,
+	const FSQLUISQLiteLayoutRepositorySettings& NewSettings)
+{
+	return !NewSettings.bRunCallbackOperationsAsync
+		|| CurrentSettings.DatabasePath != NewSettings.DatabasePath
+		|| CurrentSettings.bReadOnly != NewSettings.bReadOnly
+		|| CurrentSettings.bRunCallbackOperationsAsync != NewSettings.bRunCallbackOperationsAsync
+		|| CurrentSettings.bInitializeSchemaIfMissing != NewSettings.bInitializeSchemaIfMissing
+		|| CurrentSettings.bCreateDatabaseIfMissing != NewSettings.bCreateDatabaseIfMissing;
+}
+
+FSQLUILayoutLoadResult MakeSQLUISQLiteAsyncQueueShutdownLoadFailure(
+	const FString& LayoutId)
+{
+	FSQLUILayoutLoadResult Result;
+	Result.bSucceeded = false;
+	Result.Document.Metadata.LayoutId = LayoutId;
+	Result.ErrorMessage = SQLUISQLiteAsyncQueueShutdownMessage;
+	return Result;
+}
+
+FSQLUILayoutSaveResult MakeSQLUISQLiteAsyncQueueShutdownSaveFailure(
+	const FString& LayoutId)
+{
+	FSQLUILayoutSaveResult Result;
+	Result.bSucceeded = false;
+	Result.SavedLayoutId = LayoutId;
+	Result.ErrorMessage = SQLUISQLiteAsyncQueueShutdownMessage;
+	return Result;
+}
+}
+
+void USQLUISQLiteLayoutRepository::BeginDestroy()
+{
+	if (AsyncQueue.IsValid())
+	{
+		AsyncQueue->ShutdownAndSuppressCallbacks();
+		AsyncQueue.Reset();
+	}
+
+	Super::BeginDestroy();
 }
 
 void USQLUISQLiteLayoutRepository::LoadLayout(
@@ -29,7 +75,7 @@ void USQLUISQLiteLayoutRepository::LoadLayout(
 
 		TSharedRef<FSQLUIDatabaseAsyncQueue, ESPMode::ThreadSafe> Queue =
 			GetOrCreateAsyncQueue();
-		Queue->EnqueueResult<FSQLUILayoutLoadResult>(
+		const bool bEnqueued = Queue->EnqueueResult<FSQLUILayoutLoadResult>(
 			[WorkerSettings, LayoutIdCopy]()
 			{
 				return FSQLUISQLiteLayoutRepositoryWorker::LoadLayoutById(
@@ -40,6 +86,11 @@ void USQLUISQLiteLayoutRepository::LoadLayout(
 			{
 				Callback.ExecuteIfBound(Result);
 			});
+		if (!bEnqueued)
+		{
+			Callback.ExecuteIfBound(
+				MakeSQLUISQLiteAsyncQueueShutdownLoadFailure(LayoutIdCopy));
+		}
 		return;
 	}
 
@@ -59,7 +110,7 @@ void USQLUISQLiteLayoutRepository::SaveLayout(
 
 		TSharedRef<FSQLUIDatabaseAsyncQueue, ESPMode::ThreadSafe> Queue =
 			GetOrCreateAsyncQueue();
-		Queue->EnqueueResult<FSQLUILayoutSaveResult>(
+		const bool bEnqueued = Queue->EnqueueResult<FSQLUILayoutSaveResult>(
 			[WorkerSettings, DocumentCopy, bReadOnly]()
 			{
 				if (bReadOnly)
@@ -76,6 +127,12 @@ void USQLUISQLiteLayoutRepository::SaveLayout(
 			{
 				Callback.ExecuteIfBound(Result);
 			});
+		if (!bEnqueued)
+		{
+			Callback.ExecuteIfBound(
+				MakeSQLUISQLiteAsyncQueueShutdownSaveFailure(
+					DocumentCopy.Metadata.LayoutId));
+		}
 		return;
 	}
 
@@ -96,11 +153,14 @@ void USQLUISQLiteLayoutRepository::SaveLayout(
 void USQLUISQLiteLayoutRepository::Configure(
 	const FSQLUISQLiteLayoutRepositorySettings& InSettings)
 {
-	Settings = InSettings;
-	if (!Settings.bRunCallbackOperationsAsync)
+	if (AsyncQueue.IsValid()
+		&& ShouldShutdownSQLUISQLiteAsyncQueueForSettings(Settings, InSettings))
 	{
+		AsyncQueue->ShutdownAndSuppressCallbacks();
 		AsyncQueue.Reset();
 	}
+
+	Settings = InSettings;
 }
 
 FSQLUISQLiteLayoutRepositorySettings USQLUISQLiteLayoutRepository::GetSettings() const

@@ -35,6 +35,8 @@ class SQLUICORE_API USQLUISQLiteLayoutRepository : public USQLUILayoutRepository
 	GENERATED_BODY()
 
 public:
+	virtual void BeginDestroy() override;
+
 	virtual void LoadLayout(const FString& LayoutId, FSQLUILayoutLoadCompleteDelegate Callback) override;
 	virtual void SaveLayout(const FSQLUILayoutDocument& Document, FSQLUILayoutSaveCompleteDelegate Callback) override;
 
