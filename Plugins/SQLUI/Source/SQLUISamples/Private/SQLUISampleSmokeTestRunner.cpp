@@ -6,6 +6,7 @@
 #include "Database/SQLUISQLiteLayoutSchemaMigration.h"
 #include "Database/SQLUISQLiteMigrationRunner.h"
 #include "Database/SQLUISQLiteProbe.h"
+#include "Database/SQLUISQLiteSeedDatabaseCopy.h"
 #include "Async/TaskGraphInterfaces.h"
 #include "HAL/Event.h"
 #include "HAL/FileManager.h"
@@ -331,6 +332,21 @@ bool DoesSQLUISampleLayoutMetadataListContain(
 	for (const FSQLUILayoutMetadata& Layout : Layouts)
 	{
 		if (DoesSQLUISampleLayoutMetadataMatch(Layout, Expected))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DoesSQLUISampleLayoutMetadataAndTagsListContain(
+	const TArray<FSQLUILayoutMetadata>& Layouts,
+	const FSQLUILayoutMetadata& Expected)
+{
+	for (const FSQLUILayoutMetadata& Layout : Layouts)
+	{
+		if (DoesSQLUISampleLayoutMetadataAndTagsMatch(Layout, Expected))
 		{
 			return true;
 		}
@@ -4288,6 +4304,40 @@ FSQLUISampleLayoutRepositoryRuntimeConfigProbeResult RunSQLUISampleLayoutReposit
 			TEXT("SQLUI layout repository runtime config probe failed: SQLite command-line flags were not parsed."));
 	}
 
+	const FString RuntimeConfigSeedPath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("LayoutRepositoryRuntimeConfig"),
+		TEXT("SeedRuntimeConfig.db"));
+	const FString SQLiteSeedFlagsCommandLine = FString::Printf(
+		TEXT("-SQLUILayoutRepositoryBackend=SQLite -SQLUISQLiteLayoutRepositoryPath=RuntimeConfigSeedTarget.db -SQLUISQLiteLayoutRepositorySeedPath=\"%s\" -SQLUISQLiteLayoutRepositoryCopySeedIfMissing -SQLUISQLiteLayoutRepositoryOverwriteFromSeed"),
+		*RuntimeConfigSeedPath);
+	const FSQLUILayoutRepositoryRuntimeConfig SQLiteSeedFlagsConfig =
+		FSQLUILayoutRepositoryRuntimeConfigResolver::FromCommandLine(
+			*SQLiteSeedFlagsCommandLine,
+			Defaults);
+	const FSQLUISQLiteSeedDatabaseCopyRequest SeedCopyRequest =
+		FSQLUILayoutRepositoryRuntimeConfigResolver::ToSeedDatabaseCopyRequest(
+			SQLiteSeedFlagsConfig);
+	Result.bSQLiteSeedFlagsParsed =
+		SQLiteSeedFlagsConfig.Backend == ESQLUILayoutRepositoryBackend::SQLite
+		&& SQLiteSeedFlagsConfig.SQLiteSeedDatabasePath == RuntimeConfigSeedPath
+		&& SQLiteSeedFlagsConfig.bSQLiteCopySeedIfMissing
+		&& SQLiteSeedFlagsConfig.bSQLiteOverwriteDatabaseFromSeed;
+	Result.bSQLiteSeedCopyRequestMapped =
+		SeedCopyRequest.SeedDatabasePath == FSQLUILayoutRepositoryRuntimeConfigResolver::ResolveSQLiteSeedDatabasePath(RuntimeConfigSeedPath)
+		&& SeedCopyRequest.TargetDatabasePath == FSQLUILayoutRepositoryRuntimeConfigResolver::ResolveSQLiteDatabasePath(TEXT("RuntimeConfigSeedTarget.db"))
+		&& SeedCopyRequest.bCopyIfTargetMissing
+		&& SeedCopyRequest.bOverwriteTarget
+		&& SeedCopyRequest.bCreateTargetDirectory;
+	if (!Result.bSQLiteSeedFlagsParsed || !Result.bSQLiteSeedCopyRequestMapped)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeConfigProbeError(
+			Result,
+			TEXT("SQLUI layout repository runtime config probe failed: SQLite seed database copy command-line settings were not parsed or mapped."));
+	}
+
 	USQLUILayoutRepository* MissingPathRepository =
 		USQLUILayoutRepositoryFactory::CreateLayoutRepository(
 			Outer,
@@ -4416,11 +4466,568 @@ FSQLUISampleLayoutRepositoryRuntimeConfigProbeResult RunSQLUISampleLayoutReposit
 		&& Result.bRelativeSQLitePathResolvedUnderSaved
 		&& Result.bAbsoluteSQLitePathPreserved
 		&& Result.bSQLiteFlagsParsed
+		&& Result.bSQLiteSeedFlagsParsed
+		&& Result.bSQLiteSeedCopyRequestMapped
 		&& Result.bSQLiteMissingPathUnavailable
 		&& Result.bInvalidBackendFallsBackToDefault
 		&& Result.bFactoryCreatedSQLiteRepository
 		&& Result.bFactorySQLiteSaveSucceeded
 		&& Result.bDatabaseRemoved;
+
+	return Result;
+}
+
+void AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(
+	const TCHAR* DirectoryName,
+	const TCHAR* DatabaseFileName)
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("SQLiteSeedDatabaseCopyPolicy"),
+		DirectoryName,
+		DatabaseFileName);
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+TArray<FString> MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyDatabasePaths()
+{
+	return {
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Seed"), TEXT("SeedLayoutRepository.db")),
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Runtime"), TEXT("RuntimeLayoutRepository.db")),
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Runtime"), TEXT("ExistingLayoutRepository.db")),
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Runtime"), TEXT("OverwriteLayoutRepository.db")),
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Seed"), TEXT("MissingSeedLayoutRepository.db")),
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Runtime"), TEXT("MissingSeedTargetLayoutRepository.db")),
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Runtime"), TEXT("RuntimeConfigSeedCopyTarget.db"))
+	};
+}
+
+bool DoSQLUISampleSQLiteSeedDatabaseCopyPolicyFilesExist(const FString& DatabasePath)
+{
+	const TArray<FString> PathsToCheck = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	for (const FString& PathToCheck : PathsToCheck)
+	{
+		if (FPaths::FileExists(PathToCheck))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DeleteSQLUISampleSQLiteSeedDatabaseCopyPolicyFiles(
+	const FString& DatabasePath,
+	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& Result)
+{
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI SQLite seed database copy policy probe failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+bool DeleteSQLUISampleSQLiteSeedDatabaseCopyPolicyFiles(
+	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& Result)
+{
+	bool bRemoved = true;
+	for (const FString& DatabasePath : MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyDatabasePaths())
+	{
+		bRemoved =
+			DeleteSQLUISampleSQLiteSeedDatabaseCopyPolicyFiles(DatabasePath, Result)
+			&& bRemoved;
+	}
+
+	return bRemoved;
+}
+
+bool DoesAnySQLUISampleSQLiteSeedDatabaseCopyPolicyFileExist()
+{
+	for (const FString& DatabasePath : MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyDatabasePaths())
+	{
+		if (DoSQLUISampleSQLiteSeedDatabaseCopyPolicyFilesExist(DatabasePath))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+FSQLUILayoutDocument MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyDocument(
+	const TCHAR* LayoutId,
+	const TCHAR* DisplayName,
+	const TCHAR* ProbeTag)
+{
+	FSQLUILayoutDocument Document =
+		MakeSQLUISampleSQLiteFactorySchemaInitRepositoryDocument();
+	Document.Version.Label = DisplayName;
+	Document.Metadata.LayoutId = LayoutId;
+	Document.Metadata.DisplayName = DisplayName;
+	Document.Metadata.Description = TEXT("Smoke/probe layout for SQLite seed database copy policy.");
+	Document.Metadata.CreatedBy = TEXT("SQLUISamples");
+	Document.Metadata.CreatedAtUtc = TEXT("2026-06-04T00:00:00Z");
+	Document.Metadata.UpdatedAtUtc = Document.Metadata.CreatedAtUtc;
+	Document.Metadata.Tags.Reset();
+	Document.Metadata.Tags.Add(TEXT("sqlite"));
+	Document.Metadata.Tags.Add(TEXT("smoke"));
+	Document.Metadata.Tags.Add(ProbeTag);
+	Document.Metadata.SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteSeedDatabaseCopyPolicy"));
+	Document.RootWidgetId = FString::Printf(TEXT("%s.Root"), LayoutId);
+
+	if (Document.Nodes.Num() > 0)
+	{
+		Document.Nodes[0].WidgetId = Document.RootWidgetId;
+		Document.Nodes[0].Properties.Add(TEXT("Text"), DisplayName);
+		Document.Nodes[0].Tags.Reset();
+		Document.Nodes[0].Tags.Add(TEXT("sqlite"));
+		Document.Nodes[0].Tags.Add(ProbeTag);
+		Document.Nodes[0].SearchMetadata.Add(TEXT("Probe"), TEXT("SQLiteSeedDatabaseCopyPolicy"));
+	}
+
+	return Document;
+}
+
+USQLUISQLiteLayoutRepository* CreateSQLUISampleSQLiteSeedDatabaseCopyPolicyRepository(
+	UObject* Outer,
+	const FString& DatabasePath,
+	bool bReadOnly)
+{
+	USQLUISQLiteLayoutRepository* Repository =
+		NewObject<USQLUISQLiteLayoutRepository>(IsValid(Outer) ? Outer : GetTransientPackage());
+	if (!IsValid(Repository))
+	{
+		return nullptr;
+	}
+
+	FSQLUISQLiteLayoutRepositorySettings RepositorySettings;
+	RepositorySettings.DatabasePath = DatabasePath;
+	RepositorySettings.bReadOnly = bReadOnly;
+	RepositorySettings.bInitializeSchemaIfMissing = !bReadOnly;
+	RepositorySettings.bCreateDatabaseIfMissing = !bReadOnly;
+	Repository->Configure(RepositorySettings);
+	return Repository;
+}
+
+bool PrepareSQLUISampleSQLiteSeedDatabaseCopyPolicyDatabase(
+	UObject* Outer,
+	const FString& DatabasePath,
+	const FSQLUILayoutDocument& Document,
+	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& Result)
+{
+	DeleteSQLUISampleSQLiteSeedDatabaseCopyPolicyFiles(DatabasePath, Result);
+
+	USQLUISQLiteLayoutRepository* Repository =
+		CreateSQLUISampleSQLiteSeedDatabaseCopyPolicyRepository(Outer, DatabasePath, false);
+	if (!IsValid(Repository))
+	{
+		AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+			Result,
+			TEXT("SQLUI SQLite seed database copy policy probe failed: could not create SQLite repository."));
+		return false;
+	}
+
+	const FSQLUILayoutSaveResult SaveResult =
+		SaveSQLUISampleLayoutToRepository(
+			Repository,
+			TEXT("SQLite seed database copy policy repository"),
+			Document);
+	if (!SaveResult.bSucceeded || SaveResult.SavedLayoutId != Document.Metadata.LayoutId)
+	{
+		AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+			Result,
+			SaveResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite seed database copy policy probe failed: could not save probe layout.")
+				: SaveResult.ErrorMessage);
+		return false;
+	}
+
+	return FPaths::FileExists(DatabasePath);
+}
+
+bool ListSQLUISampleSQLiteSeedDatabaseCopyPolicyLayouts(
+	UObject* Outer,
+	const FString& DatabasePath,
+	FSQLUILayoutRepositoryListResult& OutListResult,
+	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& Result)
+{
+	USQLUISQLiteLayoutRepository* Repository =
+		CreateSQLUISampleSQLiteSeedDatabaseCopyPolicyRepository(Outer, DatabasePath, true);
+	if (!IsValid(Repository))
+	{
+		AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+			Result,
+			TEXT("SQLUI SQLite seed database copy policy probe failed: could not create read-only SQLite repository."));
+		return false;
+	}
+
+	OutListResult = Repository->ListLayouts();
+	if (OutListResult.bSucceeded)
+	{
+		return true;
+	}
+
+	AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+		Result,
+		OutListResult.ErrorMessage.IsEmpty()
+			? TEXT("SQLUI SQLite seed database copy policy probe failed: ListLayouts failed.")
+			: OutListResult.ErrorMessage);
+	return false;
+}
+
+bool LoadSQLUISampleSQLiteSeedDatabaseCopyPolicyLayout(
+	UObject* Outer,
+	const FString& DatabasePath,
+	const FSQLUILayoutDocument& Document,
+	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& Result)
+{
+	USQLUISQLiteLayoutRepository* Repository =
+		CreateSQLUISampleSQLiteSeedDatabaseCopyPolicyRepository(Outer, DatabasePath, true);
+	if (!IsValid(Repository))
+	{
+		AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+			Result,
+			TEXT("SQLUI SQLite seed database copy policy probe failed: could not create read-only SQLite repository for load."));
+		return false;
+	}
+
+	const FSQLUILayoutLoadResult LoadResult =
+		LoadSQLUISampleLayoutFromRepository(
+			Repository,
+			TEXT("SQLite seed database copy policy repository"),
+			Document.Metadata.LayoutId);
+	const bool bLoaded =
+		LoadResult.bSucceeded
+		&& LoadResult.Validation.bIsValid
+		&& LoadResult.Document.Metadata.LayoutId == Document.Metadata.LayoutId;
+	if (!bLoaded)
+	{
+		AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+			Result,
+			LoadResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite seed database copy policy probe failed: LoadLayout failed.")
+				: LoadResult.ErrorMessage);
+	}
+
+	return bLoaded;
+}
+
+FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult
+RunSQLUISampleSQLiteSeedDatabaseCopyPolicyProbe(UObject* Outer)
+{
+	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult Result;
+	const FString SeedPath =
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Seed"), TEXT("SeedLayoutRepository.db"));
+	const FString MissingTargetPath =
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Runtime"), TEXT("RuntimeLayoutRepository.db"));
+	const FString ExistingTargetPath =
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Runtime"), TEXT("ExistingLayoutRepository.db"));
+	const FString OverwriteTargetPath =
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Runtime"), TEXT("OverwriteLayoutRepository.db"));
+	const FString MissingSeedPath =
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Seed"), TEXT("MissingSeedLayoutRepository.db"));
+	const FString MissingSeedTargetPath =
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Runtime"), TEXT("MissingSeedTargetLayoutRepository.db"));
+	const FString RuntimeConfigTargetPath =
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyPath(TEXT("Runtime"), TEXT("RuntimeConfigSeedCopyTarget.db"));
+	Result.SeedDatabasePath = SeedPath;
+	Result.TargetDatabasePath = MissingTargetPath;
+
+	DeleteSQLUISampleSQLiteSeedDatabaseCopyPolicyFiles(Result);
+
+	const FSQLUILayoutDocument SeedDocument =
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyDocument(
+			TEXT("sqlui.smoke.sqlite-seed-copy.seed"),
+			TEXT("SQLUI SQLite Seed Copy Policy Seed Layout"),
+			TEXT("seed-copy-seed"));
+	const FSQLUILayoutDocument ExistingDocument =
+		MakeSQLUISampleSQLiteSeedDatabaseCopyPolicyDocument(
+			TEXT("sqlui.smoke.sqlite-seed-copy.existing"),
+			TEXT("SQLUI SQLite Seed Copy Policy Existing Layout"),
+			TEXT("seed-copy-existing"));
+
+	Result.bSeedDatabaseCreated =
+		PrepareSQLUISampleSQLiteSeedDatabaseCopyPolicyDatabase(
+			Outer,
+			SeedPath,
+			SeedDocument,
+			Result);
+
+	if (Result.bSeedDatabaseCreated)
+	{
+		FSQLUISQLiteSeedDatabaseCopyRequest MissingTargetRequest;
+		MissingTargetRequest.SeedDatabasePath = SeedPath;
+		MissingTargetRequest.TargetDatabasePath = MissingTargetPath;
+		MissingTargetRequest.bCopyIfTargetMissing = true;
+		const FSQLUISQLiteSeedDatabaseCopyResult MissingTargetCopyResult =
+			FSQLUISQLiteSeedDatabaseCopy::CopySeedDatabase(MissingTargetRequest);
+		Result.bMissingTargetCopied =
+			MissingTargetCopyResult.bSucceeded
+			&& MissingTargetCopyResult.bSeedDatabaseFound
+			&& !MissingTargetCopyResult.bTargetDatabaseAlreadyExisted
+			&& MissingTargetCopyResult.bTargetDatabaseCopied
+			&& MissingTargetCopyResult.bTargetDatabaseReady
+			&& FPaths::FileExists(MissingTargetPath);
+		if (!Result.bMissingTargetCopied)
+		{
+			AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+				Result,
+				MissingTargetCopyResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite seed database copy policy probe failed: missing target was not copied.")
+					: MissingTargetCopyResult.ErrorMessage);
+		}
+
+		FSQLUILayoutRepositoryListResult CopiedTargetListResult;
+		Result.bCopiedTargetReadable =
+			ListSQLUISampleSQLiteSeedDatabaseCopyPolicyLayouts(
+				Outer,
+				MissingTargetPath,
+				CopiedTargetListResult,
+				Result)
+			&& DoesSQLUISampleLayoutMetadataAndTagsListContain(
+				CopiedTargetListResult.Layouts,
+				SeedDocument.Metadata);
+		Result.bCopiedTargetLoadedSeedLayout =
+			LoadSQLUISampleSQLiteSeedDatabaseCopyPolicyLayout(
+				Outer,
+				MissingTargetPath,
+				SeedDocument,
+				Result);
+	}
+
+	if (Result.bSeedDatabaseCreated
+		&& PrepareSQLUISampleSQLiteSeedDatabaseCopyPolicyDatabase(
+			Outer,
+			ExistingTargetPath,
+			ExistingDocument,
+			Result))
+	{
+		FSQLUISQLiteSeedDatabaseCopyRequest ExistingTargetRequest;
+		ExistingTargetRequest.SeedDatabasePath = SeedPath;
+		ExistingTargetRequest.TargetDatabasePath = ExistingTargetPath;
+		ExistingTargetRequest.bCopyIfTargetMissing = true;
+		ExistingTargetRequest.bOverwriteTarget = false;
+		const FSQLUISQLiteSeedDatabaseCopyResult ExistingTargetCopyResult =
+			FSQLUISQLiteSeedDatabaseCopy::CopySeedDatabase(ExistingTargetRequest);
+
+		FSQLUILayoutRepositoryListResult ExistingTargetListResult;
+		const bool bExistingTargetReadable =
+			ListSQLUISampleSQLiteSeedDatabaseCopyPolicyLayouts(
+				Outer,
+				ExistingTargetPath,
+				ExistingTargetListResult,
+				Result);
+		Result.bExistingTargetPreservedWithoutOverwrite =
+			ExistingTargetCopyResult.bSucceeded
+			&& ExistingTargetCopyResult.bTargetDatabaseAlreadyExisted
+			&& !ExistingTargetCopyResult.bTargetDatabaseCopied
+			&& ExistingTargetCopyResult.bTargetDatabaseReady
+			&& bExistingTargetReadable
+			&& DoesSQLUISampleLayoutMetadataAndTagsListContain(
+				ExistingTargetListResult.Layouts,
+				ExistingDocument.Metadata)
+			&& !DoesSQLUISampleLayoutMetadataAndTagsListContain(
+				ExistingTargetListResult.Layouts,
+				SeedDocument.Metadata);
+		if (!Result.bExistingTargetPreservedWithoutOverwrite)
+		{
+			AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+				Result,
+				ExistingTargetCopyResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite seed database copy policy probe failed: existing target was not preserved without overwrite.")
+					: ExistingTargetCopyResult.ErrorMessage);
+		}
+	}
+
+	if (Result.bSeedDatabaseCreated
+		&& PrepareSQLUISampleSQLiteSeedDatabaseCopyPolicyDatabase(
+			Outer,
+			OverwriteTargetPath,
+			ExistingDocument,
+			Result))
+	{
+		FSQLUISQLiteSeedDatabaseCopyRequest OverwriteTargetRequest;
+		OverwriteTargetRequest.SeedDatabasePath = SeedPath;
+		OverwriteTargetRequest.TargetDatabasePath = OverwriteTargetPath;
+		OverwriteTargetRequest.bCopyIfTargetMissing = true;
+		OverwriteTargetRequest.bOverwriteTarget = true;
+		const FSQLUISQLiteSeedDatabaseCopyResult OverwriteTargetCopyResult =
+			FSQLUISQLiteSeedDatabaseCopy::CopySeedDatabase(OverwriteTargetRequest);
+
+		FSQLUILayoutRepositoryListResult OverwriteTargetListResult;
+		const bool bOverwriteTargetReadable =
+			ListSQLUISampleSQLiteSeedDatabaseCopyPolicyLayouts(
+				Outer,
+				OverwriteTargetPath,
+				OverwriteTargetListResult,
+				Result);
+		Result.bOverwriteTargetCopiedSeed =
+			OverwriteTargetCopyResult.bSucceeded
+			&& OverwriteTargetCopyResult.bTargetDatabaseAlreadyExisted
+			&& OverwriteTargetCopyResult.bTargetDatabaseCopied
+			&& OverwriteTargetCopyResult.bTargetDatabaseReady
+			&& bOverwriteTargetReadable
+			&& DoesSQLUISampleLayoutMetadataAndTagsListContain(
+				OverwriteTargetListResult.Layouts,
+				SeedDocument.Metadata);
+		Result.bOverwriteRemovedExistingLayout =
+			bOverwriteTargetReadable
+			&& !DoesSQLUISampleLayoutMetadataAndTagsListContain(
+				OverwriteTargetListResult.Layouts,
+				ExistingDocument.Metadata);
+		if (!Result.bOverwriteTargetCopiedSeed || !Result.bOverwriteRemovedExistingLayout)
+		{
+			AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+				Result,
+				OverwriteTargetCopyResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite seed database copy policy probe failed: overwrite target did not contain only the seed layout.")
+					: OverwriteTargetCopyResult.ErrorMessage);
+		}
+	}
+
+	FSQLUISQLiteSeedDatabaseCopyRequest MissingSeedRequest;
+	MissingSeedRequest.SeedDatabasePath = MissingSeedPath;
+	MissingSeedRequest.TargetDatabasePath = MissingSeedTargetPath;
+	MissingSeedRequest.bCopyIfTargetMissing = true;
+	const FSQLUISQLiteSeedDatabaseCopyResult MissingSeedCopyResult =
+		FSQLUISQLiteSeedDatabaseCopy::CopySeedDatabase(MissingSeedRequest);
+	Result.bMissingSeedFailed =
+		!MissingSeedCopyResult.bSucceeded
+		&& !MissingSeedCopyResult.bSeedDatabaseFound
+		&& MissingSeedCopyResult.ErrorMessage.Contains(TEXT("does not exist"));
+	Result.bMissingSeedDidNotCreateTarget =
+		!DoSQLUISampleSQLiteSeedDatabaseCopyPolicyFilesExist(MissingSeedTargetPath);
+	if (!Result.bMissingSeedFailed || !Result.bMissingSeedDidNotCreateTarget)
+	{
+		AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+			Result,
+			MissingSeedCopyResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI SQLite seed database copy policy probe failed: missing seed did not fail cleanly.")
+				: MissingSeedCopyResult.ErrorMessage);
+	}
+
+	if (Result.bSeedDatabaseCreated)
+	{
+		FSQLUISQLiteSeedDatabaseCopyRequest SamePathRequest;
+		SamePathRequest.SeedDatabasePath = SeedPath;
+		SamePathRequest.TargetDatabasePath = SeedPath;
+		const FSQLUISQLiteSeedDatabaseCopyResult SamePathCopyResult =
+			FSQLUISQLiteSeedDatabaseCopy::CopySeedDatabase(SamePathRequest);
+		Result.bSamePathFailed =
+			!SamePathCopyResult.bSucceeded
+			&& SamePathCopyResult.ErrorMessage.Contains(TEXT("same"));
+		Result.bSamePathLeftSeedIntact =
+			LoadSQLUISampleSQLiteSeedDatabaseCopyPolicyLayout(
+				Outer,
+				SeedPath,
+				SeedDocument,
+				Result);
+		if (!Result.bSamePathFailed || !Result.bSamePathLeftSeedIntact)
+		{
+			AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+				Result,
+				SamePathCopyResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite seed database copy policy probe failed: same-path case did not fail without mutating seed.")
+					: SamePathCopyResult.ErrorMessage);
+		}
+	}
+
+	const FSQLUILayoutRepositoryRuntimeConfig Defaults =
+		FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault();
+	const FString RuntimeConfigCommandLine = FString::Printf(
+		TEXT("-SQLUILayoutRepositoryBackend=SQLite -SQLUISQLiteLayoutRepositoryPath=\"%s\" -SQLUISQLiteLayoutRepositorySeedPath=\"%s\" -SQLUISQLiteLayoutRepositoryCopySeedIfMissing -SQLUISQLiteLayoutRepositoryOverwriteFromSeed"),
+		*RuntimeConfigTargetPath,
+		*SeedPath);
+	const FSQLUILayoutRepositoryRuntimeConfig RuntimeConfig =
+		FSQLUILayoutRepositoryRuntimeConfigResolver::FromCommandLine(
+			*RuntimeConfigCommandLine,
+			Defaults);
+	const FSQLUISQLiteSeedDatabaseCopyRequest RuntimeConfigCopyRequest =
+		FSQLUILayoutRepositoryRuntimeConfigResolver::ToSeedDatabaseCopyRequest(RuntimeConfig);
+	Result.bRuntimeConfigSeedFlagsParsed =
+		RuntimeConfig.SQLiteSeedDatabasePath == SeedPath
+		&& RuntimeConfig.bSQLiteCopySeedIfMissing
+		&& RuntimeConfig.bSQLiteOverwriteDatabaseFromSeed
+		&& RuntimeConfigCopyRequest.SeedDatabasePath == FSQLUILayoutRepositoryRuntimeConfigResolver::ResolveSQLiteSeedDatabasePath(SeedPath)
+		&& RuntimeConfigCopyRequest.TargetDatabasePath == FSQLUILayoutRepositoryRuntimeConfigResolver::ResolveSQLiteDatabasePath(RuntimeConfigTargetPath)
+		&& RuntimeConfigCopyRequest.bCopyIfTargetMissing
+		&& RuntimeConfigCopyRequest.bOverwriteTarget
+		&& !DoSQLUISampleSQLiteSeedDatabaseCopyPolicyFilesExist(RuntimeConfigTargetPath);
+	if (!Result.bRuntimeConfigSeedFlagsParsed)
+	{
+		AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+			Result,
+			TEXT("SQLUI SQLite seed database copy policy probe failed: runtime config seed flags were not parsed or mapped without copying."));
+	}
+
+	Result.bDatabaseFilesRemoved =
+		DeleteSQLUISampleSQLiteSeedDatabaseCopyPolicyFiles(Result)
+		&& !DoesAnySQLUISampleSQLiteSeedDatabaseCopyPolicyFileExist();
+	if (!Result.bDatabaseFilesRemoved)
+	{
+		AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
+			Result,
+			TEXT("SQLUI SQLite seed database copy policy probe failed: probe database files were not removed."));
+	}
+
+	Result.bSucceeded =
+		Result.bSeedDatabaseCreated
+		&& Result.bMissingTargetCopied
+		&& Result.bCopiedTargetReadable
+		&& Result.bCopiedTargetLoadedSeedLayout
+		&& Result.bExistingTargetPreservedWithoutOverwrite
+		&& Result.bOverwriteTargetCopiedSeed
+		&& Result.bOverwriteRemovedExistingLayout
+		&& Result.bMissingSeedFailed
+		&& Result.bMissingSeedDidNotCreateTarget
+		&& Result.bSamePathFailed
+		&& Result.bSamePathLeftSeedIntact
+		&& Result.bRuntimeConfigSeedFlagsParsed
+		&& Result.bDatabaseFilesRemoved;
 
 	return Result;
 }
@@ -5941,6 +6548,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.SQLiteSchemaInitHardening.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI SQLite schema init hardening smoke failed.")
 					: Result.SQLiteSchemaInitHardening.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseSQLiteSeedDatabaseCopyPolicyProbe)
+	{
+		Result.bUsedSQLiteSeedDatabaseCopyPolicyProbe = true;
+		Result.SQLiteSeedDatabaseCopyPolicyProbe =
+			RunSQLUISampleSQLiteSeedDatabaseCopyPolicyProbe(Outer);
+		if (!Result.SQLiteSeedDatabaseCopyPolicyProbe.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.SQLiteSeedDatabaseCopyPolicyProbe.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI SQLite seed database copy policy probe failed.")
+					: Result.SQLiteSeedDatabaseCopyPolicyProbe.ErrorMessage);
 		}
 	}
 

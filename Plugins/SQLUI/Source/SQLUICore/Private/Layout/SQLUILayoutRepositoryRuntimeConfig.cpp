@@ -68,6 +68,21 @@ FSQLUILayoutRepositoryRuntimeConfigResolver::ToFactorySettings(
 	return Settings;
 }
 
+FSQLUISQLiteSeedDatabaseCopyRequest
+FSQLUILayoutRepositoryRuntimeConfigResolver::ToSeedDatabaseCopyRequest(
+	const FSQLUILayoutRepositoryRuntimeConfig& RuntimeConfig)
+{
+	FSQLUISQLiteSeedDatabaseCopyRequest Request;
+	Request.SeedDatabasePath =
+		ResolveSQLiteSeedDatabasePath(RuntimeConfig.SQLiteSeedDatabasePath);
+	Request.TargetDatabasePath =
+		ResolveSQLiteDatabasePath(RuntimeConfig.SQLiteDatabasePath);
+	Request.bCopyIfTargetMissing = RuntimeConfig.bSQLiteCopySeedIfMissing;
+	Request.bOverwriteTarget = RuntimeConfig.bSQLiteOverwriteDatabaseFromSeed;
+	Request.bCreateTargetDirectory = true;
+	return Request;
+}
+
 FSQLUILayoutRepositoryRuntimeConfig
 FSQLUILayoutRepositoryRuntimeConfigResolver::FromCommandLine(
 	const TCHAR* CommandLine,
@@ -107,6 +122,15 @@ FSQLUILayoutRepositoryRuntimeConfigResolver::FromCommandLine(
 		Config.SQLiteDatabasePath = SQLiteDatabasePath;
 	}
 
+	FString SQLiteSeedDatabasePath;
+	if (ParseSQLUILayoutRepositoryRuntimeCommandLineValue(
+		SafeCommandLine,
+		TEXT("SQLUISQLiteLayoutRepositorySeedPath="),
+		SQLiteSeedDatabasePath))
+	{
+		Config.SQLiteSeedDatabasePath = SQLiteSeedDatabasePath;
+	}
+
 	if (FParse::Param(SafeCommandLine, TEXT("SQLUISQLiteLayoutRepositoryReadOnly")))
 	{
 		Config.bSQLiteReadOnly = true;
@@ -125,6 +149,16 @@ FSQLUILayoutRepositoryRuntimeConfigResolver::FromCommandLine(
 	if (FParse::Param(SafeCommandLine, TEXT("SQLUISQLiteLayoutRepositoryAsyncCallbacks")))
 	{
 		Config.bSQLiteRunCallbackOperationsAsync = true;
+	}
+
+	if (FParse::Param(SafeCommandLine, TEXT("SQLUISQLiteLayoutRepositoryCopySeedIfMissing")))
+	{
+		Config.bSQLiteCopySeedIfMissing = true;
+	}
+
+	if (FParse::Param(SafeCommandLine, TEXT("SQLUISQLiteLayoutRepositoryOverwriteFromSeed")))
+	{
+		Config.bSQLiteOverwriteDatabaseFromSeed = true;
 	}
 
 	return Config;
@@ -151,6 +185,19 @@ FString FSQLUILayoutRepositoryRuntimeConfigResolver::ResolveSQLiteDatabasePath(
 			FPaths::Combine(
 				MakeSQLUILayoutRepositoryRuntimeSQLiteBaseDirectory(),
 				TrimmedPath));
+	}
+
+	return NormalizeSQLUILayoutRepositoryRuntimePath(TrimmedPath);
+}
+
+FString FSQLUILayoutRepositoryRuntimeConfigResolver::ResolveSQLiteSeedDatabasePath(
+	const FString& InputPath)
+{
+	FString TrimmedPath = InputPath;
+	TrimmedPath.TrimStartAndEndInline();
+	if (TrimmedPath.IsEmpty())
+	{
+		return FString();
 	}
 
 	return NormalizeSQLUILayoutRepositoryRuntimePath(TrimmedPath);

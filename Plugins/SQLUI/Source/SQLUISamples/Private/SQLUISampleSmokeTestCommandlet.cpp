@@ -552,6 +552,18 @@ void LogSQLUISampleSmokeTestLayoutRepositoryRuntimeConfigProbeResult(
 	UE_LOG(
 		LogSQLUISamples,
 		Log,
+		TEXT("SQLUI layout repository runtime config probe SQLite seed flags parsed: %s"),
+		ProbeResult.bSQLiteSeedFlagsParsed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime config probe SQLite seed copy request mapped: %s"),
+		ProbeResult.bSQLiteSeedCopyRequestMapped ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
 		TEXT("SQLUI layout repository runtime config probe SQLite missing path unavailable: %s"),
 		ProbeResult.bSQLiteMissingPathUnavailable ? TEXT("true") : TEXT("false"));
 
@@ -2099,6 +2111,109 @@ void LogSQLUISampleSmokeTestSQLiteSchemaInitHardeningResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestSQLiteSeedDatabaseCopyPolicyProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedSQLiteSeedDatabaseCopyPolicyProbe)
+	{
+		return;
+	}
+
+	const FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& ProbeResult =
+		Result.SQLiteSeedDatabaseCopyPolicyProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite seed database copy policy probe seed database created: %s"),
+		ProbeResult.bSeedDatabaseCreated ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite seed database copy policy probe missing target copied: %s"),
+		ProbeResult.bMissingTargetCopied ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite seed database copy policy probe copied target readable: %s"),
+		ProbeResult.bCopiedTargetReadable ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite seed database copy policy probe copied target loaded seed layout: %s"),
+		ProbeResult.bCopiedTargetLoadedSeedLayout ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite seed database copy policy probe existing target preserved without overwrite: %s"),
+		ProbeResult.bExistingTargetPreservedWithoutOverwrite ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite seed database copy policy probe overwrite target copied seed: %s"),
+		ProbeResult.bOverwriteTargetCopiedSeed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite seed database copy policy probe overwrite removed existing layout: %s"),
+		ProbeResult.bOverwriteRemovedExistingLayout ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite seed database copy policy probe missing seed failed: %s"),
+		ProbeResult.bMissingSeedFailed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite seed database copy policy probe missing seed did not create target: %s"),
+		ProbeResult.bMissingSeedDidNotCreateTarget ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite seed database copy policy probe same path failed: %s"),
+		ProbeResult.bSamePathFailed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite seed database copy policy probe same path left seed intact: %s"),
+		ProbeResult.bSamePathLeftSeedIntact ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite seed database copy policy probe runtime config seed flags parsed: %s"),
+		ProbeResult.bRuntimeConfigSeedFlagsParsed ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI SQLite seed database copy policy probe database files removed: %s"),
+		ProbeResult.bDatabaseFilesRemoved ? TEXT("true") : TEXT("false"));
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite seed database copy policy probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI SQLite seed database copy policy probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestStepErrors(
 	const TCHAR* StepName,
 	const TArray<FString>& Messages)
@@ -2152,6 +2267,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestSQLiteFactoryLayoutRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteFactorySchemaInitRepositoryResult(Result);
 	LogSQLUISampleSmokeTestSQLiteSchemaInitHardeningResult(Result);
+	LogSQLUISampleSmokeTestSQLiteSeedDatabaseCopyPolicyProbeResult(Result);
 
 	UE_LOG(
 		LogSQLUISamples,
@@ -2272,6 +2388,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseSQLiteSchemaInitHardening =
 		FParse::Param(*Params, TEXT("UseSQLiteSchemaInitHardening"))
 		|| FParse::Param(*Params, TEXT("SQLiteSchemaInitHardening"));
+	const bool bUseSQLiteSeedDatabaseCopyPolicyProbe =
+		FParse::Param(*Params, TEXT("UseSQLiteSeedDatabaseCopyPolicyProbe"))
+		|| FParse::Param(*Params, TEXT("SQLiteSeedDatabaseCopyPolicyProbe"));
 	const bool bUseJsonLayoutFixture =
 		FParse::Param(*Params, TEXT("UseJsonLayoutFixture"))
 		|| FParse::Param(*Params, TEXT("JsonLayoutFixture"))
@@ -2381,6 +2500,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite schema init hardening selected: true"));
 	}
 
+	if (bUseSQLiteSeedDatabaseCopyPolicyProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite seed database copy policy probe selected: true"));
+	}
+
 	UWorld* CommandletWorld = CreateSQLUISampleSmokeTestCommandletWorld();
 	if (!CommandletWorld)
 	{
@@ -2414,6 +2538,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseSQLiteFactoryLayoutRepository = bUseSQLiteFactoryLayoutRepository;
 		Request.bUseSQLiteFactorySchemaInitRepository = bUseSQLiteFactorySchemaInitRepository;
 		Request.bUseSQLiteSchemaInitHardening = bUseSQLiteSchemaInitHardening;
+		Request.bUseSQLiteSeedDatabaseCopyPolicyProbe = bUseSQLiteSeedDatabaseCopyPolicyProbe;
 		Result = USQLUISampleSmokeTestRunner::RunSmokeTest(CommandletWorld, Request);
 	}
 

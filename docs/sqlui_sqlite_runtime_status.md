@@ -61,6 +61,9 @@ Supported command-line options include:
 - `-SQLUISQLiteLayoutRepositoryInitializeSchema`
 - `-SQLUISQLiteLayoutRepositoryCreateDatabase`
 - `-SQLUISQLiteLayoutRepositoryAsyncCallbacks`
+- `-SQLUISQLiteLayoutRepositorySeedPath="<path>"`
+- `-SQLUISQLiteLayoutRepositoryCopySeedIfMissing`
+- `-SQLUISQLiteLayoutRepositoryOverwriteFromSeed`
 
 When a SQLite database path is relative, the resolver normalizes it under:
 
@@ -69,6 +72,25 @@ Saved/SQLUI/LayoutRepositories
 ```
 
 Absolute SQLite paths are normalized and preserved. The helper also exposes the explicit `Default` token for callers that intentionally want the safe filename `LayoutRepository.sqlite` under the same `Saved/SQLUI/LayoutRepositories` scope. An empty SQLite path stays empty so explicit SQLite factory selection reports unavailable behavior instead of falling back to another backend.
+
+The resolver can also map explicit seed-copy options into `FSQLUISQLiteSeedDatabaseCopyRequest`. That mapping is configuration-only; it does not copy files, create directories, create repositories, initialize schema, or make SQLite the default backend.
+
+## Seed Database Copy Policy
+
+`FSQLUISQLiteSeedDatabaseCopy` is a SQLUICore-owned helper for explicitly copying a closed SQLite seed database into a writable runtime database path before repository use.
+
+The helper:
+
+- Normalizes seed and target paths.
+- Fails clearly when seed path is empty, target path is empty, the seed DB is missing, or seed and target paths are the same.
+- Leaves an existing target database untouched unless overwrite is explicitly enabled.
+- Copies the seed DB to a missing target only when copy-if-missing is enabled.
+- Deletes only the target database file plus target SQLite sidecars before overwrite.
+- Creates the target parent directory only when requested.
+
+The helper does not open SQLite, run migrations, create schema, seed data, create repositories, or participate in `USQLUILayoutRepositoryFactory`. It is a pre-repository file preparation policy for callers that already decided to use a seed database.
+
+No seed database assets are included by default, and no source-controlled database files are required for the current runtime path. Any future product seed DB policy still needs explicit asset location, packaging, versioning, and upgrade rules.
 
 ## Schema Initialization
 
@@ -134,6 +156,7 @@ Current SQLite-related smoke flags are:
 - `-UseSQLiteFactoryLayoutRepository`: verifies explicit factory-created SQLite repository behavior.
 - `-UseSQLiteFactorySchemaInitRepository`: verifies opt-in repository-owned schema initialization through factory settings.
 - `-UseSQLiteSchemaInitHardening`: verifies schema-init edge cases and read-only init blocking.
+- `-UseSQLiteSeedDatabaseCopyPolicyProbe`: verifies explicit seed DB copy/no-overwrite/overwrite/failure behavior and confirms copied targets are repository-readable.
 
 The smoke command reference and expected log lines live in [`sqlui_smoke_test.md`](sqlui_smoke_test.md).
 
@@ -159,7 +182,7 @@ Remaining work includes:
 - Cancellation, shutdown draining beyond stale-callback suppression, and async coverage for all repository operations.
 - Migration versioning and upgrade paths beyond `001_initial_layout_schema`.
 - User-facing runtime configuration surfaces and production database path policy.
-- Seed database copy policy, if seed DBs are added.
+- Product seed database asset/package/version policy, if seed DBs are added.
 - Optional lifecycle features such as history APIs, checkpoints, previews, restore flows, and richer search.
 
 ## Packaged Validation Status

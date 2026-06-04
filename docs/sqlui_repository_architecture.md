@@ -21,7 +21,7 @@ Widgets, widget factories, and runtime pipeline code should depend on layout doc
 
 Runtime-facing code can choose a repository backend through `FSQLUILayoutRepositoryFactorySettings` and `USQLUILayoutRepositoryFactory`.
 
-`FSQLUILayoutRepositoryRuntimeConfigResolver` is the SQLUICore storage-selection policy helper above the factory. It turns explicit runtime config values or command-line options into `FSQLUILayoutRepositoryFactorySettings` while keeping `InMemory` as the default, keeping SQLite non-default, resolving relative SQLite paths under `Saved/SQLUI/LayoutRepositories`, and leaving all repository creation, schema initialization, and file creation to later factory/repository behavior.
+`FSQLUILayoutRepositoryRuntimeConfigResolver` is the SQLUICore storage-selection policy helper above the factory. It turns explicit runtime config values or command-line options into `FSQLUILayoutRepositoryFactorySettings` while keeping `InMemory` as the default, keeping SQLite non-default, resolving relative SQLite paths under `Saved/SQLUI/LayoutRepositories`, and leaving all repository creation, schema initialization, and file creation to later factory/repository behavior. It can also map explicit SQLite seed-copy options into `FSQLUISQLiteSeedDatabaseCopyRequest`; that mapping does not copy files or select repositories.
 
 `ESQLUILayoutRepositoryBackend` currently supports:
 
@@ -35,6 +35,8 @@ Runtime-facing code can choose a repository backend through `FSQLUILayoutReposit
 `FSQLUILayoutRepositoryFactorySettings` includes `SQLiteSettings` for the SQLite backend. Those settings are passed to `USQLUISQLiteLayoutRepository` without running migrations or creating database files in the factory. If `Backend = SQLite` is requested with an empty `SQLiteSettings.DatabasePath`, the factory returns the existing unavailable repository behavior instead of silently falling back to another backend. Schema initialization remains repository-owned and opt-in through SQLite settings.
 
 The factory falls back to the transient package when no valid outer is supplied. It is the runtime selection boundary for current sample code and later storage implementations. Widgets should stay behind repository/runtime-context APIs and should not select concrete storage classes themselves.
+
+`FSQLUISQLiteSeedDatabaseCopy` is a separate SQLUICore pre-repository file policy helper. It can copy a closed SQLite seed database into a writable runtime database path when a caller explicitly requests copy-if-missing or overwrite behavior. It does not open SQLite, run schema initialization, seed data, create repositories, or run inside `USQLUILayoutRepositoryFactory`. Widgets should never call it directly.
 
 ## Current Repositories
 
@@ -167,6 +169,7 @@ Current paths are:
 - JSON file repository round trip: the factory selects `JsonFile`, the JSON fixture is saved into `USQLUIJsonFileLayoutRepository`, loaded back by layout id, removed from `Saved/SQLUI/SmokeTests/Layouts`, and passed into the widget pipeline.
 - Unavailable repository selection: repository smoke paths also select `Unavailable` and verify load/save report `bBackendUnavailable` cleanly.
 - Runtime repository config probe: SQLUISamples exercises `FSQLUILayoutRepositoryRuntimeConfigResolver` directly, verifies default `InMemory` behavior, JSON/SQLite command-line parsing, SQLite path resolution, missing-path unavailable behavior, invalid-backend fallback, and a factory-created SQLite save through explicit settings under `Saved/SQLUI/SmokeTests/LayoutRepositoryRuntimeConfig`.
+- SQLite seed database copy policy probe: SQLUISamples prepares a closed seed database under `Saved/SQLUI/SmokeTests/SQLiteSeedDatabaseCopyPolicy/Seed`, exercises the SQLUICore seed copy helper for missing target, existing target without overwrite, existing target with overwrite, missing seed, same-path failure, and runtime config mapping, verifies copied targets are readable through `USQLUISQLiteLayoutRepository`, removes all probe database files, and passes the default layout through the widget pipeline.
 - SQLite read-only repository smoke path: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, instantiates `USQLUISQLiteLayoutRepository` directly, verifies `ListLayouts` metadata and tags, verifies `LoadLayout` deserializes and validates the document, verifies unsupported `SaveLayout`, `RemoveLayout`, and `ClearLayouts` calls are rejected without mutating the prepared database, removes the database, and passes the default layout through the widget pipeline.
 - SQLite SaveLayout repository smoke path: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteSaveLayoutRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, and `LoadLayout`, saves the same layout id a second time, verifies the latest revision and updated metadata are read back, removes the database, and passes the default layout through the widget pipeline.
 - SQLite RemoveLayout repository smoke path: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteRemoveLayoutRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, `LoadLayout`, and soft-delete `RemoveLayout`, verifies the removed layout disappears from list/load while revisions remain preserved, removes the database, and passes the default layout through the widget pipeline.
@@ -200,7 +203,7 @@ The SQLite implementation should:
 - Fit the planned `Layouts.db` persistence path and gracefully report unavailable backend state when SQLite is disabled or missing.
 - Support later layout lifecycle work such as revisions, history, checkpoints, tags, search metadata, and preview sessions.
 - Preserve the current document validation boundary before saving and after loading.
-- Use `Saved/SQLUI/...` for writable runtime database state, with any seed-copy behavior handled before mutation.
+- Use `Saved/SQLUI/...` for writable runtime database state, with explicit seed-copy behavior handled before repository mutation.
 
 SQLite repository smoke coverage is broad enough for the current local lifecycle, but production migration versioning and upgrade paths, full async database execution, shutdown behavior, and packaged-build validation should happen in later implementation work.
 
@@ -212,4 +215,5 @@ Near-term implementation work can stay small and repository-focused:
 2. Extend the async database boundary beyond callback-style `LoadLayout` and `SaveLayout` before using SQLite for normal runtime persistence.
 3. Keep SQLite factory selection explicitly configured and unavailable when required settings are missing.
 4. Harden migration versioning, upgrade behavior, and database file handling in SQLUICore, not in widgets.
-5. Extend lifecycle features through repository contracts instead of exposing storage details to widgets.
+5. Define product seed database asset/package/version rules before shipping source-controlled seed DBs.
+6. Extend lifecycle features through repository contracts instead of exposing storage details to widgets.

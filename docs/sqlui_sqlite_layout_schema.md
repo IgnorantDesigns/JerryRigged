@@ -48,12 +48,14 @@ The layout read smoke proof uses `Saved/SQLUI/SmokeTests/LayoutReadProbe/LayoutR
 
 ## Seed Copy Expectations
 
-If seed databases are added later, source-controlled seed files may live in a project or plugin seed-data folder, but they should be treated as read-only inputs. Before any mutation, the runtime repository should copy the seed database into `Saved/SQLUI/...` and open the writable copy.
+If seed databases are added later, source-controlled seed files may live in a project or plugin seed-data folder, but they should be treated as read-only inputs. Before any mutation, callers should copy the seed database into `Saved/SQLUI/...` and open the writable copy.
+
+SQLUICore now includes `FSQLUISQLiteSeedDatabaseCopy` as an explicit pre-repository file policy helper for this step. It copies only a closed seed DB file into a writable target path when requested, leaves existing target DBs alone unless overwrite is explicit, deletes only target sidecars for overwrite, and fails clearly for missing seed or same-path inputs. The helper does not open SQLite, create schema, run migrations, seed repository data, or run inside `USQLUILayoutRepositoryFactory`.
 
 Seed copy rules:
 
 - Never write to `Content/`, plugin content, or source-controlled seed databases at runtime.
-- Create parent directories under `Saved/SQLUI/...` before copying.
+- Create parent directories under `Saved/SQLUI/...` before copying when explicitly allowed.
 - Prefer explicit version checks before using a copied seed.
 - If a writable copy already exists, migrate it instead of overwriting it.
 - If seed copy fails, return a backend-unavailable or save/load failure result with a clear `ErrorMessage`.

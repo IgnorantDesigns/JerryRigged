@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Database/SQLUISQLiteSeedDatabaseCopy.h"
 #include "Layout/SQLUILayoutRepositoryFactory.h"
 
 #include "SQLUILayoutRepositoryRuntimeConfig.generated.h"
@@ -20,6 +21,9 @@ struct SQLUICORE_API FSQLUILayoutRepositoryRuntimeConfig
 	FString SQLiteDatabasePath;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Layout Repository")
+	FString SQLiteSeedDatabasePath;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Layout Repository")
 	bool bSQLiteReadOnly = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Layout Repository")
@@ -30,6 +34,12 @@ struct SQLUICORE_API FSQLUILayoutRepositoryRuntimeConfig
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Layout Repository")
 	bool bSQLiteRunCallbackOperationsAsync = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Layout Repository")
+	bool bSQLiteCopySeedIfMissing = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Layout Repository")
+	bool bSQLiteOverwriteDatabaseFromSeed = false;
 };
 
 /**
@@ -50,11 +60,16 @@ public:
 	static FSQLUILayoutRepositoryFactorySettings ToFactorySettings(
 		const FSQLUILayoutRepositoryRuntimeConfig& RuntimeConfig);
 
+	static FSQLUISQLiteSeedDatabaseCopyRequest ToSeedDatabaseCopyRequest(
+		const FSQLUILayoutRepositoryRuntimeConfig& RuntimeConfig);
+
 	static FSQLUILayoutRepositoryRuntimeConfig FromCommandLine(
 		const TCHAR* CommandLine,
 		const FSQLUILayoutRepositoryRuntimeConfig& Defaults);
 
 	static FString ResolveSQLiteDatabasePath(const FString& InputPath);
+
+	static FString ResolveSQLiteSeedDatabasePath(const FString& InputPath);
 
 	static bool TryParseBackend(
 		const FString& BackendText,

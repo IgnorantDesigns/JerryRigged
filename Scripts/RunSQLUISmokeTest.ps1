@@ -46,6 +46,8 @@ param(
 
 	[switch]$UseSQLiteSchemaInitHardening,
 
+	[switch]$UseSQLiteSeedDatabaseCopyPolicyProbe,
+
 	[Alias('?')]
 	[switch]$Help
 )
@@ -135,6 +137,9 @@ Parameters:
   -UseSQLiteSchemaInitHardening
       Run the optional SQLUICore SQLite schema-init hardening smoke path.
 
+  -UseSQLiteSeedDatabaseCopyPolicyProbe
+      Run the optional SQLUICore SQLite seed database copy policy probe.
+
   -Help, -?
       Show this help.
 
@@ -160,6 +165,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteFactoryLayoutRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteFactorySchemaInitRepository
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteSchemaInitHardening
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteSeedDatabaseCopyPolicyProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -UnrealEditorCmdPath "C:\UE\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -ProjectPath ".\JerryRigged.uproject"
 '@
@@ -364,6 +370,11 @@ if ($UseSQLiteFactorySchemaInitRepository)
 if ($UseSQLiteSchemaInitHardening)
 {
 	$CommandletArgs += '-SQLiteSchemaInitHardening'
+}
+
+if ($UseSQLiteSeedDatabaseCopyPolicyProbe)
+{
+	$CommandletArgs += '-SQLiteSeedDatabaseCopyPolicyProbe'
 }
 
 $PrintableCommandParts = @($ResolvedUnrealEditorCmdPath) + $CommandletArgs
