@@ -105,6 +105,8 @@ Current SQLite-related smoke flags are:
 
 The smoke command reference and expected log lines live in [`sqlui_smoke_test.md`](sqlui_smoke_test.md).
 
+Packaged runtime SQLite smoke is separate from editor commandlet smoke. `RunSQLUIPackagedBuildValidation.ps1 -RunPackagedSQLiteSmoke` builds/packages the project, launches the packaged executable with `-SQLUIPackagedRuntimeSQLiteSmoke`, verifies a repository lifecycle under the packaged runtime `Saved/SQLUI/PackagedRuntimeSmoke/...` path, checks the runtime log for success, and removes the smoke database.
+
 ## Runtime Boundaries
 
 SQLite details belong in SQLUICore and the SQLUISamples smoke harness only. Widgets should continue to work with repository contracts, layout documents, variable stores, action systems, and runtime contexts.
@@ -120,7 +122,7 @@ The SQLite path is implemented enough for repository-shaped local smoke coverage
 Remaining work includes:
 
 - Expanding packaged-build validation beyond the latest local Win64 Development pass.
-- Packaged runtime SQLite lifecycle execution inside a built executable.
+- Expanding packaged runtime SQLite lifecycle coverage beyond the first local packaged executable smoke.
 - Production async database service or queue design.
 - Shutdown, cancellation, and stale-callback policy for all repository operations.
 - Migration versioning and upgrade paths beyond `001_initial_layout_schema`.
@@ -134,6 +136,8 @@ Local smoke tests prove commandlet behavior and temporary database cleanup. The 
 
 The latest local Win64 Development packaged-build validation passed after installing the UE 5.7-preferred Visual Studio 2022 MSVC `14.44.x` toolchain. That pass proves the local BuildCookRun path can build, cook, stage, package, and archive with SQLUI and SQLiteCore wiring enabled.
 
-That scaffold still does not prove packaged runtime SQLite lifecycle execution, packaged runtime database path behavior under `Saved/SQLUI`, platform coverage beyond the requested local target, long-running database service behavior, or production migration upgrades.
+The scaffold can also run the packaged executable with `-SQLUIPackagedRuntimeSQLiteSmoke` to prove one packaged runtime SQLite lifecycle against a packaged runtime `Saved/SQLUI/PackagedRuntimeSmoke/...` database path. That runtime smoke covers save, list, load, remove, clear, log verification, and database cleanup.
+
+It still does not prove platform coverage beyond the requested local target, long-running database service behavior, full async lifecycle handling, or production migration upgrades.
 
 Until those items are validated, SQLite should stay explicitly configured, not default.

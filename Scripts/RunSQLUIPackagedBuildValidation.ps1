@@ -14,6 +14,12 @@ param(
 
 	[string]$StageDirectory,
 
+	[switch]$RunPackagedSQLiteSmoke,
+
+	[int]$PackagedSmokeTimeoutSeconds = 120,
+
+	[string]$PackagedSmokeLogPath,
+
 	[switch]$NoBuild,
 
 	[switch]$NoCook,
@@ -65,6 +71,18 @@ Parameters:
       Saved\SQLUI\PackagedValidation\<Platform>\<Configuration>\Stage
       The resolved directory must stay under Saved\SQLUI\PackagedValidation.
 
+  -RunPackagedSQLiteSmoke
+      After BuildCookRun succeeds, launch the packaged executable with
+      -SQLUIPackagedRuntimeSQLiteSmoke and verify the runtime smoke log.
+
+  -PackagedSmokeTimeoutSeconds
+      Timeout for the packaged runtime smoke process. Defaults to 120.
+
+  -PackagedSmokeLogPath
+      Optional packaged runtime smoke log path. Defaults to:
+      Saved\SQLUI\PackagedValidation\<Platform>\<Configuration>\RuntimeSmoke\SQLUIPackagedRuntimeSQLiteSmoke.log
+      The resolved path must stay under Saved\SQLUI\PackagedValidation.
+
   -NoBuild
       Omit the BuildCookRun -build flag. Use only when build outputs already exist.
 
@@ -84,6 +102,7 @@ Parameters:
 Examples:
   .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7"
   .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput
+  .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedSQLiteSmoke
   .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -RunUATPath "C:\UE\Engine\Build\BatchFiles\RunUAT.bat" -Platform Win64 -Configuration Development
 '@
 
@@ -219,6 +238,157 @@ function Write-DetectedToolVersion
 	}
 }
 
+function Get-SQLUIPackagedRuntimePlatformFolders
+{
+	param(
+		[Parameter(Mandatory = $true)]
+		[string]$PlatformName
+	)
+
+	$Folders = New-Object System.Collections.Generic.List[string]
+	if ($PlatformName.Equals('Win64', [System.StringComparison]::OrdinalIgnoreCase))
+	{
+		$Folders.Add('Windows')
+	}
+
+	$Folders.Add($PlatformName)
+	return $Folders | Select-Object -Unique
+}
+
+function Find-SQLUIPackagedExecutable
+{
+	param(
+		[Parameter(Mandatory = $true)]
+		[string]$ArchiveRoot,
+
+		[Parameter(Mandatory = $true)]
+		[string]$StageRoot,
+
+		[Parameter(Mandatory = $true)]
+		[string]$PlatformName
+	)
+
+	$PlatformFolders = @(Get-SQLUIPackagedRuntimePlatformFolders -PlatformName $PlatformName)
+	$CandidatePaths = New-Object System.Collections.Generic.List[string]
+
+	foreach ($Root in @($ArchiveRoot, $StageRoot))
+	{
+		$CandidatePaths.Add((Join-Path -Path $Root -ChildPath 'JerryRigged.exe'))
+
+		foreach ($Folder in $PlatformFolders)
+		{
+			$CandidatePaths.Add((Join-Path -Path $Root -ChildPath (Join-Path -Path $Folder -ChildPath 'JerryRigged.exe')))
+			$CandidatePaths.Add((Join-Path -Path $Root -ChildPath (Join-Path -Path $Folder -ChildPath 'JerryRigged\JerryRigged.exe')))
+			$CandidatePaths.Add((Join-Path -Path $Root -ChildPath (Join-Path -Path $Folder -ChildPath 'JerryRigged\Binaries\Win64\JerryRigged.exe')))
+		}
+	}
+
+	foreach ($CandidatePath in ($CandidatePaths | Select-Object -Unique))
+	{
+		if (Test-Path -LiteralPath $CandidatePath -PathType Leaf)
+		{
+			return (Resolve-Path -LiteralPath $CandidatePath).ProviderPath
+		}
+	}
+
+	Write-Host 'SQLUI packaged runtime SQLite smoke executable candidates checked:'
+	foreach ($CandidatePath in ($CandidatePaths | Select-Object -Unique))
+	{
+		Write-Host "  $CandidatePath"
+	}
+
+	return $null
+}
+
+function Invoke-SQLUIPackagedRuntimeSQLiteSmoke
+{
+	param(
+		[Parameter(Mandatory = $true)]
+		[string]$ExecutablePath,
+
+		[Parameter(Mandatory = $true)]
+		[string]$LogPath,
+
+		[Parameter(Mandatory = $true)]
+		[int]$TimeoutSeconds
+	)
+
+	if ($TimeoutSeconds -lt 1)
+	{
+		Stop-WithUsageError 'PackagedSmokeTimeoutSeconds must be 1 or greater.'
+	}
+
+	$LogDirectory = Split-Path -Parent $LogPath
+	New-Item -ItemType Directory -Force -Path $LogDirectory | Out-Null
+
+	if (Test-Path -LiteralPath $LogPath)
+	{
+		Remove-Item -LiteralPath $LogPath -Force
+	}
+
+	$SmokeArgs = @(
+		'-SQLUIPackagedRuntimeSQLiteSmoke',
+		'-unattended',
+		'-nosound',
+		'-NullRHI',
+		"-abslog=`"$LogPath`""
+	)
+
+	$PrintableCommandParts = @($ExecutablePath) + $SmokeArgs
+	$PrintableCommand = '& ' + (($PrintableCommandParts | ForEach-Object { Format-PowerShellCommandPart -Value $_ }) -join ' ')
+
+	Write-Host 'Running SQLUI packaged runtime SQLite smoke command:'
+	Write-Host $PrintableCommand
+	Write-Host "SQLUI packaged runtime SQLite smoke log path: $LogPath"
+
+	$Process = Start-Process -FilePath $ExecutablePath -ArgumentList $SmokeArgs -WindowStyle Hidden -PassThru
+	$TimeoutMilliseconds = [Math]::Max(1, $TimeoutSeconds) * 1000
+	if (-not $Process.WaitForExit($TimeoutMilliseconds))
+	{
+		Write-Error "SQLUI packaged runtime SQLite smoke timed out after $TimeoutSeconds second(s)."
+		try
+		{
+			$Process.Kill()
+		}
+		catch
+		{
+			Write-Warning "SQLUI packaged runtime SQLite smoke could not kill timed-out process: $($_.Exception.Message)"
+		}
+		return 4
+	}
+
+	$RuntimeExitCode = $Process.ExitCode
+	Write-Host "SQLUI packaged runtime SQLite smoke process exit code: $RuntimeExitCode"
+
+	if (-not (Test-Path -LiteralPath $LogPath -PathType Leaf))
+	{
+		Write-Error "SQLUI packaged runtime SQLite smoke log was not created: $LogPath"
+		return 5
+	}
+
+	$LogText = Get-Content -LiteralPath $LogPath -Raw
+	if ($LogText.Contains('SQLUI packaged runtime SQLite smoke failed:'))
+	{
+		Write-Error 'SQLUI packaged runtime SQLite smoke log contains a failure line.'
+		return 6
+	}
+
+	if (-not $LogText.Contains('SQLUI packaged runtime SQLite smoke succeeded.'))
+	{
+		Write-Error 'SQLUI packaged runtime SQLite smoke success line was not found in the runtime log.'
+		return 7
+	}
+
+	if ($RuntimeExitCode -ne 0)
+	{
+		Write-Error "SQLUI packaged runtime SQLite smoke process did not exit cleanly. ExitCode=$RuntimeExitCode"
+		return $RuntimeExitCode
+	}
+
+	Write-Host 'SQLUI packaged runtime SQLite smoke succeeded.'
+	return 0
+}
+
 if ($Help)
 {
 	Show-SQLUIPackagedBuildValidationHelp
@@ -254,8 +424,16 @@ if ([string]::IsNullOrWhiteSpace($StageDirectory))
 	$StageDirectory = Join-Path -Path $DefaultOutputRoot -ChildPath 'Stage'
 }
 
+if ([string]::IsNullOrWhiteSpace($PackagedSmokeLogPath))
+{
+	$PackagedSmokeLogPath = Join-Path `
+		-Path $DefaultOutputRoot `
+		-ChildPath 'RuntimeSmoke\SQLUIPackagedRuntimeSQLiteSmoke.log'
+}
+
 $ResolvedArchiveDirectory = Resolve-FullPath -Path $ArchiveDirectory -BasePath $ProjectRoot
 $ResolvedStageDirectory = Resolve-FullPath -Path $StageDirectory -BasePath $ProjectRoot
+$ResolvedPackagedSmokeLogPath = Resolve-FullPath -Path $PackagedSmokeLogPath -BasePath $ProjectRoot
 
 if (-not (Test-IsPathUnder -Path $ResolvedArchiveDirectory -RootPath $PackagedValidationRoot))
 {
@@ -265,6 +443,11 @@ if (-not (Test-IsPathUnder -Path $ResolvedArchiveDirectory -RootPath $PackagedVa
 if (-not (Test-IsPathUnder -Path $ResolvedStageDirectory -RootPath $PackagedValidationRoot))
 {
 	Stop-WithUsageError "StageDirectory must be under Saved\SQLUI\PackagedValidation: $ResolvedStageDirectory"
+}
+
+if (-not (Test-IsPathUnder -Path $ResolvedPackagedSmokeLogPath -RootPath $PackagedValidationRoot))
+{
+	Stop-WithUsageError "PackagedSmokeLogPath must be under Saved\SQLUI\PackagedValidation: $ResolvedPackagedSmokeLogPath"
 }
 
 if ($CleanPackageOutput)
@@ -336,6 +519,12 @@ Write-Host 'Running SQLUI packaged-build validation command:'
 Write-Host $PrintableCommand
 Write-Host "SQLUI packaged-build validation archive directory: $ResolvedArchiveDirectory"
 Write-Host "SQLUI packaged-build validation stage directory: $ResolvedStageDirectory"
+if ($RunPackagedSQLiteSmoke)
+{
+	Write-Host "SQLUI packaged runtime SQLite smoke requested: true"
+	Write-Host "SQLUI packaged runtime SQLite smoke timeout seconds: $PackagedSmokeTimeoutSeconds"
+	Write-Host "SQLUI packaged runtime SQLite smoke log path: $ResolvedPackagedSmokeLogPath"
+}
 
 & $ResolvedRunUATPath @BuildCookRunArgs
 $ExitCode = $LASTEXITCODE
@@ -346,4 +535,27 @@ if ($null -eq $ExitCode)
 }
 
 Write-Host "SQLUI packaged-build validation exit code: $ExitCode"
-exit $ExitCode
+if ($ExitCode -ne 0 -or -not $RunPackagedSQLiteSmoke)
+{
+	exit $ExitCode
+}
+
+$PackagedExecutablePath = Find-SQLUIPackagedExecutable `
+	-ArchiveRoot $ResolvedArchiveDirectory `
+	-StageRoot $ResolvedStageDirectory `
+	-PlatformName $Platform
+
+if ([string]::IsNullOrWhiteSpace($PackagedExecutablePath))
+{
+	Write-Error 'SQLUI packaged runtime SQLite smoke failed: could not locate packaged executable.'
+	exit 3
+}
+
+Write-Host "SQLUI packaged runtime SQLite smoke executable path: $PackagedExecutablePath"
+$SmokeExitCode = Invoke-SQLUIPackagedRuntimeSQLiteSmoke `
+	-ExecutablePath $PackagedExecutablePath `
+	-LogPath $ResolvedPackagedSmokeLogPath `
+	-TimeoutSeconds $PackagedSmokeTimeoutSeconds
+
+Write-Host "SQLUI packaged runtime SQLite smoke exit code: $SmokeExitCode"
+exit $SmokeExitCode
