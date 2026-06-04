@@ -19,6 +19,7 @@
 #include "Layout/SQLUILayoutJson.h"
 #include "Layout/SQLUILayoutRepositoryFactory.h"
 #include "Layout/SQLUILayoutRepositoryRuntimeConfig.h"
+#include "Layout/SQLUILayoutRepositoryRuntimeIntegration.h"
 #include "Layout/SQLUISQLiteLayoutRepository.h"
 #include "Layout/SQLUILayoutTypes.h"
 #include "Misc/Paths.h"
@@ -4478,6 +4479,586 @@ FSQLUISampleLayoutRepositoryRuntimeConfigProbeResult RunSQLUISampleLayoutReposit
 	return Result;
 }
 
+void AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+	FSQLUISampleLayoutRepositoryRuntimeIntegrationProbeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleLayoutRepositoryRuntimeIntegrationPath(
+	const TCHAR* SubDirectory,
+	const TCHAR* DatabaseFileName)
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("LayoutRepositoryRuntimeIntegration"));
+	if (SubDirectory && FCString::Strlen(SubDirectory) > 0)
+	{
+		DatabasePath = FPaths::Combine(DatabasePath, SubDirectory);
+	}
+	DatabasePath = FPaths::Combine(DatabasePath, DatabaseFileName);
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+TArray<FString> MakeSQLUISampleLayoutRepositoryRuntimeIntegrationDatabasePaths()
+{
+	TArray<FString> DatabasePaths;
+	DatabasePaths.Add(MakeSQLUISampleLayoutRepositoryRuntimeIntegrationPath(
+		TEXT(""),
+		TEXT("RuntimeIntegration.db")));
+	DatabasePaths.Add(MakeSQLUISampleLayoutRepositoryRuntimeIntegrationPath(
+		TEXT("Seed"),
+		TEXT("SeedRuntimeIntegration.db")));
+	DatabasePaths.Add(MakeSQLUISampleLayoutRepositoryRuntimeIntegrationPath(
+		TEXT("Runtime"),
+		TEXT("SeedCopiedRuntimeIntegration.db")));
+	DatabasePaths.Add(MakeSQLUISampleLayoutRepositoryRuntimeIntegrationPath(
+		TEXT("Runtime"),
+		TEXT("MissingPathShouldNotExist.db")));
+	DatabasePaths.Add(MakeSQLUISampleLayoutRepositoryRuntimeIntegrationPath(
+		TEXT("Seed"),
+		TEXT("MissingSeedRuntimeIntegration.db")));
+	DatabasePaths.Add(MakeSQLUISampleLayoutRepositoryRuntimeIntegrationPath(
+		TEXT("Runtime"),
+		TEXT("MissingSeedTargetRuntimeIntegration.db")));
+	return DatabasePaths;
+}
+
+bool DoSQLUISampleLayoutRepositoryRuntimeIntegrationFilesExist(
+	const FString& DatabasePath)
+{
+	const TArray<FString> PathsToCheck = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	for (const FString& PathToCheck : PathsToCheck)
+	{
+		if (FPaths::FileExists(PathToCheck))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DeleteSQLUISampleLayoutRepositoryRuntimeIntegrationFiles(
+	const FString& DatabasePath,
+	FSQLUISampleLayoutRepositoryRuntimeIntegrationProbeResult& Result)
+{
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI layout repository runtime integration probe failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+bool DeleteSQLUISampleLayoutRepositoryRuntimeIntegrationFiles(
+	FSQLUISampleLayoutRepositoryRuntimeIntegrationProbeResult& Result)
+{
+	bool bRemoved = true;
+	for (const FString& DatabasePath : MakeSQLUISampleLayoutRepositoryRuntimeIntegrationDatabasePaths())
+	{
+		bRemoved =
+			DeleteSQLUISampleLayoutRepositoryRuntimeIntegrationFiles(DatabasePath, Result)
+			&& bRemoved;
+	}
+
+	return bRemoved;
+}
+
+bool DoesAnySQLUISampleLayoutRepositoryRuntimeIntegrationFileExist()
+{
+	for (const FString& DatabasePath : MakeSQLUISampleLayoutRepositoryRuntimeIntegrationDatabasePaths())
+	{
+		if (DoSQLUISampleLayoutRepositoryRuntimeIntegrationFilesExist(DatabasePath))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+FSQLUILayoutDocument MakeSQLUISampleLayoutRepositoryRuntimeIntegrationDocument(
+	const TCHAR* LayoutId,
+	const TCHAR* DisplayName,
+	const TCHAR* ProbeTag)
+{
+	FSQLUILayoutDocument Document =
+		MakeSQLUISampleSQLiteFactorySchemaInitRepositoryDocument();
+	Document.Version.Label = DisplayName;
+	Document.Metadata.LayoutId = LayoutId;
+	Document.Metadata.DisplayName = DisplayName;
+	Document.Metadata.Description =
+		TEXT("Smoke/probe layout for runtime repository integration policy.");
+	Document.Metadata.CreatedBy = TEXT("SQLUISamples");
+	Document.Metadata.CreatedAtUtc = TEXT("2026-06-04T00:00:00Z");
+	Document.Metadata.UpdatedAtUtc = Document.Metadata.CreatedAtUtc;
+	Document.Metadata.Tags.Reset();
+	Document.Metadata.Tags.Add(TEXT("sqlite"));
+	Document.Metadata.Tags.Add(TEXT("smoke"));
+	Document.Metadata.Tags.Add(ProbeTag);
+	Document.Metadata.SearchMetadata.Add(TEXT("Probe"), TEXT("LayoutRepositoryRuntimeIntegration"));
+	Document.RootWidgetId = FString::Printf(TEXT("%s.Root"), LayoutId);
+
+	if (Document.Nodes.Num() > 0)
+	{
+		Document.Nodes[0].WidgetId = Document.RootWidgetId;
+		Document.Nodes[0].Properties.Add(TEXT("Text"), DisplayName);
+		Document.Nodes[0].Tags.Reset();
+		Document.Nodes[0].Tags.Add(TEXT("sqlite"));
+		Document.Nodes[0].Tags.Add(ProbeTag);
+		Document.Nodes[0].SearchMetadata.Add(TEXT("Probe"), TEXT("LayoutRepositoryRuntimeIntegration"));
+	}
+
+	return Document;
+}
+
+USQLUISQLiteLayoutRepository* CreateSQLUISampleLayoutRepositoryRuntimeIntegrationSQLiteRepository(
+	UObject* Outer,
+	const FString& DatabasePath,
+	bool bReadOnly)
+{
+	USQLUISQLiteLayoutRepository* Repository =
+		NewObject<USQLUISQLiteLayoutRepository>(IsValid(Outer) ? Outer : GetTransientPackage());
+	if (!IsValid(Repository))
+	{
+		return nullptr;
+	}
+
+	FSQLUISQLiteLayoutRepositorySettings RepositorySettings;
+	RepositorySettings.DatabasePath = DatabasePath;
+	RepositorySettings.bReadOnly = bReadOnly;
+	RepositorySettings.bInitializeSchemaIfMissing = !bReadOnly;
+	RepositorySettings.bCreateDatabaseIfMissing = !bReadOnly;
+	Repository->Configure(RepositorySettings);
+	return Repository;
+}
+
+bool PrepareSQLUISampleLayoutRepositoryRuntimeIntegrationSeedDatabase(
+	UObject* Outer,
+	const FString& DatabasePath,
+	const FSQLUILayoutDocument& Document,
+	FSQLUISampleLayoutRepositoryRuntimeIntegrationProbeResult& Result)
+{
+	DeleteSQLUISampleLayoutRepositoryRuntimeIntegrationFiles(DatabasePath, Result);
+
+	USQLUISQLiteLayoutRepository* Repository =
+		CreateSQLUISampleLayoutRepositoryRuntimeIntegrationSQLiteRepository(
+			Outer,
+			DatabasePath,
+			false);
+	if (!IsValid(Repository))
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+			Result,
+			TEXT("SQLUI layout repository runtime integration probe failed: could not create seed SQLite repository."));
+		return false;
+	}
+
+	const FSQLUILayoutSaveResult SaveResult =
+		SaveSQLUISampleLayoutToRepository(
+			Repository,
+			TEXT("layout repository runtime integration seed repository"),
+			Document);
+	if (!SaveResult.bSucceeded || SaveResult.SavedLayoutId != Document.Metadata.LayoutId)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+			Result,
+			SaveResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI layout repository runtime integration probe failed: could not save seed layout.")
+				: SaveResult.ErrorMessage);
+		return false;
+	}
+
+	return FPaths::FileExists(DatabasePath);
+}
+
+bool LoadSQLUISampleLayoutRepositoryRuntimeIntegrationLayout(
+	UObject* Outer,
+	const FString& DatabasePath,
+	const FSQLUILayoutDocument& Document,
+	FSQLUISampleLayoutRepositoryRuntimeIntegrationProbeResult& Result)
+{
+	USQLUISQLiteLayoutRepository* Repository =
+		CreateSQLUISampleLayoutRepositoryRuntimeIntegrationSQLiteRepository(
+			Outer,
+			DatabasePath,
+			true);
+	if (!IsValid(Repository))
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+			Result,
+			TEXT("SQLUI layout repository runtime integration probe failed: could not create read-only SQLite repository."));
+		return false;
+	}
+
+	const FSQLUILayoutLoadResult LoadResult =
+		LoadSQLUISampleLayoutFromRepository(
+			Repository,
+			TEXT("layout repository runtime integration read-only repository"),
+			Document.Metadata.LayoutId);
+	if (LoadResult.bSucceeded
+		&& LoadResult.Validation.bIsValid
+		&& LoadResult.Document.Metadata.LayoutId == Document.Metadata.LayoutId)
+	{
+		return true;
+	}
+
+	AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+		Result,
+		LoadResult.ErrorMessage.IsEmpty()
+			? TEXT("SQLUI layout repository runtime integration probe failed: could not load expected layout.")
+			: LoadResult.ErrorMessage);
+	return false;
+}
+
+FSQLUISampleLayoutRepositoryRuntimeIntegrationProbeResult
+RunSQLUISampleLayoutRepositoryRuntimeIntegrationProbe(UObject* Outer)
+{
+	FSQLUISampleLayoutRepositoryRuntimeIntegrationProbeResult Result;
+	Result.DatabasePath = MakeSQLUISampleLayoutRepositoryRuntimeIntegrationPath(
+		TEXT(""),
+		TEXT("RuntimeIntegration.db"));
+	Result.SeedDatabasePath = MakeSQLUISampleLayoutRepositoryRuntimeIntegrationPath(
+		TEXT("Seed"),
+		TEXT("SeedRuntimeIntegration.db"));
+	Result.SeedTargetDatabasePath = MakeSQLUISampleLayoutRepositoryRuntimeIntegrationPath(
+		TEXT("Runtime"),
+		TEXT("SeedCopiedRuntimeIntegration.db"));
+	const FString MissingPathMarkerDatabasePath =
+		MakeSQLUISampleLayoutRepositoryRuntimeIntegrationPath(
+			TEXT("Runtime"),
+			TEXT("MissingPathShouldNotExist.db"));
+	const FString MissingSeedPath =
+		MakeSQLUISampleLayoutRepositoryRuntimeIntegrationPath(
+			TEXT("Seed"),
+			TEXT("MissingSeedRuntimeIntegration.db"));
+	const FString MissingSeedTargetPath =
+		MakeSQLUISampleLayoutRepositoryRuntimeIntegrationPath(
+			TEXT("Runtime"),
+			TEXT("MissingSeedTargetRuntimeIntegration.db"));
+
+	DeleteSQLUISampleLayoutRepositoryRuntimeIntegrationFiles(Result);
+
+	FSQLUILayoutRepositoryRuntimeIntegrationRequest DefaultRequest;
+	DefaultRequest.RuntimeConfig =
+		FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault();
+	const FSQLUILayoutRepositoryRuntimeIntegrationResult DefaultIntegrationResult =
+		FSQLUILayoutRepositoryRuntimeIntegration::CreateRepository(
+			Outer,
+			DefaultRequest);
+	Result.bDefaultCreatedRepository =
+		DefaultIntegrationResult.bRepositoryCreated
+		&& IsValid(DefaultIntegrationResult.Repository.Get());
+	Result.bDefaultBackendInMemory =
+		DefaultIntegrationResult.bSucceeded
+		&& DefaultIntegrationResult.Backend == ESQLUILayoutRepositoryBackend::InMemory;
+	Result.bDefaultNotSQLite =
+		!IsValid(Cast<USQLUISQLiteLayoutRepository>(
+			DefaultIntegrationResult.Repository.Get()));
+	if (!Result.bDefaultCreatedRepository
+		|| !Result.bDefaultBackendInMemory
+		|| !Result.bDefaultNotSQLite)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+			Result,
+			DefaultIntegrationResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI layout repository runtime integration probe failed: default config did not create an in-memory non-SQLite repository.")
+				: DefaultIntegrationResult.ErrorMessage);
+	}
+
+	const FSQLUILayoutDocument RuntimeDocument =
+		MakeSQLUISampleLayoutRepositoryRuntimeIntegrationDocument(
+			TEXT("sqlui.smoke.runtime-integration.sqlite"),
+			TEXT("SQLUI Runtime Integration SQLite Layout"),
+			TEXT("runtime-integration"));
+	FSQLUILayoutRepositoryRuntimeIntegrationRequest SQLiteRequest;
+	SQLiteRequest.RuntimeConfig.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	SQLiteRequest.RuntimeConfig.SQLiteDatabasePath = Result.DatabasePath;
+	SQLiteRequest.RuntimeConfig.bSQLiteReadOnly = false;
+	SQLiteRequest.RuntimeConfig.bSQLiteInitializeSchemaIfMissing = true;
+	SQLiteRequest.RuntimeConfig.bSQLiteCreateDatabaseIfMissing = true;
+	const FSQLUILayoutRepositoryRuntimeIntegrationResult SQLiteIntegrationResult =
+		FSQLUILayoutRepositoryRuntimeIntegration::CreateRepository(
+			Outer,
+			SQLiteRequest);
+	Result.bSQLiteCreatedRepository =
+		SQLiteIntegrationResult.bRepositoryCreated
+		&& IsValid(SQLiteIntegrationResult.Repository.Get());
+	USQLUISQLiteLayoutRepository* SQLiteRepository =
+		Cast<USQLUISQLiteLayoutRepository>(SQLiteIntegrationResult.Repository.Get());
+	Result.bSQLiteRepositoryCreated = IsValid(SQLiteRepository);
+	if (!Result.bSQLiteCreatedRepository || !Result.bSQLiteRepositoryCreated)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+			Result,
+			SQLiteIntegrationResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI layout repository runtime integration probe failed: explicit SQLite config did not create a SQLite repository.")
+				: SQLiteIntegrationResult.ErrorMessage);
+	}
+
+	if (Result.bSQLiteRepositoryCreated)
+	{
+		const FSQLUILayoutSaveResult SaveResult =
+			SaveSQLUISampleLayoutToRepository(
+				SQLiteRepository,
+				TEXT("layout repository runtime integration SQLite repository"),
+				RuntimeDocument);
+		Result.bSQLiteSaveSucceeded =
+			SaveResult.bSucceeded
+			&& SaveResult.SavedLayoutId == RuntimeDocument.Metadata.LayoutId
+			&& SaveResult.Validation.bIsValid;
+		Result.bSQLiteDatabaseCreated =
+			Result.bSQLiteSaveSucceeded
+			&& FPaths::FileExists(Result.DatabasePath);
+		if (!Result.bSQLiteSaveSucceeded)
+		{
+			AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+				Result,
+				SaveResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI layout repository runtime integration probe failed: explicit SQLite repository SaveLayout failed.")
+					: SaveResult.ErrorMessage);
+		}
+
+		const FSQLUILayoutRepositoryListResult ListResult =
+			SQLiteRepository->ListLayouts();
+		Result.bSQLiteListSucceeded = ListResult.bSucceeded;
+		Result.bSQLiteListedMetadataFound =
+			ListResult.bSucceeded
+			&& DoesSQLUISampleLayoutMetadataAndTagsListContain(
+				ListResult.Layouts,
+				RuntimeDocument.Metadata);
+		if (!Result.bSQLiteListSucceeded || !Result.bSQLiteListedMetadataFound)
+		{
+			AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+				Result,
+				ListResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI layout repository runtime integration probe failed: explicit SQLite repository ListLayouts did not include saved metadata and tags.")
+					: ListResult.ErrorMessage);
+		}
+	}
+
+	FSQLUILayoutRepositoryRuntimeIntegrationRequest MissingPathRequest;
+	MissingPathRequest.RuntimeConfig.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	const FSQLUILayoutRepositoryRuntimeIntegrationResult MissingPathResult =
+		FSQLUILayoutRepositoryRuntimeIntegration::CreateRepository(
+			Outer,
+			MissingPathRequest);
+	Result.bSQLiteMissingPathUnavailable =
+		!MissingPathResult.bSucceeded
+		&& MissingPathResult.bBackendUnavailable
+		&& MissingPathResult.bRepositoryCreated
+		&& IsValid(MissingPathResult.Repository.Get())
+		&& !IsValid(Cast<USQLUISQLiteLayoutRepository>(
+			MissingPathResult.Repository.Get()));
+	Result.bSQLiteMissingPathDidNotCreateDb =
+		!DoSQLUISampleLayoutRepositoryRuntimeIntegrationFilesExist(
+			MissingPathMarkerDatabasePath);
+	if (!Result.bSQLiteMissingPathUnavailable
+		|| !Result.bSQLiteMissingPathDidNotCreateDb)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+			Result,
+			MissingPathResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI layout repository runtime integration probe failed: explicit SQLite missing path did not stay unavailable without creating DB files.")
+				: MissingPathResult.ErrorMessage);
+	}
+
+	const FSQLUILayoutDocument SeedDocument =
+		MakeSQLUISampleLayoutRepositoryRuntimeIntegrationDocument(
+			TEXT("sqlui.smoke.runtime-integration.seed"),
+			TEXT("SQLUI Runtime Integration Seed Layout"),
+			TEXT("runtime-integration-seed"));
+	Result.bSeedDatabasePrepared =
+		PrepareSQLUISampleLayoutRepositoryRuntimeIntegrationSeedDatabase(
+			Outer,
+			Result.SeedDatabasePath,
+			SeedDocument,
+			Result);
+	if (Result.bSeedDatabasePrepared)
+	{
+		FSQLUILayoutRepositoryRuntimeIntegrationRequest SeedCopyRequest;
+		SeedCopyRequest.RuntimeConfig.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+		SeedCopyRequest.RuntimeConfig.SQLiteDatabasePath = Result.SeedTargetDatabasePath;
+		SeedCopyRequest.RuntimeConfig.SQLiteSeedDatabasePath = Result.SeedDatabasePath;
+		SeedCopyRequest.RuntimeConfig.bSQLiteCopySeedIfMissing = true;
+		SeedCopyRequest.RuntimeConfig.bSQLiteReadOnly = true;
+		const FSQLUILayoutRepositoryRuntimeIntegrationResult SeedCopyResult =
+			FSQLUILayoutRepositoryRuntimeIntegration::CreateRepository(
+				Outer,
+				SeedCopyRequest);
+		Result.bSeedCopyRequested = SeedCopyResult.bSeedCopyRequested;
+		Result.bSeedCopySucceeded =
+			SeedCopyResult.bSeedCopyRequested
+			&& SeedCopyResult.bSeedCopySucceeded
+			&& SeedCopyResult.bRepositoryCreated
+			&& IsValid(Cast<USQLUISQLiteLayoutRepository>(
+				SeedCopyResult.Repository.Get()))
+			&& FPaths::FileExists(Result.SeedTargetDatabasePath);
+		if (!Result.bSeedCopySucceeded)
+		{
+			AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+				Result,
+				SeedCopyResult.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI layout repository runtime integration probe failed: seed copy did not create a SQLite runtime repository target.")
+					: SeedCopyResult.ErrorMessage);
+		}
+
+		USQLUISQLiteLayoutRepository* SeedCopyRepository =
+			Cast<USQLUISQLiteLayoutRepository>(SeedCopyResult.Repository.Get());
+		if (IsValid(SeedCopyRepository))
+		{
+			const FSQLUILayoutRepositoryListResult SeedTargetListResult =
+				SeedCopyRepository->ListLayouts();
+			Result.bSeedCopiedTargetReadable =
+				SeedTargetListResult.bSucceeded
+				&& DoesSQLUISampleLayoutMetadataAndTagsListContain(
+					SeedTargetListResult.Layouts,
+					SeedDocument.Metadata);
+			if (!Result.bSeedCopiedTargetReadable)
+			{
+				AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+					Result,
+					SeedTargetListResult.ErrorMessage.IsEmpty()
+						? TEXT("SQLUI layout repository runtime integration probe failed: copied seed target did not list expected metadata and tags.")
+						: SeedTargetListResult.ErrorMessage);
+			}
+
+			const FSQLUILayoutLoadResult SeedTargetLoadResult =
+				LoadSQLUISampleLayoutFromRepository(
+					SeedCopyRepository,
+					TEXT("layout repository runtime integration seed-copied repository"),
+					SeedDocument.Metadata.LayoutId);
+			Result.bSeedCopiedTargetLoadedLayout =
+				SeedTargetLoadResult.bSucceeded
+				&& SeedTargetLoadResult.Validation.bIsValid
+				&& SeedTargetLoadResult.Document.Metadata.LayoutId == SeedDocument.Metadata.LayoutId;
+			if (!Result.bSeedCopiedTargetLoadedLayout)
+			{
+				AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+					Result,
+					SeedTargetLoadResult.ErrorMessage.IsEmpty()
+						? TEXT("SQLUI layout repository runtime integration probe failed: copied seed target did not load expected layout.")
+						: SeedTargetLoadResult.ErrorMessage);
+			}
+		}
+
+		Result.bSeedDatabaseLeftIntact =
+			LoadSQLUISampleLayoutRepositoryRuntimeIntegrationLayout(
+				Outer,
+				Result.SeedDatabasePath,
+				SeedDocument,
+				Result);
+	}
+	else
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+			Result,
+			TEXT("SQLUI layout repository runtime integration probe failed: seed database was not prepared."));
+	}
+
+	FSQLUILayoutRepositoryRuntimeIntegrationRequest MissingSeedRequest;
+	MissingSeedRequest.RuntimeConfig.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	MissingSeedRequest.RuntimeConfig.SQLiteDatabasePath = MissingSeedTargetPath;
+	MissingSeedRequest.RuntimeConfig.SQLiteSeedDatabasePath = MissingSeedPath;
+	MissingSeedRequest.RuntimeConfig.bSQLiteCopySeedIfMissing = true;
+	const FSQLUILayoutRepositoryRuntimeIntegrationResult MissingSeedResult =
+		FSQLUILayoutRepositoryRuntimeIntegration::CreateRepository(
+			Outer,
+			MissingSeedRequest);
+	Result.bSeedCopyFailureFatal =
+		!MissingSeedResult.bSucceeded
+		&& MissingSeedResult.bSeedCopyRequested
+		&& !MissingSeedResult.bSeedCopySucceeded
+		&& MissingSeedResult.ErrorMessage.Contains(TEXT("does not exist"));
+	Result.bSeedCopyFailureDidNotCreateRepository =
+		!MissingSeedResult.bRepositoryCreated;
+	Result.bSeedCopyFailureDidNotCreateTarget =
+		!DoSQLUISampleLayoutRepositoryRuntimeIntegrationFilesExist(MissingSeedTargetPath);
+	if (!Result.bSeedCopyFailureFatal
+		|| !Result.bSeedCopyFailureDidNotCreateRepository
+		|| !Result.bSeedCopyFailureDidNotCreateTarget)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+			Result,
+			MissingSeedResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI layout repository runtime integration probe failed: missing seed did not fail before repository creation without creating target.")
+				: MissingSeedResult.ErrorMessage);
+	}
+
+	Result.bDatabaseFilesRemoved =
+		DeleteSQLUISampleLayoutRepositoryRuntimeIntegrationFiles(Result)
+		&& !DoesAnySQLUISampleLayoutRepositoryRuntimeIntegrationFileExist();
+	if (!Result.bDatabaseFilesRemoved)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeIntegrationProbeError(
+			Result,
+			TEXT("SQLUI layout repository runtime integration probe failed: probe database files were not removed."));
+	}
+
+	Result.bSucceeded =
+		Result.bDefaultCreatedRepository
+		&& Result.bDefaultBackendInMemory
+		&& Result.bDefaultNotSQLite
+		&& Result.bSQLiteCreatedRepository
+		&& Result.bSQLiteRepositoryCreated
+		&& Result.bSQLiteSaveSucceeded
+		&& Result.bSQLiteDatabaseCreated
+		&& Result.bSQLiteListSucceeded
+		&& Result.bSQLiteListedMetadataFound
+		&& Result.bSQLiteMissingPathUnavailable
+		&& Result.bSQLiteMissingPathDidNotCreateDb
+		&& Result.bSeedDatabasePrepared
+		&& Result.bSeedCopyRequested
+		&& Result.bSeedCopySucceeded
+		&& Result.bSeedCopiedTargetReadable
+		&& Result.bSeedCopiedTargetLoadedLayout
+		&& Result.bSeedDatabaseLeftIntact
+		&& Result.bSeedCopyFailureFatal
+		&& Result.bSeedCopyFailureDidNotCreateRepository
+		&& Result.bSeedCopyFailureDidNotCreateTarget
+		&& Result.bDatabaseFilesRemoved;
+
+	return Result;
+}
+
 void AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
 	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& Result,
 	const FString& ErrorMessage)
@@ -6848,6 +7429,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.LayoutRepositoryRuntimeConfigProbe.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI layout repository runtime config probe failed.")
 					: Result.LayoutRepositoryRuntimeConfigProbe.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseLayoutRepositoryRuntimeIntegrationProbe)
+	{
+		Result.bUsedLayoutRepositoryRuntimeIntegrationProbe = true;
+		Result.LayoutRepositoryRuntimeIntegrationProbe =
+			RunSQLUISampleLayoutRepositoryRuntimeIntegrationProbe(Outer);
+		if (!Result.LayoutRepositoryRuntimeIntegrationProbe.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.LayoutRepositoryRuntimeIntegrationProbe.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI layout repository runtime integration probe failed.")
+					: Result.LayoutRepositoryRuntimeIntegrationProbe.ErrorMessage);
 		}
 	}
 

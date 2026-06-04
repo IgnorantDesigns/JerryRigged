@@ -19,6 +19,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - SQLite supports `SaveLayout`, `LoadLayout`, `LoadLayoutById`, `ListLayouts`, soft-delete `RemoveLayout`, and destructive scoped `ClearLayouts`.
 - SQLite is selectable through `USQLUILayoutRepositoryFactory` only when `ESQLUILayoutRepositoryBackend::SQLite` is explicitly requested and a database path is configured.
 - SQLite remains non-default. The runtime config resolver defaults to `InMemory`.
+- A SQLUICore runtime integration helper can combine explicit runtime config, optional seed-copy policy, and repository factory creation without changing normal startup.
 - Schema initialization and database creation are repository-owned and opt-in.
 - The current known production migration set is only `001_initial_layout_schema`.
 - `LoadLayout` and `SaveLayout` callback APIs can opt into serialized async execution with shutdown/stale-callback suppression.
@@ -47,6 +48,7 @@ This is still not a default production persistence policy. Runtime integration, 
 | Queue shutdown/stale callback suppression | Implemented | Rejects new work after shutdown, drops pending work, suppresses stale completion callbacks. |
 | Factory selection | Implemented | Explicit SQLite backend selection; SQLite is not default. |
 | Runtime config resolver | Implemented | Parses explicit backend/path/schema/async/seed flags; defaults to `InMemory`. |
+| Runtime integration helper | Implemented | Combines explicit runtime config, optional seed-copy policy, and factory repository creation. |
 | Seed database copy policy | Implemented | Explicit pre-repository closed-file copy helper; not factory-owned. |
 | Migration version/status framework | Implemented | Reports known/applied/pending status for current known migration set. |
 | Packaged build validation | Implemented locally | Local Win64 Development BuildCookRun validation passed with UE 5.7 preferred MSVC toolchain. |
@@ -63,6 +65,7 @@ This is still not a default production persistence policy. Runtime integration, 
 | Generic async boundary | `-UseDatabaseAsyncProbe` | Covered | No SQLite file I/O. |
 | Async queue shutdown | `-UseDatabaseAsyncQueueShutdownProbe` | Covered | Proves reject/drop/stale-callback suppression behavior. |
 | Runtime config resolver | `-UseLayoutRepositoryRuntimeConfigProbe` | Covered | Verifies explicit config parsing and default `InMemory` policy. |
+| Runtime integration helper | `-UseLayoutRepositoryRuntimeIntegrationProbe` | Covered | Verifies default in-memory creation, explicit SQLite creation, seed-copy integration, missing-path unavailable behavior, and cleanup. |
 | SQLite migration runner | `-UseSQLiteMigrationProbe` | Covered | Smoke-only migration runner proof. |
 | Layout schema migration | `-UseSQLiteLayoutSchemaMigrationProbe` | Covered | Applies and verifies `001_initial_layout_schema`. |
 | SQLite layout read probe | `-UseSQLiteLayoutReadProbe` | Covered | Seeds one layout and verifies list/load mapping. |
@@ -102,6 +105,7 @@ The current SQLite path keeps these boundaries:
 - SQLite is not the default backend.
 - Factory selection is explicit through `ESQLUILayoutRepositoryBackend::SQLite`.
 - `FSQLUILayoutRepositoryRuntimeConfigResolver` defaults to `InMemory`.
+- `FSQLUILayoutRepositoryRuntimeIntegration` runs only when explicitly invoked by caller code or smoke tests.
 - The factory passes settings only.
 - The factory does not run migrations.
 - The factory does not copy seed databases.
@@ -135,7 +139,7 @@ The safe default remains non-SQLite.
 
 Prioritized remaining work:
 
-1. Production/user-facing runtime settings surface and integration policy.
+1. Production/user-facing runtime settings surface and startup flow that intentionally invokes the runtime integration helper.
 2. Product database path policy and UX, including where user layouts should live and how users/admins inspect or reset them.
 3. Actual future schema migrations and data transforms beyond `001_initial_layout_schema`.
 4. Production async database service design beyond the current per-repository callback queue.

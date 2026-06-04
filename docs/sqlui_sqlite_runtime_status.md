@@ -76,6 +76,8 @@ Absolute SQLite paths are normalized and preserved. The helper also exposes the 
 
 The resolver can also map explicit seed-copy options into `FSQLUISQLiteSeedDatabaseCopyRequest`. That mapping is configuration-only; it does not copy files, create directories, create repositories, initialize schema, or make SQLite the default backend.
 
+`FSQLUILayoutRepositoryRuntimeIntegration` is the next SQLUICore-owned policy layer above the resolver. It accepts explicit runtime config, runs the closed-file SQLite seed-copy helper only when seed-copy flags are requested, then creates the repository through `USQLUILayoutRepositoryFactory`. It preserves the default `InMemory` backend, reports unavailable behavior for explicit SQLite requests with no database path, and does not make normal startup use SQLite by itself.
+
 ## Seed Database Copy Policy
 
 `FSQLUISQLiteSeedDatabaseCopy` is a SQLUICore-owned helper for explicitly copying a closed SQLite seed database into a writable runtime database path before repository use.
@@ -163,6 +165,7 @@ Current SQLite-related smoke flags are:
 - `-UseDatabaseAsyncProbe`: proves the generic SQLUI database async boundary without SQLite file I/O.
 - `-UseDatabaseAsyncQueueShutdownProbe`: verifies the serialized async queue rejects new work after shutdown, drops pending work, and suppresses stale callbacks.
 - `-UseLayoutRepositoryRuntimeConfigProbe`: verifies default/config parsing, SQLite path resolution, missing-path unavailable behavior, and a factory-created SQLite save from explicit runtime config.
+- `-UseLayoutRepositoryRuntimeIntegrationProbe`: verifies the runtime integration helper across default in-memory creation, explicit SQLite creation/save/list, missing-path unavailable behavior, explicit seed-copy repository creation, fatal missing-seed handling, and cleanup.
 - `-UseSQLiteMigrationProbe`: proves the minimal migration runner with a smoke-only migration.
 - `-UseSQLiteLayoutSchemaMigrationProbe`: applies and verifies the planned initial layout schema.
 - `-UseSQLiteLayoutReadProbe`: seeds one layout and verifies list/load mapping against the schema.
@@ -202,7 +205,7 @@ Remaining work includes:
 - Production async database service design beyond the current per-repository callback queue.
 - Cancellation, shutdown draining beyond stale-callback suppression, and async coverage for all repository operations.
 - Actual future schema migrations, upgrade-specific data transforms, and version-specific compatibility policy beyond the current version/status framework.
-- User-facing runtime configuration surfaces and production database path policy.
+- User-facing runtime configuration surfaces, production database path policy, and product startup code that intentionally invokes the runtime integration helper.
 - Product seed database asset/package/version policy, if seed DBs are added.
 - Optional lifecycle features such as history APIs, checkpoints, previews, restore flows, and richer search.
 
