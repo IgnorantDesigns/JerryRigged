@@ -9,6 +9,7 @@
 #include "Database/SQLUISQLiteProbe.h"
 #include "Database/SQLUISQLiteSeedDatabaseCopy.h"
 #include "Async/TaskGraphInterfaces.h"
+#include "Engine/GameInstance.h"
 #include "HAL/Event.h"
 #include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
@@ -18,6 +19,7 @@
 #include "Layout/SQLUIJsonFileLayoutRepository.h"
 #include "Layout/SQLUILayoutJson.h"
 #include "Layout/SQLUILayoutRepositoryFactory.h"
+#include "Layout/SQLUILayoutPersistenceWorkflow.h"
 #include "Layout/SQLUILayoutRepositoryRuntimeConfig.h"
 #include "Layout/SQLUILayoutRepositoryRuntimeIntegration.h"
 #include "Layout/SQLUILayoutRepositoryRuntimeProvider.h"
@@ -6377,6 +6379,491 @@ RunSQLUISampleLayoutRepositoryRuntimeSettingsProbe(UObject* Outer)
 	return Result;
 }
 
+void AppendSQLUISampleLayoutPersistenceWorkflowProbeError(
+	FSQLUISampleLayoutPersistenceWorkflowProbeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleLayoutPersistenceWorkflowPath(const TCHAR* DatabaseFileName)
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("LayoutPersistenceWorkflow"),
+		DatabaseFileName);
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+TArray<FString> MakeSQLUISampleLayoutPersistenceWorkflowDatabasePaths(
+	const FSQLUISampleLayoutPersistenceWorkflowProbeResult& Result)
+{
+	TArray<FString> DatabasePaths;
+	DatabasePaths.Add(Result.DatabasePath);
+	DatabasePaths.Add(Result.MissingRepositoryMarkerDatabasePath);
+	return DatabasePaths;
+}
+
+bool DoSQLUISampleLayoutPersistenceWorkflowFilesExist(const FString& DatabasePath)
+{
+	const TArray<FString> PathsToCheck = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	for (const FString& PathToCheck : PathsToCheck)
+	{
+		if (FPaths::FileExists(PathToCheck))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DeleteSQLUISampleLayoutPersistenceWorkflowFiles(
+	const FString& DatabasePath,
+	FSQLUISampleLayoutPersistenceWorkflowProbeResult& Result)
+{
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleLayoutPersistenceWorkflowProbeError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI layout persistence workflow probe failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+bool DeleteSQLUISampleLayoutPersistenceWorkflowFiles(
+	FSQLUISampleLayoutPersistenceWorkflowProbeResult& Result)
+{
+	bool bRemoved = true;
+	for (const FString& DatabasePath :
+		MakeSQLUISampleLayoutPersistenceWorkflowDatabasePaths(Result))
+	{
+		bRemoved =
+			DeleteSQLUISampleLayoutPersistenceWorkflowFiles(DatabasePath, Result)
+			&& bRemoved;
+	}
+
+	return bRemoved;
+}
+
+bool DoesAnySQLUISampleLayoutPersistenceWorkflowFileExist(
+	const FSQLUISampleLayoutPersistenceWorkflowProbeResult& Result)
+{
+	for (const FString& DatabasePath :
+		MakeSQLUISampleLayoutPersistenceWorkflowDatabasePaths(Result))
+	{
+		if (DoSQLUISampleLayoutPersistenceWorkflowFilesExist(DatabasePath))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+UGameInstance* CreateSQLUISampleLayoutPersistenceWorkflowGameInstance(UObject* Outer)
+{
+	return NewObject<UGameInstance>(
+		IsValid(Outer) ? Outer : GetTransientPackage());
+}
+
+USQLUILayoutRepositoryRuntimeSubsystem*
+CreateSQLUISampleLayoutPersistenceWorkflowSubsystem(UGameInstance* GameInstance)
+{
+	return IsValid(GameInstance)
+		? NewObject<USQLUILayoutRepositoryRuntimeSubsystem>(GameInstance)
+		: nullptr;
+}
+
+FSQLUILayoutDocument MakeSQLUISampleLayoutPersistenceWorkflowDocument(
+	const TCHAR* LayoutId,
+	const TCHAR* DisplayName,
+	const TCHAR* ProbeTag)
+{
+	FSQLUILayoutDocument Document =
+		MakeSQLUISampleSQLiteFactorySchemaInitRepositoryDocument();
+	Document.Version.Label = DisplayName;
+	Document.Metadata.LayoutId = LayoutId;
+	Document.Metadata.DisplayName = DisplayName;
+	Document.Metadata.Description =
+		TEXT("Smoke/probe layout for runtime persistence workflow.");
+	Document.Metadata.CreatedBy = TEXT("SQLUISamples");
+	Document.Metadata.CreatedAtUtc = TEXT("2026-06-05T00:00:00Z");
+	Document.Metadata.UpdatedAtUtc = Document.Metadata.CreatedAtUtc;
+	Document.Metadata.Tags.Reset();
+	Document.Metadata.Tags.Add(TEXT("runtime"));
+	Document.Metadata.Tags.Add(TEXT("workflow"));
+	Document.Metadata.Tags.Add(ProbeTag);
+	Document.Metadata.SearchMetadata.Add(TEXT("Probe"), TEXT("LayoutPersistenceWorkflow"));
+	Document.RootWidgetId = FString::Printf(TEXT("%s.Root"), LayoutId);
+
+	if (Document.Nodes.Num() > 0)
+	{
+		Document.Nodes[0].WidgetId = Document.RootWidgetId;
+		Document.Nodes[0].Properties.Add(TEXT("Text"), DisplayName);
+		Document.Nodes[0].Tags.Reset();
+		Document.Nodes[0].Tags.Add(TEXT("runtime"));
+		Document.Nodes[0].Tags.Add(ProbeTag);
+		Document.Nodes[0].SearchMetadata.Add(TEXT("Probe"), TEXT("LayoutPersistenceWorkflow"));
+	}
+
+	return Document;
+}
+
+FSQLUISampleLayoutPersistenceWorkflowProbeResult
+RunSQLUISampleLayoutPersistenceWorkflowProbe(UObject* Outer)
+{
+	FSQLUISampleLayoutPersistenceWorkflowProbeResult Result;
+	Result.DatabasePath =
+		MakeSQLUISampleLayoutPersistenceWorkflowPath(
+			TEXT("LayoutPersistenceWorkflow.db"));
+	Result.MissingRepositoryMarkerDatabasePath =
+		MakeSQLUISampleLayoutPersistenceWorkflowPath(
+			TEXT("MissingRepositoryShouldNotExist.db"));
+
+	DeleteSQLUISampleLayoutPersistenceWorkflowFiles(Result);
+
+	UGameInstance* WorkflowGameInstance =
+		CreateSQLUISampleLayoutPersistenceWorkflowGameInstance(Outer);
+	if (!IsValid(WorkflowGameInstance))
+	{
+		AppendSQLUISampleLayoutPersistenceWorkflowProbeError(
+			Result,
+			TEXT("SQLUI layout persistence workflow probe failed: could not create transient GameInstance for subsystem outer."));
+	}
+
+	const FSQLUILayoutDocument NullSubsystemDocument =
+		MakeSQLUISampleLayoutPersistenceWorkflowDocument(
+			TEXT("sqlui.smoke.persistence-workflow.null-subsystem"),
+			TEXT("SQLUI Persistence Workflow Null Subsystem Layout"),
+			TEXT("persistence-workflow-null-subsystem"));
+	const FSQLUILayoutSaveResult NullSubsystemSaveResult =
+		FSQLUILayoutPersistenceWorkflow::SaveLayout(nullptr, NullSubsystemDocument);
+	const FSQLUILayoutRepositoryListResult NullSubsystemListResult =
+		FSQLUILayoutPersistenceWorkflow::ListLayouts(nullptr);
+	const FSQLUILayoutLoadResult NullSubsystemLoadResult =
+		FSQLUILayoutPersistenceWorkflow::LoadLayout(
+			nullptr,
+			NullSubsystemDocument.Metadata.LayoutId);
+	Result.bNullSubsystemSaveFailed =
+		!NullSubsystemSaveResult.bSucceeded
+		&& NullSubsystemSaveResult.bBackendUnavailable
+		&& !NullSubsystemSaveResult.ErrorMessage.IsEmpty();
+	Result.bNullSubsystemListFailed =
+		!NullSubsystemListResult.bSucceeded
+		&& !NullSubsystemListResult.ErrorMessage.IsEmpty();
+	Result.bNullSubsystemLoadFailed =
+		!NullSubsystemLoadResult.bSucceeded
+		&& NullSubsystemLoadResult.bBackendUnavailable
+		&& !NullSubsystemLoadResult.ErrorMessage.IsEmpty();
+	if (!Result.bNullSubsystemSaveFailed
+		|| !Result.bNullSubsystemListFailed
+		|| !Result.bNullSubsystemLoadFailed)
+	{
+		AppendSQLUISampleLayoutPersistenceWorkflowProbeError(
+			Result,
+			TEXT("SQLUI layout persistence workflow probe failed: null subsystem did not fail clearly."));
+	}
+
+	USQLUILayoutRepositoryRuntimeSubsystem* MissingRepositorySubsystem =
+		CreateSQLUISampleLayoutPersistenceWorkflowSubsystem(WorkflowGameInstance);
+	const FSQLUILayoutDocument MissingRepositoryDocument =
+		MakeSQLUISampleLayoutPersistenceWorkflowDocument(
+			TEXT("sqlui.smoke.persistence-workflow.missing-repository"),
+			TEXT("SQLUI Persistence Workflow Missing Repository Layout"),
+			TEXT("persistence-workflow-missing-repository"));
+	const FSQLUILayoutSaveResult MissingRepositorySaveResult =
+		FSQLUILayoutPersistenceWorkflow::SaveLayout(
+			MissingRepositorySubsystem,
+			MissingRepositoryDocument);
+	const FSQLUILayoutRepositoryListResult MissingRepositoryListResult =
+		FSQLUILayoutPersistenceWorkflow::ListLayouts(MissingRepositorySubsystem);
+	const FSQLUILayoutLoadResult MissingRepositoryLoadResult =
+		FSQLUILayoutPersistenceWorkflow::LoadLayout(
+			MissingRepositorySubsystem,
+			MissingRepositoryDocument.Metadata.LayoutId);
+	Result.bMissingRepositorySaveFailed =
+		IsValid(MissingRepositorySubsystem)
+		&& !FSQLUILayoutPersistenceWorkflow::HasRepository(MissingRepositorySubsystem)
+		&& !MissingRepositorySaveResult.bSucceeded
+		&& MissingRepositorySaveResult.bBackendUnavailable
+		&& !MissingRepositorySaveResult.ErrorMessage.IsEmpty();
+	Result.bMissingRepositoryListFailed =
+		!MissingRepositoryListResult.bSucceeded
+		&& !MissingRepositoryListResult.ErrorMessage.IsEmpty();
+	Result.bMissingRepositoryLoadFailed =
+		!MissingRepositoryLoadResult.bSucceeded
+		&& MissingRepositoryLoadResult.bBackendUnavailable
+		&& !MissingRepositoryLoadResult.ErrorMessage.IsEmpty();
+	Result.bMissingRepositoryDidNotCreateDb =
+		!DoSQLUISampleLayoutPersistenceWorkflowFilesExist(
+			Result.MissingRepositoryMarkerDatabasePath);
+	if (!Result.bMissingRepositorySaveFailed
+		|| !Result.bMissingRepositoryListFailed
+		|| !Result.bMissingRepositoryLoadFailed
+		|| !Result.bMissingRepositoryDidNotCreateDb)
+	{
+		AppendSQLUISampleLayoutPersistenceWorkflowProbeError(
+			Result,
+			TEXT("SQLUI layout persistence workflow probe failed: missing repository did not fail clearly without creating DB files."));
+	}
+
+	USQLUILayoutRepositoryRuntimeSubsystem* InMemorySubsystem =
+		CreateSQLUISampleLayoutPersistenceWorkflowSubsystem(WorkflowGameInstance);
+	const FSQLUILayoutDocument InMemoryDocument =
+		MakeSQLUISampleLayoutPersistenceWorkflowDocument(
+			TEXT("sqlui.smoke.persistence-workflow.in-memory"),
+			TEXT("SQLUI Persistence Workflow InMemory Layout"),
+			TEXT("persistence-workflow-in-memory"));
+	Result.bInMemoryInitialized =
+		IsValid(InMemorySubsystem)
+		&& InMemorySubsystem->InitializeRepositoryFromRuntimeConfig(
+			FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault())
+		&& FSQLUILayoutPersistenceWorkflow::HasRepository(InMemorySubsystem)
+		&& InMemorySubsystem->GetActiveBackend() == ESQLUILayoutRepositoryBackend::InMemory;
+	if (Result.bInMemoryInitialized)
+	{
+		const FSQLUILayoutSaveResult InMemorySaveResult =
+			FSQLUILayoutPersistenceWorkflow::SaveLayout(
+				InMemorySubsystem,
+				InMemoryDocument);
+		const FSQLUILayoutRepositoryListResult InMemoryListResult =
+			FSQLUILayoutPersistenceWorkflow::ListLayouts(InMemorySubsystem);
+		const FSQLUILayoutLoadResult InMemoryLoadResult =
+			FSQLUILayoutPersistenceWorkflow::LoadLayout(
+				InMemorySubsystem,
+				InMemoryDocument.Metadata.LayoutId);
+		Result.bInMemorySaveSucceeded =
+			InMemorySaveResult.bSucceeded
+			&& InMemorySaveResult.SavedLayoutId == InMemoryDocument.Metadata.LayoutId
+			&& InMemorySaveResult.Validation.bIsValid;
+		Result.bInMemoryListSucceeded = InMemoryListResult.bSucceeded;
+		Result.bInMemoryListedMetadataFound =
+			InMemoryListResult.bSucceeded
+			&& DoesSQLUISampleLayoutMetadataAndTagsListContain(
+				InMemoryListResult.Layouts,
+				InMemoryDocument.Metadata);
+		Result.bInMemoryLoadSucceeded = InMemoryLoadResult.bSucceeded;
+		Result.bInMemoryLoadedDocumentValid = InMemoryLoadResult.Validation.bIsValid;
+		Result.bInMemoryLoadedLayoutIdMatched =
+			InMemoryLoadResult.Document.Metadata.LayoutId
+			== InMemoryDocument.Metadata.LayoutId;
+		if (IsValid(InMemorySubsystem))
+		{
+			InMemorySubsystem->ResetRepository();
+		}
+	}
+	if (!Result.bInMemoryInitialized
+		|| !Result.bInMemorySaveSucceeded
+		|| !Result.bInMemoryListSucceeded
+		|| !Result.bInMemoryListedMetadataFound
+		|| !Result.bInMemoryLoadSucceeded
+		|| !Result.bInMemoryLoadedDocumentValid
+		|| !Result.bInMemoryLoadedLayoutIdMatched)
+	{
+		AppendSQLUISampleLayoutPersistenceWorkflowProbeError(
+			Result,
+			TEXT("SQLUI layout persistence workflow probe failed: InMemory workflow did not save/list/load through the runtime subsystem."));
+	}
+
+	USQLUILayoutRepositoryRuntimeSubsystem* SQLiteSubsystem =
+		CreateSQLUISampleLayoutPersistenceWorkflowSubsystem(WorkflowGameInstance);
+	FSQLUILayoutRepositoryRuntimeConfig SQLiteConfig;
+	SQLiteConfig.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	SQLiteConfig.SQLiteDatabasePath = Result.DatabasePath;
+	SQLiteConfig.bSQLiteReadOnly = false;
+	SQLiteConfig.bSQLiteInitializeSchemaIfMissing = true;
+	SQLiteConfig.bSQLiteCreateDatabaseIfMissing = true;
+	const FSQLUILayoutDocument SQLiteDocument =
+		MakeSQLUISampleLayoutPersistenceWorkflowDocument(
+			TEXT("sqlui.smoke.persistence-workflow.sqlite"),
+			TEXT("SQLUI Persistence Workflow SQLite Layout"),
+			TEXT("persistence-workflow-sqlite"));
+	Result.bSQLiteInitialized =
+		IsValid(SQLiteSubsystem)
+		&& SQLiteSubsystem->InitializeRepositoryFromRuntimeConfig(SQLiteConfig)
+		&& FSQLUILayoutPersistenceWorkflow::HasRepository(SQLiteSubsystem)
+		&& SQLiteSubsystem->GetActiveBackend() == ESQLUILayoutRepositoryBackend::SQLite;
+	if (Result.bSQLiteInitialized)
+	{
+		const FSQLUILayoutSaveResult SQLiteSaveResult =
+			FSQLUILayoutPersistenceWorkflow::SaveLayout(
+				SQLiteSubsystem,
+				SQLiteDocument);
+		const FSQLUILayoutRepositoryListResult SQLiteListResult =
+			FSQLUILayoutPersistenceWorkflow::ListLayouts(SQLiteSubsystem);
+		const FSQLUILayoutLoadResult SQLiteLoadResult =
+			FSQLUILayoutPersistenceWorkflow::LoadLayout(
+				SQLiteSubsystem,
+				SQLiteDocument.Metadata.LayoutId);
+		Result.bSQLiteSaveSucceeded =
+			SQLiteSaveResult.bSucceeded
+			&& SQLiteSaveResult.SavedLayoutId == SQLiteDocument.Metadata.LayoutId
+			&& SQLiteSaveResult.Validation.bIsValid;
+		Result.bSQLiteDatabaseCreated = FPaths::FileExists(Result.DatabasePath);
+		Result.bSQLiteListSucceeded = SQLiteListResult.bSucceeded;
+		Result.bSQLiteListedMetadataFound =
+			SQLiteListResult.bSucceeded
+			&& DoesSQLUISampleLayoutMetadataAndTagsListContain(
+				SQLiteListResult.Layouts,
+				SQLiteDocument.Metadata);
+		Result.bSQLiteLoadSucceeded = SQLiteLoadResult.bSucceeded;
+		Result.bSQLiteLoadedDocumentValid = SQLiteLoadResult.Validation.bIsValid;
+		Result.bSQLiteLoadedLayoutIdMatched =
+			SQLiteLoadResult.Document.Metadata.LayoutId
+			== SQLiteDocument.Metadata.LayoutId;
+		if (IsValid(SQLiteSubsystem))
+		{
+			SQLiteSubsystem->ResetRepository();
+		}
+	}
+	if (!Result.bSQLiteInitialized
+		|| !Result.bSQLiteSaveSucceeded
+		|| !Result.bSQLiteDatabaseCreated
+		|| !Result.bSQLiteListSucceeded
+		|| !Result.bSQLiteListedMetadataFound
+		|| !Result.bSQLiteLoadSucceeded
+		|| !Result.bSQLiteLoadedDocumentValid
+		|| !Result.bSQLiteLoadedLayoutIdMatched)
+	{
+		AppendSQLUISampleLayoutPersistenceWorkflowProbeError(
+			Result,
+			TEXT("SQLUI layout persistence workflow probe failed: SQLite workflow did not save/list/load through the runtime subsystem."));
+	}
+
+	USQLUILayoutRepositoryRuntimeSubsystem* SQLiteUnavailableSubsystem =
+		CreateSQLUISampleLayoutPersistenceWorkflowSubsystem(WorkflowGameInstance);
+	FSQLUILayoutRepositoryRuntimeConfig SQLiteUnavailableConfig;
+	SQLiteUnavailableConfig.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	const bool bSQLiteUnavailableInitialized =
+		IsValid(SQLiteUnavailableSubsystem)
+		&& SQLiteUnavailableSubsystem->InitializeRepositoryFromRuntimeConfig(
+			SQLiteUnavailableConfig);
+	const FSQLUILayoutRepositoryRuntimeIntegrationResult SQLiteUnavailableResult =
+		IsValid(SQLiteUnavailableSubsystem)
+			? SQLiteUnavailableSubsystem->GetLastIntegrationResult()
+			: FSQLUILayoutRepositoryRuntimeIntegrationResult();
+	const FSQLUILayoutDocument SQLiteUnavailableDocument =
+		MakeSQLUISampleLayoutPersistenceWorkflowDocument(
+			TEXT("sqlui.smoke.persistence-workflow.sqlite-unavailable"),
+			TEXT("SQLUI Persistence Workflow SQLite Unavailable Layout"),
+			TEXT("persistence-workflow-sqlite-unavailable"));
+	const FSQLUILayoutSaveResult SQLiteUnavailableSaveResult =
+		FSQLUILayoutPersistenceWorkflow::SaveLayout(
+			SQLiteUnavailableSubsystem,
+			SQLiteUnavailableDocument);
+	const FSQLUILayoutRepositoryListResult SQLiteUnavailableListResult =
+		FSQLUILayoutPersistenceWorkflow::ListLayouts(SQLiteUnavailableSubsystem);
+	const FSQLUILayoutLoadResult SQLiteUnavailableLoadResult =
+		FSQLUILayoutPersistenceWorkflow::LoadLayout(
+			SQLiteUnavailableSubsystem,
+			SQLiteUnavailableDocument.Metadata.LayoutId);
+	Result.bSQLiteUnavailableHandled =
+		!bSQLiteUnavailableInitialized
+		&& SQLiteUnavailableResult.bBackendUnavailable;
+	Result.bSQLiteUnavailableWorkflowFailedClearly =
+		!SQLiteUnavailableSaveResult.bSucceeded
+		&& SQLiteUnavailableSaveResult.bBackendUnavailable
+		&& !SQLiteUnavailableSaveResult.ErrorMessage.IsEmpty()
+		&& !SQLiteUnavailableListResult.bSucceeded
+		&& !SQLiteUnavailableListResult.ErrorMessage.IsEmpty()
+		&& !SQLiteUnavailableLoadResult.bSucceeded
+		&& SQLiteUnavailableLoadResult.bBackendUnavailable
+		&& !SQLiteUnavailableLoadResult.ErrorMessage.IsEmpty();
+	Result.bSQLiteUnavailableDidNotCreateDb =
+		!DoSQLUISampleLayoutPersistenceWorkflowFilesExist(
+			Result.MissingRepositoryMarkerDatabasePath);
+	if (IsValid(SQLiteUnavailableSubsystem))
+	{
+		SQLiteUnavailableSubsystem->ResetRepository();
+	}
+	if (!Result.bSQLiteUnavailableHandled
+		|| !Result.bSQLiteUnavailableWorkflowFailedClearly
+		|| !Result.bSQLiteUnavailableDidNotCreateDb)
+	{
+		AppendSQLUISampleLayoutPersistenceWorkflowProbeError(
+			Result,
+			SQLiteUnavailableResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI layout persistence workflow probe failed: SQLite unavailable path did not fail clearly without creating DB files.")
+				: SQLiteUnavailableResult.ErrorMessage);
+	}
+
+	Result.bDatabaseFilesRemoved =
+		DeleteSQLUISampleLayoutPersistenceWorkflowFiles(Result)
+		&& !DoesAnySQLUISampleLayoutPersistenceWorkflowFileExist(Result);
+	if (!Result.bDatabaseFilesRemoved)
+	{
+		AppendSQLUISampleLayoutPersistenceWorkflowProbeError(
+			Result,
+			TEXT("SQLUI layout persistence workflow probe failed: probe database files were not removed."));
+	}
+
+	Result.bSucceeded =
+		Result.bNullSubsystemSaveFailed
+		&& Result.bNullSubsystemListFailed
+		&& Result.bNullSubsystemLoadFailed
+		&& Result.bMissingRepositorySaveFailed
+		&& Result.bMissingRepositoryListFailed
+		&& Result.bMissingRepositoryLoadFailed
+		&& Result.bMissingRepositoryDidNotCreateDb
+		&& Result.bInMemoryInitialized
+		&& Result.bInMemorySaveSucceeded
+		&& Result.bInMemoryListSucceeded
+		&& Result.bInMemoryListedMetadataFound
+		&& Result.bInMemoryLoadSucceeded
+		&& Result.bInMemoryLoadedDocumentValid
+		&& Result.bInMemoryLoadedLayoutIdMatched
+		&& Result.bSQLiteInitialized
+		&& Result.bSQLiteSaveSucceeded
+		&& Result.bSQLiteDatabaseCreated
+		&& Result.bSQLiteListSucceeded
+		&& Result.bSQLiteListedMetadataFound
+		&& Result.bSQLiteLoadSucceeded
+		&& Result.bSQLiteLoadedDocumentValid
+		&& Result.bSQLiteLoadedLayoutIdMatched
+		&& Result.bSQLiteUnavailableHandled
+		&& Result.bSQLiteUnavailableWorkflowFailedClearly
+		&& Result.bSQLiteUnavailableDidNotCreateDb
+		&& Result.bDatabaseFilesRemoved;
+
+	return Result;
+}
+
 void AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
 	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& Result,
 	const FString& ErrorMessage)
@@ -8795,6 +9282,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.LayoutRepositoryRuntimeSettingsProbe.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI layout repository runtime settings probe failed.")
 					: Result.LayoutRepositoryRuntimeSettingsProbe.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseLayoutPersistenceWorkflowProbe)
+	{
+		Result.bUsedLayoutPersistenceWorkflowProbe = true;
+		Result.LayoutPersistenceWorkflowProbe =
+			RunSQLUISampleLayoutPersistenceWorkflowProbe(Outer);
+		if (!Result.LayoutPersistenceWorkflowProbe.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.LayoutPersistenceWorkflowProbe.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI layout persistence workflow probe failed.")
+					: Result.LayoutPersistenceWorkflowProbe.ErrorMessage);
 		}
 	}
 

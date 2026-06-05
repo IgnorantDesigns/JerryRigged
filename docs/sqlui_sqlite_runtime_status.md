@@ -28,6 +28,8 @@ SQLite database work is delegated to the non-UObject `FSQLUISQLiteLayoutReposito
 
 `SaveLayout` validates the layout document, serializes canonical JSON, writes metadata, inserts an immutable revision row, replaces tags, updates the current revision, and commits a transaction. `ListLayouts` reads active layout metadata and tags. `LoadLayout` reads the current revision JSON and validates the loaded document. `RemoveLayout` preserves revisions and tags. `ClearLayouts` removes layouts plus dependent revision, tag, checkpoint, and preview rows for the selected database scope.
 
+`FSQLUILayoutPersistenceWorkflow` provides a storage-agnostic app-facing save/list/load helper above `USQLUILayoutRepositoryRuntimeSubsystem`. It uses only the subsystem's active `USQLUILayoutRepository` and does not cast to SQLite, know database paths, run migrations, copy seed databases, initialize providers, create repositories, attach widgets, touch the viewport, or change normal startup. This gives runtime code a small persistence workflow surface while preserving the repository and subsystem boundaries.
+
 ## Repository Selection
 
 SQLite is not the default backend.
@@ -86,6 +88,8 @@ The resolver can also map explicit seed-copy options into `FSQLUISQLiteSeedDatab
 `USQLUILayoutRepositoryRuntimeProvider` is the first storage-agnostic UObject holder for runtime-selected repositories. It initializes through the runtime integration helper, stores the active repository plus the last integration result, supports explicit reset/reinitialization, and keeps callers on the repository interface instead of concrete storage classes. It does not auto-start, attach widgets, run migrations directly, or make SQLite the default backend.
 
 `USQLUILayoutRepositoryRuntimeSubsystem` is the passive SQLUICore `UGameInstanceSubsystem` holder above the provider. Unreal may construct it with the GameInstance, but it does not initialize a repository, choose SQLite, create databases, copy seed files, attach widgets, or touch the viewport by default. It can be initialized by caller code through runtime config/command-line helpers, or it can opt into startup initialization only when config-backed settings or `-SQLUILayoutRepositoryProviderAutoInit` explicitly request it. That path still uses the settings/resolver default of `InMemory` unless explicit settings or command-line repository options choose another backend.
+
+`FSQLUILayoutPersistenceWorkflow` sits above that subsystem as the first storage-agnostic runtime persistence workflow proof. It assumes the subsystem/provider was already configured by caller code or explicit settings. When a repository is active, it saves, lists, and loads through the repository surface. When the subsystem is null or no repository is active, it returns clear failures and creates no database files.
 
 The packaged runtime provider startup smoke proves this holder can be intentionally created from packaged startup/runtime code and initialized from command-line repository settings. That proof runs only with `-SQLUIRuntimeProviderStartupSmoke`; normal startup still does not auto-initialize a provider or SQLite.
 
@@ -181,6 +185,7 @@ Current SQLite-related smoke flags are:
 - `-UseLayoutRepositoryRuntimeIntegrationProbe`: verifies the runtime integration helper across default in-memory creation, explicit SQLite creation/save/list, missing-path unavailable behavior, explicit seed-copy repository creation, fatal missing-seed handling, and cleanup.
 - `-UseLayoutRepositoryRuntimeProviderProbe`: verifies the runtime provider across default in-memory initialization, reset/reinitialization, explicit SQLite save/list/load, command-line SQLite initialization, explicit seed-copy initialization/readback, fatal missing-seed handling, and cleanup.
 - `-UseLayoutRepositoryRuntimeSettingsProbe`: verifies config-backed runtime settings safe defaults, settings-driven `InMemory`, settings-driven SQLite, command-line override behavior, disabled overrides, explicit SQLite missing-path unavailable behavior, and cleanup.
+- `-UseLayoutPersistenceWorkflowProbe`: verifies the storage-agnostic runtime workflow helper for null/missing repository failures, in-memory save/list/load, explicit SQLite save/list/load, SQLite unavailable behavior, and cleanup.
 - `-UseSQLiteMigrationProbe`: proves the minimal migration runner with a smoke-only migration.
 - `-UseSQLiteLayoutSchemaMigrationProbe`: applies and verifies the planned initial layout schema.
 - `-UseSQLiteLayoutReadProbe`: seeds one layout and verifies list/load mapping against the schema.

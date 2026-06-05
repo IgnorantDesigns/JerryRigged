@@ -1130,6 +1130,81 @@ void LogSQLUISampleSmokeTestLayoutRepositoryRuntimeSettingsProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestLayoutPersistenceWorkflowProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedLayoutPersistenceWorkflowProbe)
+	{
+		return;
+	}
+
+	const FSQLUISampleLayoutPersistenceWorkflowProbeResult& ProbeResult =
+		Result.LayoutPersistenceWorkflowProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout persistence workflow probe database path: '%s'"),
+		*ProbeResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout persistence workflow probe missing repository marker database path: '%s'"),
+		*ProbeResult.MissingRepositoryMarkerDatabasePath);
+
+	const auto LogLayoutPersistenceWorkflowBool =
+		[&ProbeResult](const TCHAR* Label, bool bValue)
+		{
+			UE_LOG(
+				LogSQLUISamples,
+				Log,
+				TEXT("SQLUI layout persistence workflow probe %s: %s"),
+				Label,
+				bValue ? TEXT("true") : TEXT("false"));
+		};
+
+	LogLayoutPersistenceWorkflowBool(TEXT("null subsystem save failed"), ProbeResult.bNullSubsystemSaveFailed);
+	LogLayoutPersistenceWorkflowBool(TEXT("null subsystem list failed"), ProbeResult.bNullSubsystemListFailed);
+	LogLayoutPersistenceWorkflowBool(TEXT("null subsystem load failed"), ProbeResult.bNullSubsystemLoadFailed);
+	LogLayoutPersistenceWorkflowBool(TEXT("missing repository save failed"), ProbeResult.bMissingRepositorySaveFailed);
+	LogLayoutPersistenceWorkflowBool(TEXT("missing repository list failed"), ProbeResult.bMissingRepositoryListFailed);
+	LogLayoutPersistenceWorkflowBool(TEXT("missing repository load failed"), ProbeResult.bMissingRepositoryLoadFailed);
+	LogLayoutPersistenceWorkflowBool(TEXT("missing repository did not create DB"), ProbeResult.bMissingRepositoryDidNotCreateDb);
+	LogLayoutPersistenceWorkflowBool(TEXT("in-memory initialized"), ProbeResult.bInMemoryInitialized);
+	LogLayoutPersistenceWorkflowBool(TEXT("in-memory save succeeded"), ProbeResult.bInMemorySaveSucceeded);
+	LogLayoutPersistenceWorkflowBool(TEXT("in-memory list succeeded"), ProbeResult.bInMemoryListSucceeded);
+	LogLayoutPersistenceWorkflowBool(TEXT("in-memory listed metadata found"), ProbeResult.bInMemoryListedMetadataFound);
+	LogLayoutPersistenceWorkflowBool(TEXT("in-memory load succeeded"), ProbeResult.bInMemoryLoadSucceeded);
+	LogLayoutPersistenceWorkflowBool(TEXT("in-memory loaded document valid"), ProbeResult.bInMemoryLoadedDocumentValid);
+	LogLayoutPersistenceWorkflowBool(TEXT("in-memory loaded layout id matched"), ProbeResult.bInMemoryLoadedLayoutIdMatched);
+	LogLayoutPersistenceWorkflowBool(TEXT("SQLite initialized"), ProbeResult.bSQLiteInitialized);
+	LogLayoutPersistenceWorkflowBool(TEXT("SQLite save succeeded"), ProbeResult.bSQLiteSaveSucceeded);
+	LogLayoutPersistenceWorkflowBool(TEXT("SQLite database created"), ProbeResult.bSQLiteDatabaseCreated);
+	LogLayoutPersistenceWorkflowBool(TEXT("SQLite list succeeded"), ProbeResult.bSQLiteListSucceeded);
+	LogLayoutPersistenceWorkflowBool(TEXT("SQLite listed metadata found"), ProbeResult.bSQLiteListedMetadataFound);
+	LogLayoutPersistenceWorkflowBool(TEXT("SQLite load succeeded"), ProbeResult.bSQLiteLoadSucceeded);
+	LogLayoutPersistenceWorkflowBool(TEXT("SQLite loaded document valid"), ProbeResult.bSQLiteLoadedDocumentValid);
+	LogLayoutPersistenceWorkflowBool(TEXT("SQLite loaded layout id matched"), ProbeResult.bSQLiteLoadedLayoutIdMatched);
+	LogLayoutPersistenceWorkflowBool(TEXT("SQLite unavailable handled"), ProbeResult.bSQLiteUnavailableHandled);
+	LogLayoutPersistenceWorkflowBool(TEXT("SQLite unavailable workflow failed clearly"), ProbeResult.bSQLiteUnavailableWorkflowFailedClearly);
+	LogLayoutPersistenceWorkflowBool(TEXT("SQLite unavailable did not create DB"), ProbeResult.bSQLiteUnavailableDidNotCreateDb);
+	LogLayoutPersistenceWorkflowBool(TEXT("database files removed"), ProbeResult.bDatabaseFilesRemoved);
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout persistence workflow probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI layout persistence workflow probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(
 	const FSQLUISampleSmokeTestResult& Result)
 {
@@ -2885,6 +2960,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeIntegrationProbeResult(Result);
 	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeProviderProbeResult(Result);
 	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeSettingsProbeResult(Result);
+	LogSQLUISampleSmokeTestLayoutPersistenceWorkflowProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(Result);
@@ -2990,6 +3066,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseLayoutRepositoryRuntimeSettingsProbe =
 		FParse::Param(*Params, TEXT("UseLayoutRepositoryRuntimeSettingsProbe"))
 		|| FParse::Param(*Params, TEXT("LayoutRepositoryRuntimeSettingsProbe"));
+	const bool bUseLayoutPersistenceWorkflowProbe =
+		FParse::Param(*Params, TEXT("UseLayoutPersistenceWorkflowProbe"))
+		|| FParse::Param(*Params, TEXT("LayoutPersistenceWorkflowProbe"));
 	const bool bUseSQLiteMigrationProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteMigrationProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteMigrationProbe"));
@@ -3094,6 +3173,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout repository runtime settings probe selected: true"));
 	}
 
+	if (bUseLayoutPersistenceWorkflowProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout persistence workflow probe selected: true"));
+	}
+
 	if (bUseSQLiteMigrationProbe)
 	{
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite migration probe selected: true"));
@@ -3192,6 +3276,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseLayoutRepositoryRuntimeIntegrationProbe = bUseLayoutRepositoryRuntimeIntegrationProbe;
 		Request.bUseLayoutRepositoryRuntimeProviderProbe = bUseLayoutRepositoryRuntimeProviderProbe;
 		Request.bUseLayoutRepositoryRuntimeSettingsProbe = bUseLayoutRepositoryRuntimeSettingsProbe;
+		Request.bUseLayoutPersistenceWorkflowProbe = bUseLayoutPersistenceWorkflowProbe;
 		Request.bUseSQLiteMigrationProbe = bUseSQLiteMigrationProbe;
 		Request.bUseSQLiteLayoutSchemaMigrationProbe = bUseSQLiteLayoutSchemaMigrationProbe;
 		Request.bUseSQLiteLayoutReadProbe = bUseSQLiteLayoutReadProbe;
