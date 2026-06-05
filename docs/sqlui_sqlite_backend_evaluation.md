@@ -1,6 +1,6 @@
 # SQLUI SQLite Backend Evaluation
 
-This document records the SQLite backend evaluation that led SQLUI to use engine `SQLiteCore` as the active runtime candidate. The original backend evaluation was documentation-only; the current code now includes SQLiteCore wiring, repository operations, factory selection, an explicit runtime configuration resolver, an explicit runtime integration helper above resolver/seed-copy/factory creation, an explicit seed database copy policy helper, opt-in schema initialization, a migration version/status helper for the known layout schema migration set, serialized opt-in async callback execution with queue shutdown/stale-callback suppression for `LoadLayout` and `SaveLayout`, local smoke coverage, a local packaged-build validation scaffold, and an opt-in packaged runtime SQLite lifecycle smoke. SQLite is still not the default backend, and this work still does not add migrations inside the factory, widgets, maps, assets, CI, source-controlled seed databases, or persistent database files.
+This document records the SQLite backend evaluation that led SQLUI to use engine `SQLiteCore` as the active runtime candidate. The original backend evaluation was documentation-only; the current code now includes SQLiteCore wiring, repository operations, factory selection, an explicit runtime configuration resolver, an explicit runtime integration helper above resolver/seed-copy/factory creation, a storage-agnostic runtime repository provider, an explicit seed database copy policy helper, opt-in schema initialization, a migration version/status helper for the known layout schema migration set, serialized opt-in async callback execution with queue shutdown/stale-callback suppression for `LoadLayout` and `SaveLayout`, local smoke coverage, a local packaged-build validation scaffold, and an opt-in packaged runtime SQLite lifecycle smoke. SQLite is still not the default backend, and this work still does not add migrations inside the factory, widgets, maps, assets, CI, source-controlled seed databases, or persistent database files.
 
 For the concise phase status and roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md).
 For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
@@ -225,6 +225,8 @@ The repository implementation:
 - Has optional smoke coverage for runtime config parsing, SQLite path resolution, missing-path unavailable behavior, invalid-backend fallback, and a factory-created SQLite save through explicit runtime config.
 - Has a SQLUICore runtime integration helper that can run explicit seed-copy policy, then create the requested repository through the factory while preserving the default `InMemory` behavior and unavailable behavior for explicit SQLite requests with no database path.
 - Has optional smoke coverage for default in-memory runtime integration, explicit SQLite creation/save/list, missing-path unavailable behavior, explicit seed-copy repository creation, fatal missing-seed handling, and cleanup.
+- Has a SQLUICore runtime repository provider that stores an explicitly initialized active repository and last integration result while delegating repository creation to the runtime integration helper.
+- Has optional smoke coverage for default provider initialization, reset/reinitialization, explicit SQLite save/list/load, command-line SQLite initialization, explicit seed-copy initialization/readback, fatal missing-seed handling, and cleanup.
 - Has a SQLUICore seed database copy policy helper that can explicitly copy a closed seed DB into a writable target path, preserve existing targets without overwrite, overwrite only when requested, fail for missing seed or same-path inputs, and map runtime config seed flags into a copy request without copying.
 - Has optional smoke coverage for seed copy/no-overwrite/overwrite/missing-seed/same-path behavior and verifies copied targets are readable through the SQLite repository.
 - Has optional packaged runtime smoke coverage that launches the packaged executable, creates a SQLite repository through the factory, runs save/list/load/remove/clear under a packaged runtime `Saved/SQLUI/PackagedRuntimeSmoke/...` path, verifies success from the runtime log, and removes the smoke database.
@@ -243,7 +245,7 @@ Remaining blockers before promoting SQLite to production/default persistence:
 - Expanding packaged runtime SQLite lifecycle coverage beyond the first local packaged executable smoke.
 - Production SQLite service lifecycle, shutdown draining beyond stale-callback suppression, and cancellation policy.
 - Actual future schema migrations, version-specific upgrade transforms, and compatibility policy beyond the first version/status framework.
-- Production/user-facing runtime settings and database path policy beyond the first explicit resolver.
+- Production/user-facing runtime settings, startup integration, and database path policy beyond the first explicit resolver/provider.
 - Product seed database asset location, packaging, versioning, and upgrade policy beyond the first explicit copy helper.
 
 ## Evaluation Criteria

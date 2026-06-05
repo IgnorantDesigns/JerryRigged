@@ -22,6 +22,8 @@ The optional layout repository runtime config probe exercises the SQLUICore conf
 
 The optional layout repository runtime integration probe exercises the SQLUICore helper above runtime config, seed-copy policy, and repository factory creation. It verifies the default config still creates a non-SQLite in-memory repository, explicit SQLite config creates a writable SQLite repository only when configured, missing SQLite path selection remains unavailable without creating DB files, explicit seed-copy policy prepares a copied runtime target that is readable through the SQLite repository, seed-copy failure is fatal before repository creation when configured that way, and all temporary DB files are removed.
 
+The optional layout repository runtime provider probe exercises the SQLUICore UObject holder above the runtime integration helper. It verifies default `InMemory` initialization, reset/reinitialization, explicit SQLite save/list/load, missing-path unavailable behavior without DB creation, command-line SQLite initialization, explicit seed-copy initialization/readback, fatal missing-seed handling before repository storage, and cleanup under `Saved\SQLUI\SmokeTests\LayoutRepositoryRuntimeProvider`.
+
 The optional SQLite migration probe opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe`, creates the smoke-only migration tracking table, applies and records one probe migration, verifies the migration row, closes the database, and removes the probe database file. This is not the planned SQLUI layout schema migration and does not add a SQLite layout repository.
 
 The optional SQLite layout schema migration probe opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe`, applies the planned initial layout schema through the SQLUICore migration runner, verifies the expected layout tables and indexes exist, closes the database, and removes the probe database file. This proves the schema DDL can apply locally without exercising repository operations or repository factory selection.
@@ -56,7 +58,7 @@ This is a local developer workflow only. It is not CI yet, and it does not assum
 
 Packaged-build and packaged runtime validation are separate from these editor commandlet smoke paths. Use [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) to run the local `RunUAT BuildCookRun` scaffold, and pass `-RunPackagedSQLiteSmoke` when you need the packaged executable to run the SQLUI SQLite lifecycle smoke.
 
-The smoke test does not edit maps, levels, Content, persistent database files, or the viewport. It attaches no widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory. The SQLiteCore probe writes only under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe` and removes `SQLiteCoreProbe.db` after the check. The layout repository runtime config probe writes only under `Saved\SQLUI\SmokeTests\LayoutRepositoryRuntimeConfig` and removes `LayoutRepositoryRuntimeConfig.db` after the check. The layout repository runtime integration probe writes only under `Saved\SQLUI\SmokeTests\LayoutRepositoryRuntimeIntegration` and removes `RuntimeIntegration.db`, `SeedRuntimeIntegration.db`, `SeedCopiedRuntimeIntegration.db`, `MissingSeedTargetRuntimeIntegration.db`, and SQLite sidecar files after the check. The SQLite migration probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe` and removes `SQLiteMigrationProbe.db` after the check. The SQLite layout schema migration probe writes only under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe` and removes `LayoutSchemaMigrationProbe.db` after the check. The SQLite layout read probe writes only under `Saved\SQLUI\SmokeTests\LayoutReadProbe` and removes `LayoutReadProbe.db` after the check. The SQLite read-only layout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteReadOnlyRepository` and removes `SQLiteReadOnlyRepository.db` after the check. The SQLite SaveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSaveLayoutRepository` and removes `SQLiteSaveLayoutRepository.db` after the check. The SQLite RemoveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteRemoveLayoutRepository` and removes `SQLiteRemoveLayoutRepository.db` after the check. The SQLite ClearLayouts repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteClearLayoutsRepository` and removes `SQLiteClearLayoutsRepository.db` after the check. The SQLite full lifecycle repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFullLifecycleRepository` and removes `SQLiteFullLifecycleRepository.db` after the check. The SQLite async callback repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteAsyncCallbackRepository` and removes `SQLiteAsyncCallbackRepository.db` after the check. The SQLite serialized async callback repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSerializedAsyncCallbackRepository` and removes `SQLiteSerializedAsyncCallbackRepository.db` after the check. The SQLite factory layout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFactoryRepository` and removes `SQLiteFactoryRepository.db` after the check. The SQLite factory schema-init repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFactorySchemaInitRepository` and removes `SQLiteFactorySchemaInitRepository.db`, `SQLiteFactorySchemaInitRepositoryMissing.db`, and SQLite sidecar files after the check. The SQLite schema-init hardening smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSchemaInitHardening` and removes `MissingCreateDisabled.db`, `EmptyCreateEnabled.db`, `AlreadyInitialized.db`, `CompleteSchemaMissingMigration.db`, `PartialSchema.db`, `ReadOnlyInitBlocked.db`, and SQLite sidecar files after the check. The SQLite seed database copy policy probe writes only under `Saved\SQLUI\SmokeTests\SQLiteSeedDatabaseCopyPolicy` and removes its seed, runtime target, missing-seed target, runtime-config target, and SQLite sidecar files after the check. The SQLite migration versioning policy probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationVersioningPolicy` and removes `LayoutSchemaCurrent.db`, `LayoutSchemaMissingRecord.db`, `LayoutSchemaPartial.db`, `SmokeOrderedMigrations.db`, `SmokePendingMigration.db`, `SmokeFailingMigration.db`, and SQLite sidecar files after the check. The database async probe and database async queue shutdown probe do not perform file I/O.
+The smoke test does not edit maps, levels, Content, persistent database files, or the viewport. It attaches no widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory. The SQLiteCore probe writes only under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe` and removes `SQLiteCoreProbe.db` after the check. The layout repository runtime config probe writes only under `Saved\SQLUI\SmokeTests\LayoutRepositoryRuntimeConfig` and removes `LayoutRepositoryRuntimeConfig.db` after the check. The layout repository runtime integration probe writes only under `Saved\SQLUI\SmokeTests\LayoutRepositoryRuntimeIntegration` and removes `RuntimeIntegration.db`, `SeedRuntimeIntegration.db`, `SeedCopiedRuntimeIntegration.db`, `MissingSeedTargetRuntimeIntegration.db`, and SQLite sidecar files after the check. The layout repository runtime provider probe writes only under `Saved\SQLUI\SmokeTests\LayoutRepositoryRuntimeProvider` and removes `RuntimeProvider.db`, `CommandLineRuntimeProvider.db`, `SeedRuntimeProvider.db`, `SeedCopiedRuntimeProvider.db`, `MissingSeedTargetRuntimeProvider.db`, and SQLite sidecar files after the check. The SQLite migration probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe` and removes `SQLiteMigrationProbe.db` after the check. The SQLite layout schema migration probe writes only under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe` and removes `LayoutSchemaMigrationProbe.db` after the check. The SQLite layout read probe writes only under `Saved\SQLUI\SmokeTests\LayoutReadProbe` and removes `LayoutReadProbe.db` after the check. The SQLite read-only layout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteReadOnlyRepository` and removes `SQLiteReadOnlyRepository.db` after the check. The SQLite SaveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSaveLayoutRepository` and removes `SQLiteSaveLayoutRepository.db` after the check. The SQLite RemoveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteRemoveLayoutRepository` and removes `SQLiteRemoveLayoutRepository.db` after the check. The SQLite ClearLayouts repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteClearLayoutsRepository` and removes `SQLiteClearLayoutsRepository.db` after the check. The SQLite full lifecycle repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFullLifecycleRepository` and removes `SQLiteFullLifecycleRepository.db` after the check. The SQLite async callback repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteAsyncCallbackRepository` and removes `SQLiteAsyncCallbackRepository.db` after the check. The SQLite serialized async callback repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSerializedAsyncCallbackRepository` and removes `SQLiteSerializedAsyncCallbackRepository.db` after the check. The SQLite factory layout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFactoryRepository` and removes `SQLiteFactoryRepository.db` after the check. The SQLite factory schema-init repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFactorySchemaInitRepository` and removes `SQLiteFactorySchemaInitRepository.db`, `SQLiteFactorySchemaInitRepositoryMissing.db`, and SQLite sidecar files after the check. The SQLite schema-init hardening smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSchemaInitHardening` and removes `MissingCreateDisabled.db`, `EmptyCreateEnabled.db`, `AlreadyInitialized.db`, `CompleteSchemaMissingMigration.db`, `PartialSchema.db`, `ReadOnlyInitBlocked.db`, and SQLite sidecar files after the check. The SQLite seed database copy policy probe writes only under `Saved\SQLUI\SmokeTests\SQLiteSeedDatabaseCopyPolicy` and removes its seed, runtime target, missing-seed target, runtime-config target, and SQLite sidecar files after the check. The SQLite migration versioning policy probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationVersioningPolicy` and removes `LayoutSchemaCurrent.db`, `LayoutSchemaMissingRecord.db`, `LayoutSchemaPartial.db`, `SmokeOrderedMigrations.db`, `SmokePendingMigration.db`, `SmokeFailingMigration.db`, and SQLite sidecar files after the check. The database async probe and database async queue shutdown probe do not perform file I/O.
 
 ## Build JerryRiggedEditor
 
@@ -191,6 +193,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 The commandlet also accepts `-LayoutRepositoryRuntimeIntegrationProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
 This path proves runtime integration policy only. It does not make SQLite the default backend, make normal startup use SQLite, add a settings UI, modify widgets, edit Content or maps, add source-controlled seed DBs, or leave persistent database files behind.
+
+## Run The Layout Repository Runtime Provider Probe
+
+The layout repository runtime provider probe keeps the same transient commandlet flow, creates a `USQLUILayoutRepositoryRuntimeProvider`, verifies default `InMemory` initialization through the runtime integration helper, verifies reset/reinitialization, verifies explicit SQLite save/list/load through the provider-held repository, verifies missing SQLite path selection stays unavailable without creating database files, verifies command-line SQLite initialization, verifies explicit seed-copy initialization/readback, verifies fatal missing-seed behavior before repository storage, removes all probe database files, and then runs the same default runtime widget pipeline:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseLayoutRepositoryRuntimeProviderProbe
+```
+
+The commandlet also accepts `-LayoutRepositoryRuntimeProviderProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
+
+This path proves runtime repository provider policy only. It does not make SQLite the default backend, make normal startup use SQLite, add a subsystem, add a settings UI, modify widgets, edit Content or maps, add source-controlled seed DBs, or leave persistent database files behind.
 
 ## Run The SQLite Migration Probe
 
@@ -539,6 +553,45 @@ SQLUI sample smoke test created widget count: 1
 ```
 
 After the probe succeeds, database files under `Saved\SQLUI\SmokeTests\LayoutRepositoryRuntimeIntegration` should not exist.
+
+For the layout repository runtime provider probe, also look for:
+
+```text
+SQLUI layout repository runtime provider probe selected: true
+SQLUI layout repository runtime provider probe provider created: true
+SQLUI layout repository runtime provider probe default initialization succeeded: true
+SQLUI layout repository runtime provider probe default backend in-memory: true
+SQLUI layout repository runtime provider probe default repository available: true
+SQLUI layout repository runtime provider probe default repository not SQLite: true
+SQLUI layout repository runtime provider probe reset cleared repository: true
+SQLUI layout repository runtime provider probe reinitialize after reset succeeded: true
+SQLUI layout repository runtime provider probe SQLite initialization succeeded: true
+SQLUI layout repository runtime provider probe SQLite backend selected: true
+SQLUI layout repository runtime provider probe SQLite repository available: true
+SQLUI layout repository runtime provider probe SQLite save succeeded: true
+SQLUI layout repository runtime provider probe SQLite list succeeded: true
+SQLUI layout repository runtime provider probe SQLite load succeeded: true
+SQLUI layout repository runtime provider probe SQLite missing path handled: true
+SQLUI layout repository runtime provider probe SQLite missing path did not create DB: true
+SQLUI layout repository runtime provider probe command-line initialization succeeded: true
+SQLUI layout repository runtime provider probe command-line SQLite save succeeded: true
+SQLUI layout repository runtime provider probe seed database prepared: true
+SQLUI layout repository runtime provider probe seed copy initialization succeeded: true
+SQLUI layout repository runtime provider probe seed copy requested: true
+SQLUI layout repository runtime provider probe seed copy succeeded: true
+SQLUI layout repository runtime provider probe seed copied target readable: true
+SQLUI layout repository runtime provider probe seed database left intact: true
+SQLUI layout repository runtime provider probe seed copy failure fatal: true
+SQLUI layout repository runtime provider probe seed copy failure did not create repository: true
+SQLUI layout repository runtime provider probe seed copy failure did not create target: true
+SQLUI layout repository runtime provider probe database files removed: true
+SQLUI layout repository runtime provider probe succeeded.
+SQLUI sample smoke test commandlet succeeded.
+SQLUI sample smoke test root widget valid: true
+SQLUI sample smoke test created widget count: 1
+```
+
+After the probe succeeds, database files under `Saved\SQLUI\SmokeTests\LayoutRepositoryRuntimeProvider` should not exist.
 
 For the SQLite migration probe, also look for:
 
