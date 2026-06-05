@@ -26,6 +26,12 @@ param(
 
 	[string]$PackagedProviderStartupSmokeLogPath,
 
+	[switch]$RunPackagedProviderSubsystemSmoke,
+
+	[int]$PackagedProviderSubsystemSmokeTimeoutSeconds = 120,
+
+	[string]$PackagedProviderSubsystemSmokeLogPath,
+
 	[switch]$NoBuild,
 
 	[switch]$NoCook,
@@ -86,6 +92,12 @@ Parameters:
       -SQLUIRuntimeProviderStartupSmoke and explicit SQLite repository command-line
       settings, then verify the runtime provider startup smoke log.
 
+  -RunPackagedProviderSubsystemSmoke
+      After BuildCookRun succeeds, launch the packaged executable with
+      -SQLUIRuntimeProviderSubsystemSmoke, -SQLUILayoutRepositoryProviderAutoInit,
+      and explicit SQLite repository command-line settings, then verify the
+      runtime provider subsystem smoke log.
+
   -PackagedSmokeTimeoutSeconds
       Timeout for the packaged runtime smoke process. Defaults to 120.
 
@@ -100,6 +112,14 @@ Parameters:
   -PackagedProviderStartupSmokeLogPath
       Optional packaged runtime provider startup smoke log path. Defaults to:
       Saved\SQLUI\PackagedValidation\<Platform>\<Configuration>\RuntimeSmoke\SQLUIPackagedRuntimeProviderStartupSmoke.log
+      The resolved path must stay under Saved\SQLUI\PackagedValidation.
+
+  -PackagedProviderSubsystemSmokeTimeoutSeconds
+      Timeout for the packaged runtime provider subsystem smoke process. Defaults to 120.
+
+  -PackagedProviderSubsystemSmokeLogPath
+      Optional packaged runtime provider subsystem smoke log path. Defaults to:
+      Saved\SQLUI\PackagedValidation\<Platform>\<Configuration>\RuntimeSmoke\SQLUIPackagedRuntimeProviderSubsystemSmoke.log
       The resolved path must stay under Saved\SQLUI\PackagedValidation.
 
   -NoBuild
@@ -123,7 +143,8 @@ Examples:
   .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput
   .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedSQLiteSmoke
   .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedProviderStartupSmoke
-  .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedSQLiteSmoke -RunPackagedProviderStartupSmoke
+  .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedProviderSubsystemSmoke
+  .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedSQLiteSmoke -RunPackagedProviderStartupSmoke -RunPackagedProviderSubsystemSmoke
   .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -RunUATPath "C:\UE\Engine\Build\BatchFiles\RunUAT.bat" -Platform Win64 -Configuration Development
 '@
 
@@ -505,6 +526,102 @@ function Invoke-SQLUIPackagedRuntimeProviderStartupSmoke
 	return 0
 }
 
+function Invoke-SQLUIPackagedRuntimeProviderSubsystemSmoke
+{
+	param(
+		[Parameter(Mandatory = $true)]
+		[string]$ExecutablePath,
+
+		[Parameter(Mandatory = $true)]
+		[string]$LogPath,
+
+		[Parameter(Mandatory = $true)]
+		[int]$TimeoutSeconds
+	)
+
+	if ($TimeoutSeconds -lt 1)
+	{
+		Stop-WithUsageError 'PackagedProviderSubsystemSmokeTimeoutSeconds must be 1 or greater.'
+	}
+
+	$LogDirectory = Split-Path -Parent $LogPath
+	New-Item -ItemType Directory -Force -Path $LogDirectory | Out-Null
+
+	if (Test-Path -LiteralPath $LogPath)
+	{
+		Remove-Item -LiteralPath $LogPath -Force
+	}
+
+	$ProviderSubsystemSQLitePath = 'PackagedRuntimeSmoke/RuntimeProviderSubsystem/RuntimeProviderSubsystem.db'
+	$SmokeArgs = @(
+		'-SQLUIRuntimeProviderSubsystemSmoke',
+		'-SQLUILayoutRepositoryProviderAutoInit',
+		'-SQLUILayoutRepositoryBackend=SQLite',
+		"-SQLUISQLiteLayoutRepositoryPath=`"$ProviderSubsystemSQLitePath`"",
+		'-SQLUISQLiteLayoutRepositoryInitializeSchema',
+		'-SQLUISQLiteLayoutRepositoryCreateDatabase',
+		'-unattended',
+		'-nosound',
+		'-NullRHI',
+		"-abslog=`"$LogPath`""
+	)
+
+	$PrintableCommandParts = @($ExecutablePath) + $SmokeArgs
+	$PrintableCommand = '& ' + (($PrintableCommandParts | ForEach-Object { Format-PowerShellCommandPart -Value $_ }) -join ' ')
+
+	Write-Host 'Running SQLUI packaged runtime provider subsystem smoke command:'
+	Write-Host $PrintableCommand
+	Write-Host "SQLUI packaged runtime provider subsystem smoke relative SQLite path: $ProviderSubsystemSQLitePath"
+	Write-Host "SQLUI packaged runtime provider subsystem smoke log path: $LogPath"
+
+	$Process = Start-Process -FilePath $ExecutablePath -ArgumentList $SmokeArgs -WindowStyle Hidden -PassThru
+	$TimeoutMilliseconds = [Math]::Max(1, $TimeoutSeconds) * 1000
+	if (-not $Process.WaitForExit($TimeoutMilliseconds))
+	{
+		Write-Error "SQLUI packaged runtime provider subsystem smoke timed out after $TimeoutSeconds second(s)."
+		try
+		{
+			$Process.Kill()
+		}
+		catch
+		{
+			Write-Warning "SQLUI packaged runtime provider subsystem smoke could not kill timed-out process: $($_.Exception.Message)"
+		}
+		return 4
+	}
+
+	$RuntimeExitCode = $Process.ExitCode
+	Write-Host "SQLUI packaged runtime provider subsystem smoke process exit code: $RuntimeExitCode"
+
+	if (-not (Test-Path -LiteralPath $LogPath -PathType Leaf))
+	{
+		Write-Error "SQLUI packaged runtime provider subsystem smoke log was not created: $LogPath"
+		return 5
+	}
+
+	$LogText = Get-Content -LiteralPath $LogPath -Raw
+	if ($LogText.Contains('SQLUI packaged runtime provider subsystem smoke failed:'))
+	{
+		Write-Error 'SQLUI packaged runtime provider subsystem smoke log contains a failure line.'
+		return 6
+	}
+
+	if (-not $LogText.Contains('SQLUI packaged runtime provider subsystem smoke succeeded.'))
+	{
+		Write-Error 'SQLUI packaged runtime provider subsystem smoke success line was not found in the runtime log.'
+		return 7
+	}
+
+	if ($RuntimeExitCode -ne 0)
+	{
+		Write-Error "SQLUI packaged runtime provider subsystem smoke process did not exit cleanly. ExitCode=$RuntimeExitCode"
+		return $RuntimeExitCode
+	}
+
+	Write-Host 'SQLUI packaged runtime provider subsystem smoke succeeded.'
+	return 0
+}
+
 if ($Help)
 {
 	Show-SQLUIPackagedBuildValidationHelp
@@ -554,10 +671,18 @@ if ([string]::IsNullOrWhiteSpace($PackagedProviderStartupSmokeLogPath))
 		-ChildPath 'RuntimeSmoke\SQLUIPackagedRuntimeProviderStartupSmoke.log'
 }
 
+if ([string]::IsNullOrWhiteSpace($PackagedProviderSubsystemSmokeLogPath))
+{
+	$PackagedProviderSubsystemSmokeLogPath = Join-Path `
+		-Path $DefaultOutputRoot `
+		-ChildPath 'RuntimeSmoke\SQLUIPackagedRuntimeProviderSubsystemSmoke.log'
+}
+
 $ResolvedArchiveDirectory = Resolve-FullPath -Path $ArchiveDirectory -BasePath $ProjectRoot
 $ResolvedStageDirectory = Resolve-FullPath -Path $StageDirectory -BasePath $ProjectRoot
 $ResolvedPackagedSmokeLogPath = Resolve-FullPath -Path $PackagedSmokeLogPath -BasePath $ProjectRoot
 $ResolvedPackagedProviderStartupSmokeLogPath = Resolve-FullPath -Path $PackagedProviderStartupSmokeLogPath -BasePath $ProjectRoot
+$ResolvedPackagedProviderSubsystemSmokeLogPath = Resolve-FullPath -Path $PackagedProviderSubsystemSmokeLogPath -BasePath $ProjectRoot
 
 if (-not (Test-IsPathUnder -Path $ResolvedArchiveDirectory -RootPath $PackagedValidationRoot))
 {
@@ -577,6 +702,11 @@ if (-not (Test-IsPathUnder -Path $ResolvedPackagedSmokeLogPath -RootPath $Packag
 if (-not (Test-IsPathUnder -Path $ResolvedPackagedProviderStartupSmokeLogPath -RootPath $PackagedValidationRoot))
 {
 	Stop-WithUsageError "PackagedProviderStartupSmokeLogPath must be under Saved\SQLUI\PackagedValidation: $ResolvedPackagedProviderStartupSmokeLogPath"
+}
+
+if (-not (Test-IsPathUnder -Path $ResolvedPackagedProviderSubsystemSmokeLogPath -RootPath $PackagedValidationRoot))
+{
+	Stop-WithUsageError "PackagedProviderSubsystemSmokeLogPath must be under Saved\SQLUI\PackagedValidation: $ResolvedPackagedProviderSubsystemSmokeLogPath"
 }
 
 if ($CleanPackageOutput)
@@ -660,6 +790,12 @@ if ($RunPackagedProviderStartupSmoke)
 	Write-Host "SQLUI packaged runtime provider startup smoke timeout seconds: $PackagedProviderStartupSmokeTimeoutSeconds"
 	Write-Host "SQLUI packaged runtime provider startup smoke log path: $ResolvedPackagedProviderStartupSmokeLogPath"
 }
+if ($RunPackagedProviderSubsystemSmoke)
+{
+	Write-Host "SQLUI packaged runtime provider subsystem smoke requested: true"
+	Write-Host "SQLUI packaged runtime provider subsystem smoke timeout seconds: $PackagedProviderSubsystemSmokeTimeoutSeconds"
+	Write-Host "SQLUI packaged runtime provider subsystem smoke log path: $ResolvedPackagedProviderSubsystemSmokeLogPath"
+}
 
 & $ResolvedRunUATPath @BuildCookRunArgs
 $ExitCode = $LASTEXITCODE
@@ -670,7 +806,7 @@ if ($null -eq $ExitCode)
 }
 
 Write-Host "SQLUI packaged-build validation exit code: $ExitCode"
-if ($ExitCode -ne 0 -or (-not $RunPackagedSQLiteSmoke -and -not $RunPackagedProviderStartupSmoke))
+if ($ExitCode -ne 0 -or (-not $RunPackagedSQLiteSmoke -and -not $RunPackagedProviderStartupSmoke -and -not $RunPackagedProviderSubsystemSmoke))
 {
 	exit $ExitCode
 }
@@ -711,5 +847,19 @@ if ($RunPackagedProviderStartupSmoke)
 		-TimeoutSeconds $PackagedProviderStartupSmokeTimeoutSeconds
 
 	Write-Host "SQLUI packaged runtime provider startup smoke exit code: $SmokeExitCode"
+	if ($SmokeExitCode -ne 0)
+	{
+		exit $SmokeExitCode
+	}
+}
+
+if ($RunPackagedProviderSubsystemSmoke)
+{
+	$SmokeExitCode = Invoke-SQLUIPackagedRuntimeProviderSubsystemSmoke `
+		-ExecutablePath $PackagedExecutablePath `
+		-LogPath $ResolvedPackagedProviderSubsystemSmokeLogPath `
+		-TimeoutSeconds $PackagedProviderSubsystemSmokeTimeoutSeconds
+
+	Write-Host "SQLUI packaged runtime provider subsystem smoke exit code: $SmokeExitCode"
 }
 exit $SmokeExitCode

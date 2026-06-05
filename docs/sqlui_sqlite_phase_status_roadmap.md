@@ -21,6 +21,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - SQLite remains non-default. The runtime config resolver defaults to `InMemory`.
 - A SQLUICore runtime integration helper can combine explicit runtime config, optional seed-copy policy, and repository factory creation without changing normal startup.
 - A SQLUICore runtime repository provider can hold the explicitly initialized active repository and last integration result without changing normal startup.
+- A passive SQLUICore runtime repository `GameInstance` subsystem can own/access the provider and auto-initializes only when `-SQLUILayoutRepositoryProviderAutoInit` is present.
 - Schema initialization and database creation are repository-owned and opt-in.
 - The current known production migration set is only `001_initial_layout_schema`.
 - `LoadLayout` and `SaveLayout` callback APIs can opt into serialized async execution with shutdown/stale-callback suppression.
@@ -28,6 +29,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - Local Win64 Development packaged BuildCookRun validation has passed.
 - An explicit packaged runtime SQLite lifecycle smoke exists and runs only with `-RunPackagedSQLiteSmoke` / `-SQLUIPackagedRuntimeSQLiteSmoke`.
 - An explicit packaged runtime provider startup smoke exists and runs only with `-RunPackagedProviderStartupSmoke` / `-SQLUIRuntimeProviderStartupSmoke`.
+- An explicit packaged runtime provider subsystem smoke exists and runs only with `-RunPackagedProviderSubsystemSmoke` / `-SQLUIRuntimeProviderSubsystemSmoke`.
 
 This is still not a default production persistence policy. Runtime integration, user-facing settings, broader platform validation, production async service hardening, and actual future schema upgrades remain future work.
 
@@ -52,6 +54,7 @@ This is still not a default production persistence policy. Runtime integration, 
 | Runtime config resolver | Implemented | Parses explicit backend/path/schema/async/seed flags; defaults to `InMemory`. |
 | Runtime integration helper | Implemented | Combines explicit runtime config, optional seed-copy policy, and factory repository creation. |
 | Runtime repository provider | Implemented | Storage-agnostic UObject holder for an explicitly initialized active repository and last integration result. |
+| Runtime repository subsystem | Implemented | Passive `GameInstance` subsystem can own/access the provider; startup auto-init requires `-SQLUILayoutRepositoryProviderAutoInit`. |
 | Seed database copy policy | Implemented | Explicit pre-repository closed-file copy helper; not factory-owned. |
 | Migration version/status framework | Implemented | Reports known/applied/pending status for current known migration set. |
 | Packaged build validation | Implemented locally | Local Win64 Development BuildCookRun validation passed with UE 5.7 preferred MSVC toolchain. |
@@ -89,6 +92,7 @@ This is still not a default production persistence policy. Runtime integration, 
 | Packaged build validation | `RunSQLUIPackagedBuildValidation.ps1 -CleanPackageOutput` | Local Win64 Development covered | Passed after installing UE 5.7 preferred MSVC `14.44.x`. |
 | Packaged runtime SQLite smoke | `RunSQLUIPackagedBuildValidation.ps1 -CleanPackageOutput -RunPackagedSQLiteSmoke` | Local Win64 Development covered | Launches packaged executable with `-SQLUIPackagedRuntimeSQLiteSmoke`. |
 | Packaged runtime provider startup smoke | `RunSQLUIPackagedBuildValidation.ps1 -CleanPackageOutput -RunPackagedProviderStartupSmoke` | Local Win64 Development covered | Launches packaged executable with `-SQLUIRuntimeProviderStartupSmoke` and explicit SQLite repository command-line settings. |
+| Packaged runtime provider subsystem smoke | `RunSQLUIPackagedBuildValidation.ps1 -CleanPackageOutput -RunPackagedProviderSubsystemSmoke` | Local Win64 Development covered | Launches packaged executable with `-SQLUIRuntimeProviderSubsystemSmoke`, `-SQLUILayoutRepositoryProviderAutoInit`, and explicit SQLite repository command-line settings. |
 
 ## Runtime And Packaging Status
 
@@ -113,6 +117,7 @@ The current SQLite path keeps these boundaries:
 - `FSQLUILayoutRepositoryRuntimeConfigResolver` defaults to `InMemory`.
 - `FSQLUILayoutRepositoryRuntimeIntegration` runs only when explicitly invoked by caller code or smoke tests.
 - `USQLUILayoutRepositoryRuntimeProvider` initializes only when caller code or smoke tests explicitly invoke it.
+- `USQLUILayoutRepositoryRuntimeSubsystem` is passive by default; startup auto-init requires `-SQLUILayoutRepositoryProviderAutoInit`.
 - The factory passes settings only.
 - The factory does not run migrations.
 - The factory does not copy seed databases.
@@ -127,8 +132,10 @@ The current SQLite path keeps these boundaries:
 - Normal startup does not use SQLite unless future runtime code explicitly opts in.
 - Packaged runtime smoke runs only with the explicit `-SQLUIPackagedRuntimeSQLiteSmoke` command-line flag.
 - Packaged runtime provider startup smoke runs only with the explicit `-SQLUIRuntimeProviderStartupSmoke` command-line flag.
+- Packaged runtime provider subsystem smoke runs only with the explicit `-SQLUIRuntimeProviderSubsystemSmoke` command-line flag.
 - Editor smoke DB writes stay under `Saved/SQLUI/SmokeTests/...` and remove DB files afterward.
 - Packaged runtime smoke DB writes stay under packaged runtime `Saved/SQLUI/PackagedRuntimeSmoke/...` and remove DB files afterward.
+- Packaged runtime provider startup/subsystem smoke DB writes resolve under packaged runtime `Saved/SQLUI/LayoutRepositories/PackagedRuntimeSmoke/...` and remove DB files afterward.
 
 ## What Is Still Explicit / Non-Default
 
@@ -147,7 +154,7 @@ The safe default remains non-SQLite.
 
 Prioritized remaining work:
 
-1. Production/user-facing runtime settings surface and normal startup flow that intentionally creates and initializes the runtime provider outside the packaged smoke flag.
+1. Production/user-facing runtime settings surface and normal startup policy that intentionally initializes the passive runtime provider subsystem outside packaged smoke flags.
 2. Product database path policy and UX, including where user layouts should live and how users/admins inspect or reset them.
 3. Actual future schema migrations and data transforms beyond `001_initial_layout_schema`.
 4. Production async database service design beyond the current per-repository callback queue.
@@ -162,7 +169,7 @@ Prioritized remaining work:
 
 Suggested next PRs, in priority order:
 
-1. Runtime settings surface / normal startup provider integration policy proof.
+1. Runtime settings surface and product startup provider-subsystem initialization policy.
    Keep SQLite opt-in, keep `InMemory` as the safe default, and keep widgets away from SQLite settings and paths.
 2. Production async service design doc or small scaffold.
    Decide whether the current per-repository callback queue is enough or whether SQLUI needs a longer-lived DB service for production runtime use.
