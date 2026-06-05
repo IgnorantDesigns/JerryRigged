@@ -10,6 +10,8 @@ For the concise SQLite phase status and roadmap, see [`sqlui_sqlite_phase_status
 
 When `-RunPackagedSQLiteSmoke` is passed, the script also launches the packaged executable with `-SQLUIPackagedRuntimeSQLiteSmoke` and verifies the runtime log contains the packaged SQLite lifecycle success line.
 
+When `-RunPackagedProviderStartupSmoke` is passed, the script launches the packaged executable with `-SQLUIRuntimeProviderStartupSmoke` plus explicit command-line repository settings. That smoke proves packaged startup/runtime code can intentionally create `USQLUILayoutRepositoryRuntimeProvider`, initialize it through command-line config, use the active repository through the repository contract for save/load, verify SQLite list readback in smoke-only code, then reset the provider and remove the smoke database.
+
 This validation is intended to catch packaging and dependency issues around:
 
 - JerryRigged as the host project.
@@ -27,10 +29,11 @@ This scaffold does not:
 - Add GitHub Actions or CI.
 - Launch the packaged executable by default.
 - Run packaged runtime SQLite lifecycle smoke unless `-RunPackagedSQLiteSmoke` is explicitly passed.
+- Run packaged runtime provider startup smoke unless `-RunPackagedProviderStartupSmoke` is explicitly passed.
 - Add maps, Content assets, packaged outputs, database files, or generated files to source control.
-- Change normal game startup behavior unless `-SQLUIPackagedRuntimeSQLiteSmoke` is present.
+- Change normal game startup behavior unless an explicit packaged smoke flag such as `-SQLUIPackagedRuntimeSQLiteSmoke` or `-SQLUIRuntimeProviderStartupSmoke` is present.
 
-Run this validation before treating SQLite as packaged-runtime-ready, but do not treat a successful package alone as proof of packaged SQLite lifecycle behavior. Use `-RunPackagedSQLiteSmoke` for the first packaged runtime SQLite repository lifecycle proof.
+Run this validation before treating SQLite as packaged-runtime-ready, but do not treat a successful package alone as proof of packaged SQLite lifecycle behavior. Use `-RunPackagedSQLiteSmoke` for the packaged runtime SQLite repository lifecycle proof, and use `-RunPackagedProviderStartupSmoke` for the packaged runtime provider startup proof.
 
 ## Output Location
 
@@ -53,6 +56,12 @@ The default packaged runtime smoke log path is:
 Saved/SQLUI/PackagedValidation/Win64/Development/RuntimeSmoke/SQLUIPackagedRuntimeSQLiteSmoke.log
 ```
 
+The default packaged runtime provider startup smoke log path is:
+
+```text
+Saved/SQLUI/PackagedValidation/Win64/Development/RuntimeSmoke/SQLUIPackagedRuntimeProviderStartupSmoke.log
+```
+
 Unreal may still write normal local build artifacts such as logs, build products, Derived Data Cache, or intermediate files according to standard Unreal packaging behavior. Those outputs are generated files and should not be committed.
 
 ## Run Validation
@@ -73,6 +82,18 @@ To build/package and then run the packaged SQLite lifecycle smoke:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedSQLiteSmoke
+```
+
+To build/package and then run the packaged runtime provider startup smoke:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedProviderStartupSmoke
+```
+
+To run both packaged runtime smoke paths after one BuildCookRun:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedSQLiteSmoke -RunPackagedProviderStartupSmoke
 ```
 
 To use a direct AutomationTool path:
@@ -109,6 +130,8 @@ The script:
 - Returns the AutomationTool exit code unless packaged runtime smoke is requested and BuildCookRun succeeds.
 - Refuses `-CleanPackageOutput` outside `Saved/SQLUI/PackagedValidation`.
 - When `-RunPackagedSQLiteSmoke` is passed, locates the packaged executable, launches it with `-SQLUIPackagedRuntimeSQLiteSmoke`, waits for completion, and verifies the runtime smoke log.
+- When `-RunPackagedProviderStartupSmoke` is passed, locates the packaged executable, launches it with `-SQLUIRuntimeProviderStartupSmoke` and explicit SQLite repository command-line settings, waits for completion, and verifies the runtime provider startup smoke log.
+- When both packaged runtime smoke switches are passed, runs them sequentially with separate logs after the same BuildCookRun.
 
 Optional switches:
 
@@ -119,6 +142,9 @@ Optional switches:
 - `-RunPackagedSQLiteSmoke`: launches the packaged executable after BuildCookRun succeeds and verifies the packaged runtime SQLite lifecycle log.
 - `-PackagedSmokeTimeoutSeconds`: overrides the packaged runtime smoke process timeout. The default is `120`.
 - `-PackagedSmokeLogPath`: overrides the packaged runtime smoke log path. The resolved path must stay under `Saved/SQLUI/PackagedValidation`.
+- `-RunPackagedProviderStartupSmoke`: launches the packaged executable after BuildCookRun succeeds and verifies the packaged runtime provider startup log.
+- `-PackagedProviderStartupSmokeTimeoutSeconds`: overrides the packaged runtime provider startup smoke process timeout. The default is `120`.
+- `-PackagedProviderStartupSmokeLogPath`: overrides the packaged runtime provider startup smoke log path. The resolved path must stay under `Saved/SQLUI/PackagedValidation`.
 
 ## Interpreting Results
 
@@ -133,6 +159,8 @@ SQLUI packaged runtime SQLite smoke succeeded.
 Failure means AutomationTool returned a non-zero exit code. Check the command output and Unreal logs for the first meaningful build, cook, staging, package, plugin, or dependency error. Do not treat script failure as a SQLUI runtime failure unless the logs point to SQLUI or SQLiteCore specifically.
 
 With `-RunPackagedSQLiteSmoke`, failure can also mean the packaged executable could not be found, timed out, returned a non-zero exit code, failed to write the smoke log, logged `SQLUI packaged runtime SQLite smoke failed:`, or never logged the success line.
+
+With `-RunPackagedProviderStartupSmoke`, failure can also mean the packaged executable could not be found, timed out, returned a non-zero exit code, failed to write the provider startup smoke log, logged `SQLUI packaged runtime provider startup smoke failed:`, or never logged the provider startup success line.
 
 ## Packaged Runtime SQLite Smoke
 
@@ -161,6 +189,39 @@ It deletes any existing smoke database and SQLite sidecar files, creates a SQLit
 
 The packaged runtime smoke requests process exit when finished. Success is recorded by both a clean packaged process exit and the runtime log success line.
 
+## Packaged Runtime Provider Startup Smoke
+
+`-RunPackagedProviderStartupSmoke` proves the intended explicit startup integration shape for `USQLUILayoutRepositoryRuntimeProvider`. It runs only when the packaged executable is launched with:
+
+```text
+-SQLUIRuntimeProviderStartupSmoke
+```
+
+The script also passes explicit repository command-line settings:
+
+```text
+-SQLUILayoutRepositoryBackend=SQLite
+-SQLUISQLiteLayoutRepositoryPath="PackagedRuntimeSmoke/RuntimeProviderStartup/RuntimeProviderStartup.db"
+-SQLUISQLiteLayoutRepositoryInitializeSchema
+-SQLUISQLiteLayoutRepositoryCreateDatabase
+```
+
+The relative SQLite path is resolved by `FSQLUILayoutRepositoryRuntimeConfigResolver` under the packaged runtime saved directory:
+
+```text
+<ProjectSavedDir>/SQLUI/LayoutRepositories/PackagedRuntimeSmoke/RuntimeProviderStartup/RuntimeProviderStartup.db
+```
+
+The runtime flag is inspected by the SQLUISamples module after engine-loop initialization. Normal startup is unchanged when the flag is absent.
+
+The provider startup smoke creates `USQLUILayoutRepositoryRuntimeProvider`, initializes it from the packaged command line, verifies the active backend is SQLite, saves and loads one probe layout through the base repository callback methods, verifies SQLite metadata/tags listing in smoke-only code, resets the provider, removes the smoke database and sidecars, and requests process exit.
+
+Success requires the packaged process to exit cleanly and the runtime log to contain:
+
+```text
+SQLUI packaged runtime provider startup smoke succeeded.
+```
+
 ## Latest Local Result
 
 The earlier unresolved `__std_*` linker failure was observed when UBT selected non-preferred Visual Studio 2022 MSVC toolchains for the local UE 5.7 package run.
@@ -186,7 +247,7 @@ AutomationTool exited with ExitCode=0.
 SQLUI packaged-build validation exit code: 0.
 ```
 
-This records local BuildCookRun package compatibility for the installed UE 5.7 toolchain and Win64 Development validation path. Package build validation without `-RunPackagedSQLiteSmoke` still does not prove packaged runtime SQLite lifecycle execution inside the packaged executable.
+This records local BuildCookRun package compatibility for the installed UE 5.7 toolchain and Win64 Development validation path. Package build validation without `-RunPackagedSQLiteSmoke` or `-RunPackagedProviderStartupSmoke` still does not prove packaged runtime SQLite lifecycle or packaged runtime provider startup execution inside the packaged executable.
 
 ## Troubleshooting Local Linker Failures
 
@@ -251,5 +312,6 @@ Future work still includes:
 - Target-platform coverage beyond local Win64 Development.
 - CI automation if Unreal-capable build agents become available.
 - Broader packaged runtime database path coverage beyond the first `Saved/SQLUI/PackagedRuntimeSmoke` lifecycle proof.
+- Product startup integration beyond the explicit packaged provider startup smoke flag.
 - Production async database service, queue, cancellation, and shutdown hardening.
 - Migration upgrade/versioning validation beyond the initial schema.

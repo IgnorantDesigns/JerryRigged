@@ -27,6 +27,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - `ListLayouts`, `LoadLayoutById`, `RemoveLayout`, and `ClearLayouts` remain synchronous.
 - Local Win64 Development packaged BuildCookRun validation has passed.
 - An explicit packaged runtime SQLite lifecycle smoke exists and runs only with `-RunPackagedSQLiteSmoke` / `-SQLUIPackagedRuntimeSQLiteSmoke`.
+- An explicit packaged runtime provider startup smoke exists and runs only with `-RunPackagedProviderStartupSmoke` / `-SQLUIRuntimeProviderStartupSmoke`.
 
 This is still not a default production persistence policy. Runtime integration, user-facing settings, broader platform validation, production async service hardening, and actual future schema upgrades remain future work.
 
@@ -55,6 +56,7 @@ This is still not a default production persistence policy. Runtime integration, 
 | Migration version/status framework | Implemented | Reports known/applied/pending status for current known migration set. |
 | Packaged build validation | Implemented locally | Local Win64 Development BuildCookRun validation passed with UE 5.7 preferred MSVC toolchain. |
 | Packaged runtime SQLite smoke | Implemented locally | Optional packaged executable lifecycle smoke passes when explicitly requested. |
+| Packaged runtime provider startup smoke | Implemented locally | Optional packaged executable startup proof initializes `USQLUILayoutRepositoryRuntimeProvider` from command-line repository settings. |
 
 ## Validation Matrix
 
@@ -86,6 +88,7 @@ This is still not a default production persistence policy. Runtime integration, 
 | Migration versioning policy | `-UseSQLiteMigrationVersioningPolicyProbe` | Covered | Verifies current status, missing-row repair, partial failure, pending/failing smoke migrations. |
 | Packaged build validation | `RunSQLUIPackagedBuildValidation.ps1 -CleanPackageOutput` | Local Win64 Development covered | Passed after installing UE 5.7 preferred MSVC `14.44.x`. |
 | Packaged runtime SQLite smoke | `RunSQLUIPackagedBuildValidation.ps1 -CleanPackageOutput -RunPackagedSQLiteSmoke` | Local Win64 Development covered | Launches packaged executable with `-SQLUIPackagedRuntimeSQLiteSmoke`. |
+| Packaged runtime provider startup smoke | `RunSQLUIPackagedBuildValidation.ps1 -CleanPackageOutput -RunPackagedProviderStartupSmoke` | Local Win64 Development covered | Launches packaged executable with `-SQLUIRuntimeProviderStartupSmoke` and explicit SQLite repository command-line settings. |
 
 ## Runtime And Packaging Status
 
@@ -123,6 +126,7 @@ The current SQLite path keeps these boundaries:
 - JerryRigged remains a thin host.
 - Normal startup does not use SQLite unless future runtime code explicitly opts in.
 - Packaged runtime smoke runs only with the explicit `-SQLUIPackagedRuntimeSQLiteSmoke` command-line flag.
+- Packaged runtime provider startup smoke runs only with the explicit `-SQLUIRuntimeProviderStartupSmoke` command-line flag.
 - Editor smoke DB writes stay under `Saved/SQLUI/SmokeTests/...` and remove DB files afterward.
 - Packaged runtime smoke DB writes stay under packaged runtime `Saved/SQLUI/PackagedRuntimeSmoke/...` and remove DB files afterward.
 
@@ -143,7 +147,7 @@ The safe default remains non-SQLite.
 
 Prioritized remaining work:
 
-1. Production/user-facing runtime settings surface and startup flow that intentionally creates and initializes the runtime provider.
+1. Production/user-facing runtime settings surface and normal startup flow that intentionally creates and initializes the runtime provider outside the packaged smoke flag.
 2. Product database path policy and UX, including where user layouts should live and how users/admins inspect or reset them.
 3. Actual future schema migrations and data transforms beyond `001_initial_layout_schema`.
 4. Production async database service design beyond the current per-repository callback queue.
@@ -158,7 +162,7 @@ Prioritized remaining work:
 
 Suggested next PRs, in priority order:
 
-1. Runtime settings surface / provider integration policy proof.
+1. Runtime settings surface / normal startup provider integration policy proof.
    Keep SQLite opt-in, keep `InMemory` as the safe default, and keep widgets away from SQLite settings and paths.
 2. Production async service design doc or small scaffold.
    Decide whether the current per-repository callback queue is enough or whether SQLUI needs a longer-lived DB service for production runtime use.
