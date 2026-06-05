@@ -62,6 +62,7 @@ class SQLUICORE_API USQLUILayoutRepository : public UObject, public ISQLUILayout
 public:
 	virtual void LoadLayout(const FString& LayoutId, FSQLUILayoutLoadCompleteDelegate Callback) override;
 	virtual void SaveLayout(const FSQLUILayoutDocument& Document, FSQLUILayoutSaveCompleteDelegate Callback) override;
+	virtual FSQLUILayoutRepositoryListResult ListLayouts() const;
 
 protected:
 	static FSQLUILayoutLoadResult MakeBackendUnavailableLoadResult(const FString& LayoutId);

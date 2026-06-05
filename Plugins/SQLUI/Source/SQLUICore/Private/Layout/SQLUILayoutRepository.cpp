@@ -15,6 +15,14 @@ void USQLUILayoutRepository::SaveLayout(const FSQLUILayoutDocument& Document, FS
 	Callback.ExecuteIfBound(MakeBackendUnavailableSaveResult(Document));
 }
 
+FSQLUILayoutRepositoryListResult USQLUILayoutRepository::ListLayouts() const
+{
+	FSQLUILayoutRepositoryListResult Result;
+	Result.bSucceeded = false;
+	Result.ErrorMessage = SQLUILayoutRepositoryUnavailableMessage;
+	return Result;
+}
+
 FSQLUILayoutLoadResult USQLUILayoutRepository::MakeBackendUnavailableLoadResult(const FString& LayoutId)
 {
 	FSQLUILayoutLoadResult Result;

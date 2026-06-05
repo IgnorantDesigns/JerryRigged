@@ -53,7 +53,7 @@ public:
 	FSQLUILayoutLoadResult LoadLayoutById(const FString& LayoutId) const;
 
 	UFUNCTION(BlueprintCallable, Category = "SQLUI|Layout Repository")
-	FSQLUILayoutRepositoryListResult ListLayouts() const;
+	virtual FSQLUILayoutRepositoryListResult ListLayouts() const override;
 
 	UFUNCTION(BlueprintCallable, Category = "SQLUI|Layout Repository")
 	FSQLUILayoutRepositoryRemoveResult RemoveLayout(const FString& LayoutId);
