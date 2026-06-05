@@ -15,8 +15,10 @@ private:
 	void RunPackagedRuntimeSQLiteSmoke();
 	void RunPackagedRuntimeProviderStartupSmoke();
 	void RunPackagedRuntimeProviderSubsystemSmoke();
+	void RunPackagedRuntimePersistenceWorkflowSmoke();
 
 	FDelegateHandle PackagedRuntimeSQLiteSmokeDelegateHandle;
 	FDelegateHandle PackagedRuntimeProviderStartupSmokeDelegateHandle;
 	FDelegateHandle PackagedRuntimeProviderSubsystemSmokeDelegateHandle;
+	FDelegateHandle PackagedRuntimePersistenceWorkflowSmokeDelegateHandle;
 };

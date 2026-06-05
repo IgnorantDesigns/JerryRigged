@@ -95,6 +95,8 @@ The packaged runtime provider startup smoke proves this holder can be intentiona
 
 The packaged runtime provider subsystem smoke proves the app-level subsystem holder path. It runs only with `-SQLUIRuntimeProviderSubsystemSmoke` plus explicit `-SQLUILayoutRepositoryProviderAutoInit` and repository settings. When the flags are absent, the subsystem remains passive and normal startup still does not initialize SQLite.
 
+The packaged runtime persistence workflow smoke proves the first cross-launch packaged workflow path. It runs only with `-SQLUIRuntimePersistenceWorkflowSmoke` and an explicit `Save`, `Verify`, or `Cleanup` phase. The Save phase uses `USQLUILayoutRepositoryRuntimeSubsystem` plus `FSQLUILayoutPersistenceWorkflow` to save/list/load one layout and leave the SQLite database under `Saved/SQLUI/LayoutRepositories/PackagedRuntimeSmoke/PersistenceWorkflow`. The Verify phase starts a separate packaged process and list/loads the same persisted layout without saving first. The Cleanup phase removes the database and SQLite sidecars.
+
 ## Seed Database Copy Policy
 
 `FSQLUISQLiteSeedDatabaseCopy` is a SQLUICore-owned helper for explicitly copying a closed SQLite seed database into a writable runtime database path before repository use.
@@ -210,6 +212,8 @@ Packaged runtime provider startup smoke is another explicit packaged executable 
 
 Packaged runtime provider subsystem smoke proves the passive subsystem integration surface. `RunSQLUIPackagedBuildValidation.ps1 -RunPackagedProviderSubsystemSmoke` launches the packaged executable with `-SQLUIRuntimeProviderSubsystemSmoke`, `-SQLUILayoutRepositoryProviderAutoInit`, and explicit SQLite repository command-line settings, waits for the `GameInstance` subsystem, verifies subsystem/provider initialization/save/list/load/reset behavior, checks the runtime log for success, and removes the smoke database under packaged runtime `Saved/SQLUI/LayoutRepositories/PackagedRuntimeSmoke/RuntimeProviderSubsystem`.
 
+Packaged runtime persistence workflow smoke proves persistence across separate packaged launches. `RunSQLUIPackagedBuildValidation.ps1 -RunPackagedPersistenceWorkflowSmoke` launches Save, Verify, and Cleanup packaged processes with `-SQLUIRuntimePersistenceWorkflowSmoke`, explicit subsystem auto-init, and a relative SQLite path of `PackagedRuntimeSmoke/PersistenceWorkflow/PersistenceWorkflow.db`. Save leaves the database in place, Verify reads the persisted layout without saving first, and Cleanup removes the database and sidecars.
+
 ## Runtime Boundaries
 
 SQLite details belong in SQLUICore and the SQLUISamples smoke harness only. Widgets should continue to work with repository contracts, layout documents, variable stores, action systems, and runtime contexts.
@@ -226,6 +230,7 @@ Remaining work includes:
 
 - Expanding packaged-build validation beyond the latest local Win64 Development pass.
 - Expanding packaged runtime SQLite lifecycle coverage beyond the first local packaged executable smoke.
+- Expanding packaged persistence-across-launches coverage beyond the first local Save/Verify/Cleanup workflow smoke.
 - Production async database service design beyond the current per-repository callback queue.
 - Cancellation, shutdown draining beyond stale-callback suppression, and async coverage for all repository operations.
 - Actual future schema migrations, upgrade-specific data transforms, and version-specific compatibility policy beyond the current version/status framework.
@@ -245,6 +250,8 @@ The scaffold can separately run the packaged executable with `-SQLUIRuntimeProvi
 
 The scaffold can also run the packaged executable with `-SQLUIRuntimeProviderSubsystemSmoke` and `-SQLUILayoutRepositoryProviderAutoInit` to prove the passive `USQLUILayoutRepositoryRuntimeSubsystem` can own/access the provider, initialize it from explicit command-line repository settings, use the active repository for save/load, verify SQLite list readback in smoke-only code, reset the subsystem/provider, and clean up its database. Config-backed provider auto-init is intentionally default-off; packaged subsystem smoke continues to use explicit command-line auto-init.
 
-It still does not prove platform coverage beyond the requested local target, long-running database service behavior, full async lifecycle handling, or production migration upgrades.
+The scaffold can now run the packaged executable with `-SQLUIRuntimePersistenceWorkflowSmoke` across Save, Verify, and Cleanup launches to prove the subsystem-held repository and storage-agnostic persistence workflow can persist one layout across separate packaged processes and then clean up the database.
+
+It still does not prove platform coverage beyond the requested local target, long-running database service behavior, full async lifecycle handling, production migration upgrades, or product startup policy beyond explicit smoke flags.
 
 Until those items are validated, SQLite should stay explicitly configured, not default.

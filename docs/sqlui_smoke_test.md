@@ -60,7 +60,7 @@ The optional SQLite migration versioning policy probe writes temporary databases
 
 This is a local developer workflow only. It is not CI yet, and it does not assume Unreal Engine is installed on GitHub Actions or any build agent.
 
-Packaged-build and packaged runtime validation are separate from these editor commandlet smoke paths. Use [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) to run the local `RunUAT BuildCookRun` scaffold. Pass `-RunPackagedSQLiteSmoke` when you need the packaged executable to run the SQLUI SQLite lifecycle smoke, pass `-RunPackagedProviderStartupSmoke` when you need the packaged executable to prove direct runtime provider startup from command-line repository settings, and pass `-RunPackagedProviderSubsystemSmoke` when you need the packaged executable to prove the passive runtime provider subsystem opt-in startup path.
+Packaged-build and packaged runtime validation are separate from these editor commandlet smoke paths. Use [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) to run the local `RunUAT BuildCookRun` scaffold. Pass `-RunPackagedSQLiteSmoke` when you need the packaged executable to run the SQLUI SQLite lifecycle smoke, pass `-RunPackagedProviderStartupSmoke` when you need the packaged executable to prove direct runtime provider startup from command-line repository settings, pass `-RunPackagedProviderSubsystemSmoke` when you need the packaged executable to prove the passive runtime provider subsystem opt-in startup path, and pass `-RunPackagedPersistenceWorkflowSmoke` when you need the packaged executable to prove one workflow-saved SQLite layout persists across separate Save and Verify launches before Cleanup removes the database.
 
 The smoke test does not edit maps, levels, Content, persistent database files, or the viewport. It attaches no widgets to the viewport. The JSON file repository smoke path writes only under `Saved\SQLUI\SmokeTests\Layouts`, removes its saved layout after loading it, and clears remaining layouts in that smoke-test repository directory. The SQLiteCore probe writes only under `Saved\SQLUI\SmokeTests\SQLiteCoreProbe` and removes `SQLiteCoreProbe.db` after the check. The layout repository runtime config probe writes only under `Saved\SQLUI\SmokeTests\LayoutRepositoryRuntimeConfig` and removes `LayoutRepositoryRuntimeConfig.db` after the check. The layout repository runtime integration probe writes only under `Saved\SQLUI\SmokeTests\LayoutRepositoryRuntimeIntegration` and removes `RuntimeIntegration.db`, `SeedRuntimeIntegration.db`, `SeedCopiedRuntimeIntegration.db`, `MissingSeedTargetRuntimeIntegration.db`, and SQLite sidecar files after the check. The layout repository runtime provider probe writes only under `Saved\SQLUI\SmokeTests\LayoutRepositoryRuntimeProvider` and removes `RuntimeProvider.db`, `CommandLineRuntimeProvider.db`, `SeedRuntimeProvider.db`, `SeedCopiedRuntimeProvider.db`, `MissingSeedTargetRuntimeProvider.db`, and SQLite sidecar files after the check. The layout repository runtime settings probe writes only under `Saved\SQLUI\SmokeTests\LayoutRepositoryRuntimeSettings` and removes `RuntimeSettings.db`, `CommandLineOverrideRuntimeSettings.db`, `MissingPathShouldNotExist.db`, and SQLite sidecar files after the check. The layout persistence workflow probe writes only under `Saved\SQLUI\SmokeTests\LayoutPersistenceWorkflow` and removes `LayoutPersistenceWorkflow.db`, `MissingRepositoryShouldNotExist.db`, and SQLite sidecar files after the check. The SQLite migration probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe` and removes `SQLiteMigrationProbe.db` after the check. The SQLite layout schema migration probe writes only under `Saved\SQLUI\SmokeTests\LayoutSchemaMigrationProbe` and removes `LayoutSchemaMigrationProbe.db` after the check. The SQLite layout read probe writes only under `Saved\SQLUI\SmokeTests\LayoutReadProbe` and removes `LayoutReadProbe.db` after the check. The SQLite read-only layout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteReadOnlyRepository` and removes `SQLiteReadOnlyRepository.db` after the check. The SQLite SaveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSaveLayoutRepository` and removes `SQLiteSaveLayoutRepository.db` after the check. The SQLite RemoveLayout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteRemoveLayoutRepository` and removes `SQLiteRemoveLayoutRepository.db` after the check. The SQLite ClearLayouts repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteClearLayoutsRepository` and removes `SQLiteClearLayoutsRepository.db` after the check. The SQLite full lifecycle repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFullLifecycleRepository` and removes `SQLiteFullLifecycleRepository.db` after the check. The SQLite async callback repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteAsyncCallbackRepository` and removes `SQLiteAsyncCallbackRepository.db` after the check. The SQLite serialized async callback repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSerializedAsyncCallbackRepository` and removes `SQLiteSerializedAsyncCallbackRepository.db` after the check. The SQLite factory layout repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFactoryRepository` and removes `SQLiteFactoryRepository.db` after the check. The SQLite factory schema-init repository smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteFactorySchemaInitRepository` and removes `SQLiteFactorySchemaInitRepository.db`, `SQLiteFactorySchemaInitRepositoryMissing.db`, and SQLite sidecar files after the check. The SQLite schema-init hardening smoke path writes only under `Saved\SQLUI\SmokeTests\SQLiteSchemaInitHardening` and removes `MissingCreateDisabled.db`, `EmptyCreateEnabled.db`, `AlreadyInitialized.db`, `CompleteSchemaMissingMigration.db`, `PartialSchema.db`, `ReadOnlyInitBlocked.db`, and SQLite sidecar files after the check. The SQLite seed database copy policy probe writes only under `Saved\SQLUI\SmokeTests\SQLiteSeedDatabaseCopyPolicy` and removes its seed, runtime target, missing-seed target, runtime-config target, and SQLite sidecar files after the check. The SQLite migration versioning policy probe writes only under `Saved\SQLUI\SmokeTests\SQLiteMigrationVersioningPolicy` and removes `LayoutSchemaCurrent.db`, `LayoutSchemaMissingRecord.db`, `LayoutSchemaPartial.db`, `SmokeOrderedMigrations.db`, `SmokePendingMigration.db`, `SmokeFailingMigration.db`, and SQLite sidecar files after the check. The database async probe and database async queue shutdown probe do not perform file I/O.
 
@@ -1061,6 +1061,57 @@ The failing-migration case intentionally prepares invalid SQL, so Unreal may als
 Some optional pipeline steps may log `Skipped` depending on the current sample request. Failures are logged with `SQLUI sample smoke test commandlet failed.` and the script returns a non-zero exit code.
 
 Useful logs appear in the command window. Unreal may also write local generated logs under `Saved\Logs`, such as `Saved\Logs\JerryRigged.log`.
+
+## Packaged Persistence Workflow Smoke
+
+The packaged persistence workflow smoke is run through the packaged-build validation script, not the editor commandlet:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedPersistenceWorkflowSmoke
+```
+
+That script builds/packages once, then launches the packaged executable three times with `-SQLUIRuntimePersistenceWorkflowSmoke` and `-SQLUIRuntimePersistenceWorkflowSmokePhase=Save|Verify|Cleanup`. The relative SQLite path is `PackagedRuntimeSmoke/PersistenceWorkflow/PersistenceWorkflow.db`, which resolves under packaged runtime `Saved/SQLUI/LayoutRepositories`.
+
+The Save phase log should include:
+
+```text
+SQLUI packaged runtime persistence workflow smoke selected phase: Save
+SQLUI packaged runtime persistence workflow smoke auto init requested: true
+SQLUI packaged runtime persistence workflow smoke auto init succeeded: true
+SQLUI packaged runtime persistence workflow smoke workflow save succeeded: true
+SQLUI packaged runtime persistence workflow smoke workflow list succeeded: true
+SQLUI packaged runtime persistence workflow smoke workflow listed metadata found: true
+SQLUI packaged runtime persistence workflow smoke workflow load succeeded: true
+SQLUI packaged runtime persistence workflow smoke workflow loaded document valid: true
+SQLUI packaged runtime persistence workflow smoke provider reset: true
+SQLUI packaged runtime persistence workflow smoke database exists after phase: true
+SQLUI packaged runtime persistence workflow smoke Save phase succeeded.
+```
+
+The Verify phase log should include:
+
+```text
+SQLUI packaged runtime persistence workflow smoke selected phase: Verify
+SQLUI packaged runtime persistence workflow smoke auto init requested: true
+SQLUI packaged runtime persistence workflow smoke auto init succeeded: true
+SQLUI packaged runtime persistence workflow smoke workflow list succeeded: true
+SQLUI packaged runtime persistence workflow smoke workflow listed persisted metadata found: true
+SQLUI packaged runtime persistence workflow smoke workflow load succeeded: true
+SQLUI packaged runtime persistence workflow smoke workflow loaded persisted document valid: true
+SQLUI packaged runtime persistence workflow smoke provider reset: true
+SQLUI packaged runtime persistence workflow smoke database exists after phase: true
+SQLUI packaged runtime persistence workflow smoke Verify phase succeeded.
+```
+
+The Cleanup phase log should include:
+
+```text
+SQLUI packaged runtime persistence workflow smoke selected phase: Cleanup
+SQLUI packaged runtime persistence workflow smoke database removed: true
+SQLUI packaged runtime persistence workflow smoke Cleanup phase succeeded.
+```
+
+The validation script also checks that the database and SQLite sidecar files are gone after Cleanup. Cleanup runs even when Verify fails, but the script still returns a non-zero exit code for the failing phase.
 
 ## Common Local Issues
 
