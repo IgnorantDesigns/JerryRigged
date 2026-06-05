@@ -21,6 +21,7 @@
 #include "Layout/SQLUILayoutRepositoryRuntimeConfig.h"
 #include "Layout/SQLUILayoutRepositoryRuntimeIntegration.h"
 #include "Layout/SQLUILayoutRepositoryRuntimeProvider.h"
+#include "Layout/SQLUILayoutRepositoryRuntimeSettings.h"
 #include "Layout/SQLUISQLiteLayoutRepository.h"
 #include "Layout/SQLUILayoutTypes.h"
 #include "Misc/Paths.h"
@@ -5767,6 +5768,615 @@ RunSQLUISampleLayoutRepositoryRuntimeProviderProbe(UObject* Outer)
 	return Result;
 }
 
+void AppendSQLUISampleLayoutRepositoryRuntimeSettingsProbeError(
+	FSQLUISampleLayoutRepositoryRuntimeSettingsProbeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleLayoutRepositoryRuntimeSettingsPath(const TCHAR* DatabaseFileName)
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("LayoutRepositoryRuntimeSettings"),
+		DatabaseFileName);
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+TArray<FString> MakeSQLUISampleLayoutRepositoryRuntimeSettingsDatabasePaths()
+{
+	return {
+		MakeSQLUISampleLayoutRepositoryRuntimeSettingsPath(TEXT("RuntimeSettings.db")),
+		MakeSQLUISampleLayoutRepositoryRuntimeSettingsPath(TEXT("CommandLineOverrideRuntimeSettings.db")),
+		MakeSQLUISampleLayoutRepositoryRuntimeSettingsPath(TEXT("MissingPathShouldNotExist.db"))
+	};
+}
+
+bool DoSQLUISampleLayoutRepositoryRuntimeSettingsFilesExist(const FString& DatabasePath)
+{
+	const TArray<FString> PathsToCheck = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	for (const FString& PathToCheck : PathsToCheck)
+	{
+		if (FPaths::FileExists(PathToCheck))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DeleteSQLUISampleLayoutRepositoryRuntimeSettingsFiles(
+	const FString& DatabasePath,
+	FSQLUISampleLayoutRepositoryRuntimeSettingsProbeResult& Result)
+{
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleLayoutRepositoryRuntimeSettingsProbeError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI layout repository runtime settings probe failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+bool DeleteSQLUISampleLayoutRepositoryRuntimeSettingsFiles(
+	FSQLUISampleLayoutRepositoryRuntimeSettingsProbeResult& Result)
+{
+	bool bRemoved = true;
+	for (const FString& DatabasePath : MakeSQLUISampleLayoutRepositoryRuntimeSettingsDatabasePaths())
+	{
+		bRemoved =
+			DeleteSQLUISampleLayoutRepositoryRuntimeSettingsFiles(DatabasePath, Result)
+			&& bRemoved;
+	}
+
+	return bRemoved;
+}
+
+bool DoesAnySQLUISampleLayoutRepositoryRuntimeSettingsFileExist()
+{
+	for (const FString& DatabasePath : MakeSQLUISampleLayoutRepositoryRuntimeSettingsDatabasePaths())
+	{
+		if (DoSQLUISampleLayoutRepositoryRuntimeSettingsFilesExist(DatabasePath))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+USQLUILayoutRepositoryRuntimeSettings* CreateSQLUISampleLayoutRepositoryRuntimeSettings(UObject* Outer)
+{
+	return NewObject<USQLUILayoutRepositoryRuntimeSettings>(
+		IsValid(Outer) ? Outer : GetTransientPackage());
+}
+
+FSQLUILayoutDocument MakeSQLUISampleLayoutRepositoryRuntimeSettingsDocument(
+	const TCHAR* LayoutId,
+	const TCHAR* DisplayName,
+	const TCHAR* ProbeTag)
+{
+	FSQLUILayoutDocument Document =
+		MakeSQLUISampleLayoutRepositoryRuntimeProviderDocument(LayoutId, DisplayName, ProbeTag);
+	Document.Metadata.Description =
+		TEXT("Smoke/probe layout for runtime repository settings policy.");
+	Document.Metadata.SearchMetadata.Add(TEXT("Probe"), TEXT("LayoutRepositoryRuntimeSettings"));
+
+	if (Document.Nodes.Num() > 0)
+	{
+		Document.Nodes[0].SearchMetadata.Add(TEXT("Probe"), TEXT("LayoutRepositoryRuntimeSettings"));
+	}
+
+	return Document;
+}
+
+bool DoesSQLUISampleLayoutRepositoryRuntimeSettingsListContain(
+	USQLUILayoutRepositoryRuntimeProvider* Provider,
+	const FSQLUILayoutDocument& Document,
+	const TCHAR* RepositoryName,
+	FSQLUISampleLayoutRepositoryRuntimeSettingsProbeResult& Result)
+{
+	USQLUISQLiteLayoutRepository* SQLiteRepository =
+		IsValid(Provider) ? Cast<USQLUISQLiteLayoutRepository>(Provider->GetRepository()) : nullptr;
+	if (!IsValid(SQLiteRepository))
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeSettingsProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI layout repository runtime settings probe failed: %s was not SQLite."),
+				RepositoryName));
+		return false;
+	}
+
+	const FSQLUILayoutRepositoryListResult ListResult = SQLiteRepository->ListLayouts();
+	if (ListResult.bSucceeded
+		&& DoesSQLUISampleLayoutMetadataAndTagsListContain(
+			ListResult.Layouts,
+			Document.Metadata))
+	{
+		return true;
+	}
+
+	AppendSQLUISampleLayoutRepositoryRuntimeSettingsProbeError(
+		Result,
+		ListResult.ErrorMessage.IsEmpty()
+			? FString::Printf(
+				TEXT("SQLUI layout repository runtime settings probe failed: %s did not list expected metadata and tags."),
+				RepositoryName)
+			: ListResult.ErrorMessage);
+	return false;
+}
+
+bool DoesSQLUISampleLayoutRepositoryRuntimeSettingsLoadLayout(
+	USQLUILayoutRepositoryRuntimeProvider* Provider,
+	const FSQLUILayoutDocument& Document,
+	const TCHAR* RepositoryName,
+	FSQLUISampleLayoutRepositoryRuntimeSettingsProbeResult& Result)
+{
+	const FSQLUILayoutLoadResult LoadResult =
+		LoadSQLUISampleLayoutFromRepository(
+			IsValid(Provider) ? Provider->GetRepository() : nullptr,
+			RepositoryName,
+			Document.Metadata.LayoutId);
+	if (LoadResult.bSucceeded
+		&& LoadResult.Validation.bIsValid
+		&& LoadResult.Document.Metadata.LayoutId == Document.Metadata.LayoutId)
+	{
+		return true;
+	}
+
+	AppendSQLUISampleLayoutRepositoryRuntimeSettingsProbeError(
+		Result,
+		LoadResult.ErrorMessage.IsEmpty()
+			? FString::Printf(
+				TEXT("SQLUI layout repository runtime settings probe failed: %s did not load expected layout."),
+				RepositoryName)
+			: LoadResult.ErrorMessage);
+	return false;
+}
+
+bool DoesSQLUISampleLayoutRepositoryRuntimeSettingsSaveListLoad(
+	USQLUILayoutRepositoryRuntimeProvider* Provider,
+	const FSQLUILayoutDocument& Document,
+	const TCHAR* RepositoryName,
+	FSQLUISampleLayoutRepositoryRuntimeSettingsProbeResult& Result,
+	bool& bOutSaveSucceeded,
+	bool& bOutListSucceeded,
+	bool& bOutLoadSucceeded)
+{
+	const FSQLUILayoutSaveResult SaveResult =
+		SaveSQLUISampleLayoutToRepository(
+			IsValid(Provider) ? Provider->GetRepository() : nullptr,
+			RepositoryName,
+			Document);
+	bOutSaveSucceeded =
+		SaveResult.bSucceeded
+		&& SaveResult.SavedLayoutId == Document.Metadata.LayoutId
+		&& SaveResult.Validation.bIsValid;
+	if (!bOutSaveSucceeded)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeSettingsProbeError(
+			Result,
+			SaveResult.ErrorMessage.IsEmpty()
+				? FString::Printf(
+					TEXT("SQLUI layout repository runtime settings probe failed: %s SaveLayout failed."),
+					RepositoryName)
+				: SaveResult.ErrorMessage);
+	}
+
+	bOutListSucceeded =
+		DoesSQLUISampleLayoutRepositoryRuntimeSettingsListContain(
+			Provider,
+			Document,
+			RepositoryName,
+			Result);
+	bOutLoadSucceeded =
+		DoesSQLUISampleLayoutRepositoryRuntimeSettingsLoadLayout(
+			Provider,
+			Document,
+			RepositoryName,
+			Result);
+
+	return bOutSaveSucceeded && bOutListSucceeded && bOutLoadSucceeded;
+}
+
+FSQLUISampleLayoutRepositoryRuntimeSettingsProbeResult
+RunSQLUISampleLayoutRepositoryRuntimeSettingsProbe(UObject* Outer)
+{
+	FSQLUISampleLayoutRepositoryRuntimeSettingsProbeResult Result;
+	Result.DatabasePath =
+		MakeSQLUISampleLayoutRepositoryRuntimeSettingsPath(TEXT("RuntimeSettings.db"));
+	Result.CommandLineDatabasePath =
+		MakeSQLUISampleLayoutRepositoryRuntimeSettingsPath(
+			TEXT("CommandLineOverrideRuntimeSettings.db"));
+	Result.MissingPathMarkerDatabasePath =
+		MakeSQLUISampleLayoutRepositoryRuntimeSettingsPath(
+			TEXT("MissingPathShouldNotExist.db"));
+
+	DeleteSQLUISampleLayoutRepositoryRuntimeSettingsFiles(Result);
+
+	const USQLUILayoutRepositoryRuntimeSettings* DefaultSettings =
+		GetDefault<USQLUILayoutRepositoryRuntimeSettings>();
+	const FSQLUILayoutRepositoryRuntimeIntegrationRequest DefaultRequest =
+		FSQLUILayoutRepositoryRuntimeSettingsPolicy::
+			MakeRuntimeIntegrationRequestFromSettingsAndCommandLine(
+				DefaultSettings,
+				TEXT(""));
+	Result.bDefaultSettingsSafe =
+		DefaultSettings
+		&& !DefaultSettings->bAutoInitializeProvider
+		&& DefaultSettings->bRunSQLiteSeedCopyPolicy
+		&& DefaultSettings->bTreatSeedCopyFailureAsFatal
+		&& DefaultSettings->bAllowCommandLineOverrides
+		&& DefaultSettings->RuntimeConfig.Backend == ESQLUILayoutRepositoryBackend::InMemory
+		&& DefaultSettings->RuntimeConfig.SQLiteDatabasePath.IsEmpty()
+		&& !DefaultSettings->RuntimeConfig.bSQLiteInitializeSchemaIfMissing
+		&& !DefaultSettings->RuntimeConfig.bSQLiteCreateDatabaseIfMissing
+		&& !DefaultSettings->RuntimeConfig.bSQLiteRunCallbackOperationsAsync
+		&& !DefaultSettings->RuntimeConfig.bSQLiteCopySeedIfMissing
+		&& !DefaultSettings->RuntimeConfig.bSQLiteOverwriteDatabaseFromSeed
+		&& DefaultRequest.RuntimeConfig.Backend == ESQLUILayoutRepositoryBackend::InMemory
+		&& DefaultRequest.RuntimeConfig.SQLiteDatabasePath.IsEmpty()
+		&& DefaultRequest.bRunSQLiteSeedCopyPolicy
+		&& DefaultRequest.bTreatSeedCopyFailureAsFatal;
+	Result.bDefaultDoesNotAutoInitialize =
+		!FSQLUILayoutRepositoryRuntimeSettingsPolicy::ShouldAutoInitializeProvider(
+			DefaultSettings,
+			TEXT(""));
+	if (!Result.bDefaultSettingsSafe || !Result.bDefaultDoesNotAutoInitialize)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeSettingsProbeError(
+			Result,
+			TEXT("SQLUI layout repository runtime settings probe failed: default settings were not passive/in-memory safe."));
+	}
+
+	USQLUILayoutRepositoryRuntimeSettings* InMemorySettings =
+		CreateSQLUISampleLayoutRepositoryRuntimeSettings(Outer);
+	if (IsValid(InMemorySettings))
+	{
+		InMemorySettings->bAutoInitializeProvider = true;
+		InMemorySettings->RuntimeConfig =
+			FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault();
+		const FSQLUILayoutRepositoryRuntimeIntegrationRequest InMemoryRequest =
+			FSQLUILayoutRepositoryRuntimeSettingsPolicy::
+				MakeRuntimeIntegrationRequestFromSettingsAndCommandLine(
+					InMemorySettings,
+					TEXT(""));
+		Result.bSettingsInMemoryAutoInitResolved =
+			FSQLUILayoutRepositoryRuntimeSettingsPolicy::ShouldAutoInitializeProvider(
+				InMemorySettings,
+				TEXT(""))
+			&& InMemoryRequest.RuntimeConfig.Backend == ESQLUILayoutRepositoryBackend::InMemory;
+
+		USQLUILayoutRepositoryRuntimeProvider* InMemoryProvider =
+			CreateSQLUISampleLayoutRepositoryRuntimeProvider(Outer);
+		const bool bInMemoryInitialized =
+			IsValid(InMemoryProvider)
+			&& InMemoryProvider->InitializeRepository(InMemoryRequest);
+		Result.bSettingsInMemoryRepositoryCreated =
+			bInMemoryInitialized
+			&& InMemoryProvider->HasRepository()
+			&& InMemoryProvider->GetActiveBackend() == ESQLUILayoutRepositoryBackend::InMemory;
+		Result.bSettingsInMemoryRepositoryNotSQLite =
+			IsValid(InMemoryProvider)
+			&& !IsValid(Cast<USQLUISQLiteLayoutRepository>(InMemoryProvider->GetRepository()));
+		if (IsValid(InMemoryProvider))
+		{
+			InMemoryProvider->ResetRepository();
+		}
+	}
+	if (!Result.bSettingsInMemoryAutoInitResolved
+		|| !Result.bSettingsInMemoryRepositoryCreated
+		|| !Result.bSettingsInMemoryRepositoryNotSQLite)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeSettingsProbeError(
+			Result,
+			TEXT("SQLUI layout repository runtime settings probe failed: settings-driven InMemory auto-init did not resolve/create correctly."));
+	}
+
+	USQLUILayoutRepositoryRuntimeSettings* SQLiteSettings =
+		CreateSQLUISampleLayoutRepositoryRuntimeSettings(Outer);
+	if (IsValid(SQLiteSettings))
+	{
+		SQLiteSettings->bAutoInitializeProvider = true;
+		SQLiteSettings->RuntimeConfig =
+			FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault();
+		SQLiteSettings->RuntimeConfig.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+		SQLiteSettings->RuntimeConfig.SQLiteDatabasePath = Result.DatabasePath;
+		SQLiteSettings->RuntimeConfig.bSQLiteReadOnly = false;
+		SQLiteSettings->RuntimeConfig.bSQLiteInitializeSchemaIfMissing = true;
+		SQLiteSettings->RuntimeConfig.bSQLiteCreateDatabaseIfMissing = true;
+		const FSQLUILayoutRepositoryRuntimeIntegrationRequest SQLiteRequest =
+			FSQLUILayoutRepositoryRuntimeSettingsPolicy::
+				MakeRuntimeIntegrationRequestFromSettingsAndCommandLine(
+					SQLiteSettings,
+					TEXT(""));
+		Result.bSettingsSQLiteResolved =
+			FSQLUILayoutRepositoryRuntimeSettingsPolicy::ShouldAutoInitializeProvider(
+				SQLiteSettings,
+				TEXT(""))
+			&& SQLiteRequest.RuntimeConfig.Backend == ESQLUILayoutRepositoryBackend::SQLite
+			&& SQLiteRequest.RuntimeConfig.SQLiteDatabasePath == Result.DatabasePath
+			&& SQLiteRequest.RuntimeConfig.bSQLiteInitializeSchemaIfMissing
+			&& SQLiteRequest.RuntimeConfig.bSQLiteCreateDatabaseIfMissing;
+
+		USQLUILayoutRepositoryRuntimeProvider* SQLiteProvider =
+			CreateSQLUISampleLayoutRepositoryRuntimeProvider(Outer);
+		Result.bSettingsSQLiteRepositoryCreated =
+			IsValid(SQLiteProvider)
+			&& SQLiteProvider->InitializeRepository(SQLiteRequest)
+			&& SQLiteProvider->HasRepository()
+			&& SQLiteProvider->GetActiveBackend() == ESQLUILayoutRepositoryBackend::SQLite
+			&& IsValid(Cast<USQLUISQLiteLayoutRepository>(SQLiteProvider->GetRepository()));
+		if (Result.bSettingsSQLiteRepositoryCreated)
+		{
+			const FSQLUILayoutDocument SQLiteDocument =
+				MakeSQLUISampleLayoutRepositoryRuntimeSettingsDocument(
+					TEXT("sqlui.smoke.runtime-settings.sqlite"),
+					TEXT("SQLUI Runtime Settings SQLite Layout"),
+					TEXT("runtime-settings-sqlite"));
+			DoesSQLUISampleLayoutRepositoryRuntimeSettingsSaveListLoad(
+				SQLiteProvider,
+				SQLiteDocument,
+				TEXT("layout repository runtime settings SQLite repository"),
+				Result,
+				Result.bSettingsSQLiteSaveSucceeded,
+				Result.bSettingsSQLiteListSucceeded,
+				Result.bSettingsSQLiteLoadSucceeded);
+			Result.bSettingsSQLiteSaveSucceeded =
+				Result.bSettingsSQLiteSaveSucceeded
+				&& FPaths::FileExists(Result.DatabasePath);
+		}
+		if (IsValid(SQLiteProvider))
+		{
+			SQLiteProvider->ResetRepository();
+		}
+	}
+	if (!Result.bSettingsSQLiteResolved
+		|| !Result.bSettingsSQLiteRepositoryCreated
+		|| !Result.bSettingsSQLiteSaveSucceeded
+		|| !Result.bSettingsSQLiteListSucceeded
+		|| !Result.bSettingsSQLiteLoadSucceeded)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeSettingsProbeError(
+			Result,
+			TEXT("SQLUI layout repository runtime settings probe failed: settings-driven SQLite did not resolve/create/save/list/load correctly."));
+	}
+
+	USQLUILayoutRepositoryRuntimeSettings* OverrideSettings =
+		CreateSQLUISampleLayoutRepositoryRuntimeSettings(Outer);
+	if (IsValid(OverrideSettings))
+	{
+		OverrideSettings->bAutoInitializeProvider = false;
+		OverrideSettings->bAllowCommandLineOverrides = true;
+		OverrideSettings->RuntimeConfig =
+			FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault();
+		const FString OverrideCommandLine = FString::Printf(
+			TEXT("-SQLUILayoutRepositoryProviderAutoInit -SQLUILayoutRepositoryBackend=SQLite -SQLUISQLiteLayoutRepositoryPath=\"%s\" -SQLUISQLiteLayoutRepositoryInitializeSchema -SQLUISQLiteLayoutRepositoryCreateDatabase"),
+			*Result.CommandLineDatabasePath);
+		const FSQLUILayoutRepositoryRuntimeIntegrationRequest OverrideRequest =
+			FSQLUILayoutRepositoryRuntimeSettingsPolicy::
+				MakeRuntimeIntegrationRequestFromSettingsAndCommandLine(
+					OverrideSettings,
+					*OverrideCommandLine);
+		Result.bCommandLineOverrideResolvedSQLite =
+			FSQLUILayoutRepositoryRuntimeSettingsPolicy::ShouldAutoInitializeProvider(
+				OverrideSettings,
+				*OverrideCommandLine)
+			&& OverrideRequest.RuntimeConfig.Backend == ESQLUILayoutRepositoryBackend::SQLite
+			&& OverrideRequest.RuntimeConfig.SQLiteDatabasePath == Result.CommandLineDatabasePath
+			&& OverrideRequest.RuntimeConfig.bSQLiteInitializeSchemaIfMissing
+			&& OverrideRequest.RuntimeConfig.bSQLiteCreateDatabaseIfMissing;
+
+		USQLUILayoutRepositoryRuntimeProvider* OverrideProvider =
+			CreateSQLUISampleLayoutRepositoryRuntimeProvider(Outer);
+		const bool bOverrideRepositoryCreated =
+			IsValid(OverrideProvider)
+			&& OverrideProvider->InitializeRepository(OverrideRequest)
+			&& IsValid(Cast<USQLUISQLiteLayoutRepository>(OverrideProvider->GetRepository()));
+		bool bOverrideListSucceeded = false;
+		bool bOverrideLoadSucceeded = false;
+		if (bOverrideRepositoryCreated)
+		{
+			const FSQLUILayoutDocument OverrideDocument =
+				MakeSQLUISampleLayoutRepositoryRuntimeSettingsDocument(
+					TEXT("sqlui.smoke.runtime-settings.command-line"),
+					TEXT("SQLUI Runtime Settings Command-Line Override Layout"),
+					TEXT("runtime-settings-command-line"));
+			DoesSQLUISampleLayoutRepositoryRuntimeSettingsSaveListLoad(
+				OverrideProvider,
+				OverrideDocument,
+				TEXT("layout repository runtime settings command-line SQLite repository"),
+				Result,
+				Result.bCommandLineOverrideSaveSucceeded,
+				bOverrideListSucceeded,
+				bOverrideLoadSucceeded);
+			Result.bCommandLineOverrideSaveSucceeded =
+				Result.bCommandLineOverrideSaveSucceeded
+				&& bOverrideListSucceeded
+				&& bOverrideLoadSucceeded
+				&& FPaths::FileExists(Result.CommandLineDatabasePath);
+		}
+		if (IsValid(OverrideProvider))
+		{
+			OverrideProvider->ResetRepository();
+		}
+	}
+	if (!Result.bCommandLineOverrideResolvedSQLite
+		|| !Result.bCommandLineOverrideSaveSucceeded)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeSettingsProbeError(
+			Result,
+			TEXT("SQLUI layout repository runtime settings probe failed: command-line override did not select usable SQLite."));
+	}
+
+	USQLUILayoutRepositoryRuntimeSettings* DisabledOverrideSettings =
+		CreateSQLUISampleLayoutRepositoryRuntimeSettings(Outer);
+	if (IsValid(DisabledOverrideSettings))
+	{
+		DisabledOverrideSettings->bAutoInitializeProvider = false;
+		DisabledOverrideSettings->bAllowCommandLineOverrides = false;
+		DisabledOverrideSettings->RuntimeConfig =
+			FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault();
+		const FString DisabledOverrideCommandLine = FString::Printf(
+			TEXT("-SQLUILayoutRepositoryProviderAutoInit -SQLUILayoutRepositoryBackend=SQLite -SQLUISQLiteLayoutRepositoryPath=\"%s\" -SQLUISQLiteLayoutRepositoryInitializeSchema -SQLUISQLiteLayoutRepositoryCreateDatabase"),
+			*Result.MissingPathMarkerDatabasePath);
+		const FSQLUILayoutRepositoryRuntimeIntegrationRequest DisabledOverrideRequest =
+			FSQLUILayoutRepositoryRuntimeSettingsPolicy::
+				MakeRuntimeIntegrationRequestFromSettingsAndCommandLine(
+					DisabledOverrideSettings,
+					*DisabledOverrideCommandLine);
+		Result.bCommandLineOverrideDisabledPreservedSettings =
+			FSQLUILayoutRepositoryRuntimeSettingsPolicy::ShouldAutoInitializeProvider(
+				DisabledOverrideSettings,
+				*DisabledOverrideCommandLine)
+			&& DisabledOverrideRequest.RuntimeConfig.Backend == ESQLUILayoutRepositoryBackend::InMemory
+			&& DisabledOverrideRequest.RuntimeConfig.SQLiteDatabasePath.IsEmpty();
+
+		USQLUILayoutRepositoryRuntimeProvider* DisabledOverrideProvider =
+			CreateSQLUISampleLayoutRepositoryRuntimeProvider(Outer);
+		const bool bDisabledOverrideInitialized =
+			IsValid(DisabledOverrideProvider)
+			&& DisabledOverrideProvider->InitializeRepository(DisabledOverrideRequest)
+			&& DisabledOverrideProvider->HasRepository()
+			&& DisabledOverrideProvider->GetActiveBackend() == ESQLUILayoutRepositoryBackend::InMemory;
+		Result.bCommandLineOverrideDisabledPreservedSettings =
+			Result.bCommandLineOverrideDisabledPreservedSettings
+			&& bDisabledOverrideInitialized;
+		Result.bCommandLineOverrideDisabledDidNotCreateDb =
+			!DoSQLUISampleLayoutRepositoryRuntimeSettingsFilesExist(
+				Result.MissingPathMarkerDatabasePath);
+		if (IsValid(DisabledOverrideProvider))
+		{
+			DisabledOverrideProvider->ResetRepository();
+		}
+	}
+	if (!Result.bCommandLineOverrideDisabledPreservedSettings
+		|| !Result.bCommandLineOverrideDisabledDidNotCreateDb)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeSettingsProbeError(
+			Result,
+			TEXT("SQLUI layout repository runtime settings probe failed: disabled command-line override did not preserve InMemory settings without creating DB files."));
+	}
+
+	USQLUILayoutRepositoryRuntimeSettings* MissingPathSettings =
+		CreateSQLUISampleLayoutRepositoryRuntimeSettings(Outer);
+	if (IsValid(MissingPathSettings))
+	{
+		MissingPathSettings->bAutoInitializeProvider = true;
+		MissingPathSettings->RuntimeConfig =
+			FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault();
+		MissingPathSettings->RuntimeConfig.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+		MissingPathSettings->RuntimeConfig.SQLiteDatabasePath.Empty();
+		MissingPathSettings->RuntimeConfig.bSQLiteReadOnly = false;
+		MissingPathSettings->RuntimeConfig.bSQLiteInitializeSchemaIfMissing = true;
+		MissingPathSettings->RuntimeConfig.bSQLiteCreateDatabaseIfMissing = true;
+		const FSQLUILayoutRepositoryRuntimeIntegrationRequest MissingPathRequest =
+			FSQLUILayoutRepositoryRuntimeSettingsPolicy::
+				MakeRuntimeIntegrationRequestFromSettingsAndCommandLine(
+					MissingPathSettings,
+					TEXT(""));
+		USQLUILayoutRepositoryRuntimeProvider* MissingPathProvider =
+			CreateSQLUISampleLayoutRepositoryRuntimeProvider(Outer);
+		const bool bMissingPathInitialized =
+			IsValid(MissingPathProvider)
+			&& MissingPathProvider->InitializeRepository(MissingPathRequest);
+		const FSQLUILayoutRepositoryRuntimeIntegrationResult MissingPathResult =
+			IsValid(MissingPathProvider)
+				? MissingPathProvider->GetLastIntegrationResult()
+				: FSQLUILayoutRepositoryRuntimeIntegrationResult();
+		Result.bSQLiteMissingPathUnavailable =
+			!bMissingPathInitialized
+			&& MissingPathRequest.RuntimeConfig.Backend == ESQLUILayoutRepositoryBackend::SQLite
+			&& MissingPathRequest.RuntimeConfig.SQLiteDatabasePath.IsEmpty()
+			&& MissingPathResult.bBackendUnavailable
+			&& IsValid(MissingPathProvider)
+			&& !IsValid(Cast<USQLUISQLiteLayoutRepository>(MissingPathProvider->GetRepository()));
+		Result.bSQLiteMissingPathDidNotCreateDb =
+			!DoSQLUISampleLayoutRepositoryRuntimeSettingsFilesExist(
+				Result.MissingPathMarkerDatabasePath);
+		if (IsValid(MissingPathProvider))
+		{
+			MissingPathProvider->ResetRepository();
+		}
+	}
+	if (!Result.bSQLiteMissingPathUnavailable
+		|| !Result.bSQLiteMissingPathDidNotCreateDb)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeSettingsProbeError(
+			Result,
+			TEXT("SQLUI layout repository runtime settings probe failed: explicit SQLite missing path did not stay unavailable without creating DB files."));
+	}
+
+	Result.bDatabaseFilesRemoved =
+		DeleteSQLUISampleLayoutRepositoryRuntimeSettingsFiles(Result)
+		&& !DoesAnySQLUISampleLayoutRepositoryRuntimeSettingsFileExist();
+	if (!Result.bDatabaseFilesRemoved)
+	{
+		AppendSQLUISampleLayoutRepositoryRuntimeSettingsProbeError(
+			Result,
+			TEXT("SQLUI layout repository runtime settings probe failed: probe database files were not removed."));
+	}
+
+	Result.bSucceeded =
+		Result.bDefaultSettingsSafe
+		&& Result.bDefaultDoesNotAutoInitialize
+		&& Result.bSettingsInMemoryAutoInitResolved
+		&& Result.bSettingsInMemoryRepositoryCreated
+		&& Result.bSettingsInMemoryRepositoryNotSQLite
+		&& Result.bSettingsSQLiteResolved
+		&& Result.bSettingsSQLiteRepositoryCreated
+		&& Result.bSettingsSQLiteSaveSucceeded
+		&& Result.bSettingsSQLiteListSucceeded
+		&& Result.bSettingsSQLiteLoadSucceeded
+		&& Result.bCommandLineOverrideResolvedSQLite
+		&& Result.bCommandLineOverrideSaveSucceeded
+		&& Result.bCommandLineOverrideDisabledPreservedSettings
+		&& Result.bCommandLineOverrideDisabledDidNotCreateDb
+		&& Result.bSQLiteMissingPathUnavailable
+		&& Result.bSQLiteMissingPathDidNotCreateDb
+		&& Result.bDatabaseFilesRemoved;
+
+	return Result;
+}
+
 void AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
 	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& Result,
 	const FString& ErrorMessage)
@@ -8169,6 +8779,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.LayoutRepositoryRuntimeProviderProbe.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI layout repository runtime provider probe failed.")
 					: Result.LayoutRepositoryRuntimeProviderProbe.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseLayoutRepositoryRuntimeSettingsProbe)
+	{
+		Result.bUsedLayoutRepositoryRuntimeSettingsProbe = true;
+		Result.LayoutRepositoryRuntimeSettingsProbe =
+			RunSQLUISampleLayoutRepositoryRuntimeSettingsProbe(Outer);
+		if (!Result.LayoutRepositoryRuntimeSettingsProbe.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.LayoutRepositoryRuntimeSettingsProbe.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI layout repository runtime settings probe failed.")
+					: Result.LayoutRepositoryRuntimeSettingsProbe.ErrorMessage);
 		}
 	}
 

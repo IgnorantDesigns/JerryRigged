@@ -1,22 +1,33 @@
 #include "Layout/SQLUILayoutRepositoryRuntimeSubsystem.h"
 
 #include "Misc/CommandLine.h"
-#include "Misc/Parse.h"
+#include "Layout/SQLUILayoutRepositoryRuntimeSettings.h"
 
 void USQLUILayoutRepositoryRuntimeSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
+	const USQLUILayoutRepositoryRuntimeSettings* RuntimeSettings =
+		GetDefault<USQLUILayoutRepositoryRuntimeSettings>();
 	bAutoInitializationRequested =
-		FParse::Param(FCommandLine::Get(), TEXT("SQLUILayoutRepositoryProviderAutoInit"));
+		FSQLUILayoutRepositoryRuntimeSettingsPolicy::ShouldAutoInitializeProvider(
+			RuntimeSettings,
+			FCommandLine::Get());
 	bAutoInitializationSuccessful = false;
 
 	if (bAutoInitializationRequested)
 	{
-		bAutoInitializationSuccessful =
-			InitializeRepositoryFromCommandLine(
-				FCommandLine::Get(),
-				FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault());
+		USQLUILayoutRepositoryRuntimeProvider* RuntimeProvider = GetOrCreateProvider();
+		if (IsValid(RuntimeProvider))
+		{
+			const FSQLUILayoutRepositoryRuntimeIntegrationRequest Request =
+				FSQLUILayoutRepositoryRuntimeSettingsPolicy::
+					MakeRuntimeIntegrationRequestFromSettingsAndCommandLine(
+						RuntimeSettings,
+						FCommandLine::Get());
+			bAutoInitializationSuccessful =
+				RuntimeProvider->InitializeRepository(Request);
+		}
 	}
 }
 

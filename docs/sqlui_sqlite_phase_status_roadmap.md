@@ -21,7 +21,8 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - SQLite remains non-default. The runtime config resolver defaults to `InMemory`.
 - A SQLUICore runtime integration helper can combine explicit runtime config, optional seed-copy policy, and repository factory creation without changing normal startup.
 - A SQLUICore runtime repository provider can hold the explicitly initialized active repository and last integration result without changing normal startup.
-- A passive SQLUICore runtime repository `GameInstance` subsystem can own/access the provider and auto-initializes only when `-SQLUILayoutRepositoryProviderAutoInit` is present.
+- Config-backed SQLUICore runtime repository settings can request provider auto-init when explicitly configured, while default settings remain passive and `InMemory`.
+- A passive SQLUICore runtime repository `GameInstance` subsystem can own/access the provider and auto-initializes only when config-backed settings or `-SQLUILayoutRepositoryProviderAutoInit` explicitly request it.
 - Schema initialization and database creation are repository-owned and opt-in.
 - The current known production migration set is only `001_initial_layout_schema`.
 - `LoadLayout` and `SaveLayout` callback APIs can opt into serialized async execution with shutdown/stale-callback suppression.
@@ -54,7 +55,8 @@ This is still not a default production persistence policy. Runtime integration, 
 | Runtime config resolver | Implemented | Parses explicit backend/path/schema/async/seed flags; defaults to `InMemory`. |
 | Runtime integration helper | Implemented | Combines explicit runtime config, optional seed-copy policy, and factory repository creation. |
 | Runtime repository provider | Implemented | Storage-agnostic UObject holder for an explicitly initialized active repository and last integration result. |
-| Runtime repository subsystem | Implemented | Passive `GameInstance` subsystem can own/access the provider; startup auto-init requires `-SQLUILayoutRepositoryProviderAutoInit`. |
+| Runtime settings policy | Implemented | `Config=Game` UObject settings default to no auto-init/`InMemory`; command-line overrides can be allowed or disabled. |
+| Runtime repository subsystem | Implemented | Passive `GameInstance` subsystem can own/access the provider; startup auto-init requires explicit settings or `-SQLUILayoutRepositoryProviderAutoInit`. |
 | Seed database copy policy | Implemented | Explicit pre-repository closed-file copy helper; not factory-owned. |
 | Migration version/status framework | Implemented | Reports known/applied/pending status for current known migration set. |
 | Packaged build validation | Implemented locally | Local Win64 Development BuildCookRun validation passed with UE 5.7 preferred MSVC toolchain. |
@@ -74,6 +76,7 @@ This is still not a default production persistence policy. Runtime integration, 
 | Runtime config resolver | `-UseLayoutRepositoryRuntimeConfigProbe` | Covered | Verifies explicit config parsing and default `InMemory` policy. |
 | Runtime integration helper | `-UseLayoutRepositoryRuntimeIntegrationProbe` | Covered | Verifies default in-memory creation, explicit SQLite creation, seed-copy integration, missing-path unavailable behavior, and cleanup. |
 | Runtime repository provider | `-UseLayoutRepositoryRuntimeProviderProbe` | Covered | Verifies provider initialization, reset/reinit, explicit SQLite save/list/load, command-line config, seed-copy integration, fatal missing-seed behavior, and cleanup. |
+| Runtime settings policy | `-UseLayoutRepositoryRuntimeSettingsProbe` | Covered | Verifies safe defaults, settings-driven `InMemory`, settings-driven SQLite, command-line override behavior, disabled overrides, missing-path unavailable behavior, and cleanup. |
 | SQLite migration runner | `-UseSQLiteMigrationProbe` | Covered | Smoke-only migration runner proof. |
 | Layout schema migration | `-UseSQLiteLayoutSchemaMigrationProbe` | Covered | Applies and verifies `001_initial_layout_schema`. |
 | SQLite layout read probe | `-UseSQLiteLayoutReadProbe` | Covered | Seeds one layout and verifies list/load mapping. |
@@ -105,7 +108,7 @@ This does not yet prove:
 - Target-platform coverage beyond the local validation target.
 - Long-running packaged gameplay persistence behavior.
 - Production async service lifecycle, cancellation, or shutdown draining.
-- Product DB path UX and runtime settings flow.
+- Product DB path UX and user-facing runtime settings flow.
 - Future migration upgrade transforms beyond `001_initial_layout_schema`.
 
 ## Safety Boundaries
@@ -115,9 +118,10 @@ The current SQLite path keeps these boundaries:
 - SQLite is not the default backend.
 - Factory selection is explicit through `ESQLUILayoutRepositoryBackend::SQLite`.
 - `FSQLUILayoutRepositoryRuntimeConfigResolver` defaults to `InMemory`.
+- `USQLUILayoutRepositoryRuntimeSettings` defaults to no provider auto-init, `InMemory`, empty SQLite paths, schema/create disabled, async callbacks disabled, and seed-copy flags disabled.
 - `FSQLUILayoutRepositoryRuntimeIntegration` runs only when explicitly invoked by caller code or smoke tests.
 - `USQLUILayoutRepositoryRuntimeProvider` initializes only when caller code or smoke tests explicitly invoke it.
-- `USQLUILayoutRepositoryRuntimeSubsystem` is passive by default; startup auto-init requires `-SQLUILayoutRepositoryProviderAutoInit`.
+- `USQLUILayoutRepositoryRuntimeSubsystem` is passive by default; startup auto-init requires explicit runtime settings or `-SQLUILayoutRepositoryProviderAutoInit`.
 - The factory passes settings only.
 - The factory does not run migrations.
 - The factory does not copy seed databases.
@@ -154,7 +158,7 @@ The safe default remains non-SQLite.
 
 Prioritized remaining work:
 
-1. Production/user-facing runtime settings surface and normal startup policy that intentionally initializes the passive runtime provider subsystem outside packaged smoke flags.
+1. Production/user-facing runtime settings surface and normal startup policy that intentionally configures the passive runtime provider subsystem outside packaged smoke flags.
 2. Product database path policy and UX, including where user layouts should live and how users/admins inspect or reset them.
 3. Actual future schema migrations and data transforms beyond `001_initial_layout_schema`.
 4. Production async database service design beyond the current per-repository callback queue.
