@@ -774,6 +774,217 @@ void LogSQLUISampleSmokeTestLayoutRepositoryRuntimeIntegrationProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestLayoutRepositoryRuntimeProviderProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedLayoutRepositoryRuntimeProviderProbe)
+	{
+		return;
+	}
+
+	const FSQLUISampleLayoutRepositoryRuntimeProviderProbeResult& ProbeResult =
+		Result.LayoutRepositoryRuntimeProviderProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe database path: '%s'"),
+		*ProbeResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe command-line database path: '%s'"),
+		*ProbeResult.CommandLineDatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe seed database path: '%s'"),
+		*ProbeResult.SeedDatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe seed target database path: '%s'"),
+		*ProbeResult.SeedTargetDatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe provider created: %s"),
+		ProbeResult.bProviderCreated ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe default initialization succeeded: %s"),
+		ProbeResult.bDefaultInitializationSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe default backend in-memory: %s"),
+		ProbeResult.bDefaultBackendInMemory ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe default repository available: %s"),
+		ProbeResult.bDefaultRepositoryAvailable ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe default repository not SQLite: %s"),
+		ProbeResult.bDefaultRepositoryNotSQLite ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe reset cleared repository: %s"),
+		ProbeResult.bResetClearedRepository ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe reinitialize after reset succeeded: %s"),
+		ProbeResult.bReinitializeAfterResetSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe SQLite initialization succeeded: %s"),
+		ProbeResult.bSQLiteInitializationSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe SQLite backend selected: %s"),
+		ProbeResult.bSQLiteBackendSelected ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe SQLite repository available: %s"),
+		ProbeResult.bSQLiteRepositoryAvailable ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe SQLite save succeeded: %s"),
+		ProbeResult.bSQLiteSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe SQLite list succeeded: %s"),
+		ProbeResult.bSQLiteListSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe SQLite load succeeded: %s"),
+		ProbeResult.bSQLiteLoadSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe SQLite missing path handled: %s"),
+		ProbeResult.bSQLiteMissingPathHandled ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe SQLite missing path did not create DB: %s"),
+		ProbeResult.bSQLiteMissingPathDidNotCreateDb ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe command-line initialization succeeded: %s"),
+		ProbeResult.bCommandLineInitializationSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe command-line SQLite save succeeded: %s"),
+		ProbeResult.bCommandLineSQLiteSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe seed database prepared: %s"),
+		ProbeResult.bSeedDatabasePrepared ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe seed copy initialization succeeded: %s"),
+		ProbeResult.bSeedCopyInitializationSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe seed copy requested: %s"),
+		ProbeResult.bSeedCopyRequested ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe seed copy succeeded: %s"),
+		ProbeResult.bSeedCopySucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe seed copied target readable: %s"),
+		ProbeResult.bSeedCopiedTargetReadable ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe seed database left intact: %s"),
+		ProbeResult.bSeedDatabaseLeftIntact ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe seed copy failure fatal: %s"),
+		ProbeResult.bSeedCopyFailureFatal ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe seed copy failure did not create repository: %s"),
+		ProbeResult.bSeedCopyFailureDidNotCreateRepository ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe seed copy failure did not create target: %s"),
+		ProbeResult.bSeedCopyFailureDidNotCreateTarget ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime provider probe database files removed: %s"),
+		ProbeResult.bDatabaseFilesRemoved ? TEXT("true") : TEXT("false"));
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout repository runtime provider probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI layout repository runtime provider probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(
 	const FSQLUISampleSmokeTestResult& Result)
 {
@@ -2527,6 +2738,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestDatabaseAsyncQueueShutdownProbeResult(Result);
 	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeConfigProbeResult(Result);
 	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeIntegrationProbeResult(Result);
+	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeProviderProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(Result);
@@ -2626,6 +2838,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseLayoutRepositoryRuntimeIntegrationProbe =
 		FParse::Param(*Params, TEXT("UseLayoutRepositoryRuntimeIntegrationProbe"))
 		|| FParse::Param(*Params, TEXT("LayoutRepositoryRuntimeIntegrationProbe"));
+	const bool bUseLayoutRepositoryRuntimeProviderProbe =
+		FParse::Param(*Params, TEXT("UseLayoutRepositoryRuntimeProviderProbe"))
+		|| FParse::Param(*Params, TEXT("LayoutRepositoryRuntimeProviderProbe"));
 	const bool bUseSQLiteMigrationProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteMigrationProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteMigrationProbe"));
@@ -2718,6 +2933,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	if (bUseLayoutRepositoryRuntimeIntegrationProbe)
 	{
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout repository runtime integration probe selected: true"));
+	}
+
+	if (bUseLayoutRepositoryRuntimeProviderProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout repository runtime provider probe selected: true"));
 	}
 
 	if (bUseSQLiteMigrationProbe)
@@ -2816,6 +3036,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseDatabaseAsyncQueueShutdownProbe = bUseDatabaseAsyncQueueShutdownProbe;
 		Request.bUseLayoutRepositoryRuntimeConfigProbe = bUseLayoutRepositoryRuntimeConfigProbe;
 		Request.bUseLayoutRepositoryRuntimeIntegrationProbe = bUseLayoutRepositoryRuntimeIntegrationProbe;
+		Request.bUseLayoutRepositoryRuntimeProviderProbe = bUseLayoutRepositoryRuntimeProviderProbe;
 		Request.bUseSQLiteMigrationProbe = bUseSQLiteMigrationProbe;
 		Request.bUseSQLiteLayoutSchemaMigrationProbe = bUseSQLiteLayoutSchemaMigrationProbe;
 		Request.bUseSQLiteLayoutReadProbe = bUseSQLiteLayoutReadProbe;

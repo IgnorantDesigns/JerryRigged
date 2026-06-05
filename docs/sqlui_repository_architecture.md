@@ -25,6 +25,8 @@ Runtime-facing code can choose a repository backend through `FSQLUILayoutReposit
 
 `FSQLUILayoutRepositoryRuntimeIntegration` is the SQLUICore helper above the resolver, seed-copy policy, and factory. Given explicit runtime config, it can run the SQLite seed-copy helper only when copy-if-missing or overwrite is requested, then create the repository through `USQLUILayoutRepositoryFactory`. It preserves the resolver default of `InMemory`, does not make normal startup use SQLite, does not run schema initialization itself, and reports unavailable behavior when SQLite is requested without a database path.
 
+`USQLUILayoutRepositoryRuntimeProvider` is the storage-agnostic UObject holder above the runtime integration helper. It stores the active `ISQLUILayoutRepository` implementation, exposes the last integration result, supports explicit reset/reinitialization, and initializes only when caller code provides a runtime integration request, runtime config, or command-line string. It delegates repository creation to `FSQLUILayoutRepositoryRuntimeIntegration`; it does not construct concrete repositories directly, auto-start, attach widgets, choose SQLite by default, run migrations by itself, or create a subsystem.
+
 `ESQLUILayoutRepositoryBackend` currently supports:
 
 - `Unavailable`: creates `USQLUILayoutRepository`, which reports `bBackendUnavailable` for load and save.
@@ -174,6 +176,7 @@ Current paths are:
 - Unavailable repository selection: repository smoke paths also select `Unavailable` and verify load/save report `bBackendUnavailable` cleanly.
 - Runtime repository config probe: SQLUISamples exercises `FSQLUILayoutRepositoryRuntimeConfigResolver` directly, verifies default `InMemory` behavior, JSON/SQLite command-line parsing, SQLite path resolution, missing-path unavailable behavior, invalid-backend fallback, and a factory-created SQLite save through explicit settings under `Saved/SQLUI/SmokeTests/LayoutRepositoryRuntimeConfig`.
 - Runtime repository integration probe: SQLUISamples exercises `FSQLUILayoutRepositoryRuntimeIntegration`, verifies default non-SQLite `InMemory` creation, explicit SQLite repository creation/save/list, missing-path unavailable behavior without DB creation, explicit seed-copy integration, fatal missing-seed behavior before repository creation, and cleanup under `Saved/SQLUI/SmokeTests/LayoutRepositoryRuntimeIntegration`.
+- Runtime repository provider probe: SQLUISamples exercises `USQLUILayoutRepositoryRuntimeProvider`, verifies default `InMemory` initialization, reset/reinitialization, explicit SQLite save/list/load, command-line SQLite initialization, seed-copy initialization/readback, fatal missing-seed behavior before repository storage, and cleanup under `Saved/SQLUI/SmokeTests/LayoutRepositoryRuntimeProvider`.
 - SQLite seed database copy policy probe: SQLUISamples prepares a closed seed database under `Saved/SQLUI/SmokeTests/SQLiteSeedDatabaseCopyPolicy/Seed`, exercises the SQLUICore seed copy helper for missing target, existing target without overwrite, existing target with overwrite, missing seed, same-path failure, and runtime config mapping, verifies copied targets are readable through `USQLUISQLiteLayoutRepository`, removes all probe database files, and passes the default layout through the widget pipeline.
 - SQLite read-only repository smoke path: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteReadOnlyRepository`, instantiates `USQLUISQLiteLayoutRepository` directly, verifies `ListLayouts` metadata and tags, verifies `LoadLayout` deserializes and validates the document, verifies unsupported `SaveLayout`, `RemoveLayout`, and `ClearLayouts` calls are rejected without mutating the prepared database, removes the database, and passes the default layout through the widget pipeline.
 - SQLite SaveLayout repository smoke path: SQLUISamples prepares a temporary database under `Saved/SQLUI/SmokeTests/SQLiteSaveLayoutRepository`, instantiates `USQLUISQLiteLayoutRepository` directly with `bReadOnly = false`, verifies `SaveLayout`, `ListLayouts`, and `LoadLayout`, saves the same layout id a second time, verifies the latest revision and updated metadata are read back, removes the database, and passes the default layout through the widget pipeline.
@@ -211,7 +214,7 @@ The SQLite implementation should:
 - Preserve the current document validation boundary before saving and after loading.
 - Use `Saved/SQLUI/...` for writable runtime database state, with explicit seed-copy behavior handled before repository mutation.
 
-SQLite repository smoke coverage is broad enough for the current local lifecycle, and the first migration version/status framework exists. Actual future production migrations, full async database execution, broader shutdown behavior, and broader packaged validation should happen in later implementation work.
+SQLite repository smoke coverage is broad enough for the current local lifecycle, and the first migration version/status framework plus an explicit runtime provider proof exist. Actual future production migrations, full async database execution, broader shutdown behavior, product startup integration, and broader packaged validation should happen in later implementation work.
 
 ## Suggested Next Steps
 
@@ -220,6 +223,6 @@ Near-term implementation work can stay small and repository-focused:
 1. Run and expand packaged-build validation for the `SQLiteCore` path on target platforms.
 2. Extend the async database boundary beyond callback-style `LoadLayout` and `SaveLayout` before using SQLite for normal runtime persistence.
 3. Keep SQLite factory selection explicitly configured and unavailable when required settings are missing.
-4. Add actual future schema migrations, upgrade behavior, and database file handling in SQLUICore, not in widgets.
+4. Add actual future schema migrations, upgrade behavior, and product database file handling in SQLUICore, not in widgets.
 5. Define product seed database asset/package/version rules before shipping source-controlled seed DBs.
 6. Extend lifecycle features through repository contracts instead of exposing storage details to widgets.

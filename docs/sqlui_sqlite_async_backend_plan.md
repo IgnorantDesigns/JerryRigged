@@ -206,7 +206,7 @@ Migration failures should fail closed. A repository operation should not continu
 
 ## Seed-Copy Timing
 
-SQLUICore now has `FSQLUISQLiteSeedDatabaseCopy`, an explicit file-copy policy helper for copying a closed seed database into a writable target path, and `FSQLUILayoutRepositoryRuntimeIntegration`, a small helper that can invoke that seed-copy policy before factory repository creation when explicitly requested. Production async startup integration for product seed databases is still deferred, so the timing rules below remain the guidance for future production integration.
+SQLUICore now has `FSQLUISQLiteSeedDatabaseCopy`, an explicit file-copy policy helper for copying a closed seed database into a writable target path, `FSQLUILayoutRepositoryRuntimeIntegration`, a small helper that can invoke that seed-copy policy before factory repository creation when explicitly requested, and `USQLUILayoutRepositoryRuntimeProvider`, a storage-agnostic holder for an explicitly initialized repository and last integration result. Production async startup integration for product seed databases is still deferred, so the timing rules below remain the guidance for future production integration.
 
 Expected seed-copy rules:
 
