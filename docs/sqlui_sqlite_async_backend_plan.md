@@ -206,7 +206,7 @@ Migration failures should fail closed. A repository operation should not continu
 
 ## Seed-Copy Timing
 
-SQLUICore now has `FSQLUISQLiteSeedDatabaseCopy`, an explicit file-copy policy helper for copying a closed seed database into a writable target path. Repository/factory startup integration for product seed databases is still deferred, so the timing rules below remain the guidance for future production integration.
+SQLUICore now has `FSQLUISQLiteSeedDatabaseCopy`, an explicit file-copy policy helper for copying a closed seed database into a writable target path, and `FSQLUILayoutRepositoryRuntimeIntegration`, a small helper that can invoke that seed-copy policy before factory repository creation when explicitly requested. Production async startup integration for product seed databases is still deferred, so the timing rules below remain the guidance for future production integration.
 
 Expected seed-copy rules:
 
@@ -305,7 +305,9 @@ The optional SQLite factory layout repository smoke path prepares a temporary da
 
 The optional SQLite factory schema-init repository smoke path starts with no database under `Saved/SQLUI/SmokeTests/SQLiteFactorySchemaInitRepository`, requests `ESQLUILayoutRepositoryBackend::SQLite` through `USQLUILayoutRepositoryFactory`, enables repository-owned schema initialization and database creation through `SQLiteSettings`, verifies callback-style `SaveLayout` initializes the schema and creates the database, verifies list/load/remove/clear behavior, verifies a missing database without schema-init settings fails without creating a file, closes all database handles, and removes the file. It proves the first opt-in schema initialization slice without moving migration logic into the factory.
 
-The optional SQLite seed database copy policy probe prepares a closed seed database under `Saved/SQLUI/SmokeTests/SQLiteSeedDatabaseCopyPolicy`, exercises the SQLUICore seed copy helper for missing-target copy, existing-target preserve, explicit overwrite, missing-seed failure, same-path failure, and runtime config mapping, verifies copied targets are readable through the SQLite repository, closes all database handles, and removes the files. It proves the explicit file-copy policy only; production async startup integration remains future work.
+The optional SQLite seed database copy policy probe prepares a closed seed database under `Saved/SQLUI/SmokeTests/SQLiteSeedDatabaseCopyPolicy`, exercises the SQLUICore seed copy helper for missing-target copy, existing-target preserve, explicit overwrite, missing-seed failure, same-path failure, and runtime config mapping, verifies copied targets are readable through the SQLite repository, closes all database handles, and removes the files. It proves the explicit file-copy policy only.
+
+The optional layout repository runtime integration probe writes under `Saved/SQLUI/SmokeTests/LayoutRepositoryRuntimeIntegration`, verifies the helper that combines explicit runtime config, seed-copy policy, and factory repository creation, proves default config still creates non-SQLite in-memory storage, proves missing SQLite path remains unavailable without creating files, proves explicit seed-copy yields a readable SQLite target, and removes all probe database files. It is a local integration proof; production async startup integration remains future work.
 
 Future SQLite smoke coverage should continue to prove:
 
