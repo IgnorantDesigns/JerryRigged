@@ -56,6 +56,7 @@ Supported command-line options include:
 - `-SQLUILayoutRepositoryBackend=JsonFile`
 - `-SQLUILayoutRepositoryBackend=SQLite`
 - `-SQLUILayoutRepositoryBackend=Unavailable`
+- `-SQLUILayoutRepositoryProviderAutoInit`
 - `-SQLUIJsonFileLayoutRepositoryDir="<path>"`
 - `-SQLUISQLiteLayoutRepositoryPath="<path>"`
 - `-SQLUISQLiteLayoutRepositoryReadOnly`
@@ -78,9 +79,13 @@ The resolver can also map explicit seed-copy options into `FSQLUISQLiteSeedDatab
 
 `FSQLUILayoutRepositoryRuntimeIntegration` is the next SQLUICore-owned policy layer above the resolver. It accepts explicit runtime config, runs the closed-file SQLite seed-copy helper only when seed-copy flags are requested, then creates the repository through `USQLUILayoutRepositoryFactory`. It preserves the default `InMemory` backend, reports unavailable behavior for explicit SQLite requests with no database path, and does not make normal startup use SQLite by itself.
 
-`USQLUILayoutRepositoryRuntimeProvider` is the first storage-agnostic UObject holder for runtime-selected repositories. It initializes through the runtime integration helper, stores the active repository plus the last integration result, supports explicit reset/reinitialization, and keeps callers on the repository interface instead of concrete storage classes. It does not auto-start, attach widgets, create a subsystem, run migrations directly, or make SQLite the default backend.
+`USQLUILayoutRepositoryRuntimeProvider` is the first storage-agnostic UObject holder for runtime-selected repositories. It initializes through the runtime integration helper, stores the active repository plus the last integration result, supports explicit reset/reinitialization, and keeps callers on the repository interface instead of concrete storage classes. It does not auto-start, attach widgets, run migrations directly, or make SQLite the default backend.
+
+`USQLUILayoutRepositoryRuntimeSubsystem` is the passive SQLUICore `UGameInstanceSubsystem` holder above the provider. Unreal may construct it with the GameInstance, but it does not initialize a repository, choose SQLite, create databases, copy seed files, attach widgets, or touch the viewport by default. It can be initialized by caller code through runtime config/command-line helpers, or it can opt into startup initialization only when `-SQLUILayoutRepositoryProviderAutoInit` is present. That flag still uses the resolver default of `InMemory` unless explicit repository settings such as `-SQLUILayoutRepositoryBackend=SQLite` and a SQLite path are supplied.
 
 The packaged runtime provider startup smoke proves this holder can be intentionally created from packaged startup/runtime code and initialized from command-line repository settings. That proof runs only with `-SQLUIRuntimeProviderStartupSmoke`; normal startup still does not auto-initialize a provider or SQLite.
+
+The packaged runtime provider subsystem smoke proves the app-level subsystem holder path. It runs only with `-SQLUIRuntimeProviderSubsystemSmoke` plus explicit `-SQLUILayoutRepositoryProviderAutoInit` and repository settings. When the flags are absent, the subsystem remains passive and normal startup still does not initialize SQLite.
 
 ## Seed Database Copy Policy
 
@@ -193,6 +198,8 @@ Packaged runtime SQLite smoke is separate from editor commandlet smoke. `RunSQLU
 
 Packaged runtime provider startup smoke is another explicit packaged executable proof. `RunSQLUIPackagedBuildValidation.ps1 -RunPackagedProviderStartupSmoke` launches the packaged executable with `-SQLUIRuntimeProviderStartupSmoke` and explicit SQLite repository command-line settings, verifies provider initialization/save/list/load/reset behavior, checks the runtime log for success, and removes the smoke database under packaged runtime `Saved/SQLUI/LayoutRepositories/PackagedRuntimeSmoke/RuntimeProviderStartup`.
 
+Packaged runtime provider subsystem smoke proves the passive subsystem integration surface. `RunSQLUIPackagedBuildValidation.ps1 -RunPackagedProviderSubsystemSmoke` launches the packaged executable with `-SQLUIRuntimeProviderSubsystemSmoke`, `-SQLUILayoutRepositoryProviderAutoInit`, and explicit SQLite repository command-line settings, waits for the `GameInstance` subsystem, verifies subsystem/provider initialization/save/list/load/reset behavior, checks the runtime log for success, and removes the smoke database under packaged runtime `Saved/SQLUI/LayoutRepositories/PackagedRuntimeSmoke/RuntimeProviderSubsystem`.
+
 ## Runtime Boundaries
 
 SQLite details belong in SQLUICore and the SQLUISamples smoke harness only. Widgets should continue to work with repository contracts, layout documents, variable stores, action systems, and runtime contexts.
@@ -212,7 +219,7 @@ Remaining work includes:
 - Production async database service design beyond the current per-repository callback queue.
 - Cancellation, shutdown draining beyond stale-callback suppression, and async coverage for all repository operations.
 - Actual future schema migrations, upgrade-specific data transforms, and version-specific compatibility policy beyond the current version/status framework.
-- User-facing runtime configuration surfaces, production database path policy, and normal product startup code that intentionally creates and initializes the runtime provider outside the packaged smoke flag.
+- User-facing runtime configuration surfaces, production database path policy, and product startup policy beyond the passive subsystem and explicit packaged smoke flags.
 - Product seed database asset/package/version policy, if seed DBs are added.
 - Optional lifecycle features such as history APIs, checkpoints, previews, restore flows, and richer search.
 
@@ -225,6 +232,8 @@ The latest local Win64 Development packaged-build validation passed after instal
 The scaffold can also run the packaged executable with `-SQLUIPackagedRuntimeSQLiteSmoke` to prove one packaged runtime SQLite lifecycle against a packaged runtime `Saved/SQLUI/PackagedRuntimeSmoke/...` database path. That runtime smoke covers save, list, load, remove, clear, log verification, and database cleanup.
 
 The scaffold can separately run the packaged executable with `-SQLUIRuntimeProviderStartupSmoke` to prove explicit packaged startup code can create `USQLUILayoutRepositoryRuntimeProvider`, initialize it from command-line repository settings, use the active repository for save/load, verify SQLite list readback in smoke-only code, reset the provider, and clean up its database.
+
+The scaffold can also run the packaged executable with `-SQLUIRuntimeProviderSubsystemSmoke` and `-SQLUILayoutRepositoryProviderAutoInit` to prove the passive `USQLUILayoutRepositoryRuntimeSubsystem` can own/access the provider, initialize it from command-line repository settings only when explicitly requested, use the active repository for save/load, verify SQLite list readback in smoke-only code, reset the subsystem/provider, and clean up its database.
 
 It still does not prove platform coverage beyond the requested local target, long-running database service behavior, full async lifecycle handling, or production migration upgrades.
 

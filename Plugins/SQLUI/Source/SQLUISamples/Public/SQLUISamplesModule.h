@@ -14,7 +14,9 @@ public:
 private:
 	void RunPackagedRuntimeSQLiteSmoke();
 	void RunPackagedRuntimeProviderStartupSmoke();
+	void RunPackagedRuntimeProviderSubsystemSmoke();
 
 	FDelegateHandle PackagedRuntimeSQLiteSmokeDelegateHandle;
 	FDelegateHandle PackagedRuntimeProviderStartupSmokeDelegateHandle;
+	FDelegateHandle PackagedRuntimeProviderSubsystemSmokeDelegateHandle;
 };
