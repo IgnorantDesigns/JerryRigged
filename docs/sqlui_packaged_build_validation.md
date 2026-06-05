@@ -14,6 +14,8 @@ When `-RunPackagedProviderStartupSmoke` is passed, the script launches the packa
 
 When `-RunPackagedProviderSubsystemSmoke` is passed, the script launches the packaged executable with `-SQLUIRuntimeProviderSubsystemSmoke`, `-SQLUILayoutRepositoryProviderAutoInit`, and explicit SQLite repository command-line settings. That smoke proves the passive SQLUICore `UGameInstanceSubsystem` can act as the app-level provider holder, opt into command-line initialization, use the active repository through the repository contract, reset the provider, and remove the smoke database.
 
+SQLUICore also has config-backed runtime repository settings, but they remain default-off. Packaged provider subsystem smoke intentionally uses explicit command-line auto-init instead of requiring a committed runtime config file.
+
 This validation is intended to catch packaging and dependency issues around:
 
 - JerryRigged as the host project.
@@ -267,7 +269,7 @@ The relative SQLite path is resolved by `FSQLUILayoutRepositoryRuntimeConfigReso
 <ProjectSavedDir>/SQLUI/LayoutRepositories/PackagedRuntimeSmoke/RuntimeProviderSubsystem/RuntimeProviderSubsystem.db
 ```
 
-The subsystem is passive when `-SQLUILayoutRepositoryProviderAutoInit` is absent. It does not select SQLite, create databases, copy seed files, attach widgets, or touch the viewport by default.
+The subsystem is passive when config-backed auto-init is off and `-SQLUILayoutRepositoryProviderAutoInit` is absent. It does not select SQLite, create databases, copy seed files, attach widgets, or touch the viewport by default.
 
 The provider subsystem smoke waits briefly for the packaged runtime `GameInstance`, finds `USQLUILayoutRepositoryRuntimeSubsystem`, verifies explicit auto-initialization selected SQLite, saves and loads one probe layout through the base repository callback methods, verifies SQLite metadata/tags listing in smoke-only code, resets the subsystem/provider, removes the smoke database and sidecars, and requests process exit.
 
@@ -367,6 +369,6 @@ Future work still includes:
 - Target-platform coverage beyond local Win64 Development.
 - CI automation if Unreal-capable build agents become available.
 - Broader packaged runtime database path coverage beyond the first `Saved/SQLUI/PackagedRuntimeSmoke` lifecycle proof.
-- User-facing runtime settings and product startup policy beyond the passive provider subsystem and explicit packaged smoke flags.
+- User-facing runtime settings/DB path UX and product startup policy beyond the safe config-backed settings object, passive provider subsystem, and explicit packaged smoke flags.
 - Production async database service, queue, cancellation, and shutdown hardening.
 - Migration upgrade/versioning validation beyond the initial schema.

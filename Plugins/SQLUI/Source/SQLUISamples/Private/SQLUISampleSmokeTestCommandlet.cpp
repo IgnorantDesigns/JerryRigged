@@ -985,6 +985,151 @@ void LogSQLUISampleSmokeTestLayoutRepositoryRuntimeProviderProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestLayoutRepositoryRuntimeSettingsProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedLayoutRepositoryRuntimeSettingsProbe)
+	{
+		return;
+	}
+
+	const FSQLUISampleLayoutRepositoryRuntimeSettingsProbeResult& ProbeResult =
+		Result.LayoutRepositoryRuntimeSettingsProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe database path: '%s'"),
+		*ProbeResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe command-line database path: '%s'"),
+		*ProbeResult.CommandLineDatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe missing path marker database path: '%s'"),
+		*ProbeResult.MissingPathMarkerDatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe default settings safe: %s"),
+		ProbeResult.bDefaultSettingsSafe ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe default does not auto initialize: %s"),
+		ProbeResult.bDefaultDoesNotAutoInitialize ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe settings in-memory auto init resolved: %s"),
+		ProbeResult.bSettingsInMemoryAutoInitResolved ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe settings in-memory repository created: %s"),
+		ProbeResult.bSettingsInMemoryRepositoryCreated ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe settings in-memory repository not SQLite: %s"),
+		ProbeResult.bSettingsInMemoryRepositoryNotSQLite ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe settings SQLite resolved: %s"),
+		ProbeResult.bSettingsSQLiteResolved ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe settings SQLite repository created: %s"),
+		ProbeResult.bSettingsSQLiteRepositoryCreated ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe settings SQLite save succeeded: %s"),
+		ProbeResult.bSettingsSQLiteSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe settings SQLite list succeeded: %s"),
+		ProbeResult.bSettingsSQLiteListSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe settings SQLite load succeeded: %s"),
+		ProbeResult.bSettingsSQLiteLoadSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe command-line override resolved SQLite: %s"),
+		ProbeResult.bCommandLineOverrideResolvedSQLite ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe command-line override save succeeded: %s"),
+		ProbeResult.bCommandLineOverrideSaveSucceeded ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe command-line override disabled preserved settings: %s"),
+		ProbeResult.bCommandLineOverrideDisabledPreservedSettings ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe command-line override disabled did not create DB: %s"),
+		ProbeResult.bCommandLineOverrideDisabledDidNotCreateDb ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe SQLite missing path unavailable: %s"),
+		ProbeResult.bSQLiteMissingPathUnavailable ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe SQLite missing path did not create DB: %s"),
+		ProbeResult.bSQLiteMissingPathDidNotCreateDb ? TEXT("true") : TEXT("false"));
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository runtime settings probe database files removed: %s"),
+		ProbeResult.bDatabaseFilesRemoved ? TEXT("true") : TEXT("false"));
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout repository runtime settings probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI layout repository runtime settings probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(
 	const FSQLUISampleSmokeTestResult& Result)
 {
@@ -2739,6 +2884,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeConfigProbeResult(Result);
 	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeIntegrationProbeResult(Result);
 	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeProviderProbeResult(Result);
+	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeSettingsProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(Result);
@@ -2841,6 +2987,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseLayoutRepositoryRuntimeProviderProbe =
 		FParse::Param(*Params, TEXT("UseLayoutRepositoryRuntimeProviderProbe"))
 		|| FParse::Param(*Params, TEXT("LayoutRepositoryRuntimeProviderProbe"));
+	const bool bUseLayoutRepositoryRuntimeSettingsProbe =
+		FParse::Param(*Params, TEXT("UseLayoutRepositoryRuntimeSettingsProbe"))
+		|| FParse::Param(*Params, TEXT("LayoutRepositoryRuntimeSettingsProbe"));
 	const bool bUseSQLiteMigrationProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteMigrationProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteMigrationProbe"));
@@ -2940,6 +3089,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout repository runtime provider probe selected: true"));
 	}
 
+	if (bUseLayoutRepositoryRuntimeSettingsProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout repository runtime settings probe selected: true"));
+	}
+
 	if (bUseSQLiteMigrationProbe)
 	{
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite migration probe selected: true"));
@@ -3037,6 +3191,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseLayoutRepositoryRuntimeConfigProbe = bUseLayoutRepositoryRuntimeConfigProbe;
 		Request.bUseLayoutRepositoryRuntimeIntegrationProbe = bUseLayoutRepositoryRuntimeIntegrationProbe;
 		Request.bUseLayoutRepositoryRuntimeProviderProbe = bUseLayoutRepositoryRuntimeProviderProbe;
+		Request.bUseLayoutRepositoryRuntimeSettingsProbe = bUseLayoutRepositoryRuntimeSettingsProbe;
 		Request.bUseSQLiteMigrationProbe = bUseSQLiteMigrationProbe;
 		Request.bUseSQLiteLayoutSchemaMigrationProbe = bUseSQLiteLayoutSchemaMigrationProbe;
 		Request.bUseSQLiteLayoutReadProbe = bUseSQLiteLayoutReadProbe;

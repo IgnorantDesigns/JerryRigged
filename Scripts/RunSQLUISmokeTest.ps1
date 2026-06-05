@@ -24,6 +24,8 @@ param(
 
 	[switch]$UseLayoutRepositoryRuntimeProviderProbe,
 
+	[switch]$UseLayoutRepositoryRuntimeSettingsProbe,
+
 	[switch]$UseSQLiteMigrationProbe,
 
 	[switch]$UseSQLiteLayoutSchemaMigrationProbe,
@@ -110,6 +112,9 @@ Parameters:
   -UseLayoutRepositoryRuntimeProviderProbe
       Run the optional SQLUICore layout repository runtime provider probe.
 
+  -UseLayoutRepositoryRuntimeSettingsProbe
+      Run the optional SQLUICore layout repository runtime settings policy probe.
+
   -UseSQLiteMigrationProbe
       Run the optional SQLUICore SQLite migration-runner probe.
 
@@ -169,6 +174,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseLayoutRepositoryRuntimeConfigProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseLayoutRepositoryRuntimeIntegrationProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseLayoutRepositoryRuntimeProviderProbe
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseLayoutRepositoryRuntimeSettingsProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteMigrationProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteLayoutSchemaMigrationProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteLayoutReadProbe
@@ -333,6 +339,11 @@ if ($UseLayoutRepositoryRuntimeIntegrationProbe)
 if ($UseLayoutRepositoryRuntimeProviderProbe)
 {
 	$CommandletArgs += '-LayoutRepositoryRuntimeProviderProbe'
+}
+
+if ($UseLayoutRepositoryRuntimeSettingsProbe)
+{
+	$CommandletArgs += '-LayoutRepositoryRuntimeSettingsProbe'
 }
 
 if ($UseSQLiteMigrationProbe)

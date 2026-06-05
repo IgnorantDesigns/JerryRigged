@@ -11,7 +11,7 @@
  *
  * The subsystem is created by Unreal with the GameInstance, but it does not
  * initialize a repository unless explicit caller code does so or the
- * -SQLUILayoutRepositoryProviderAutoInit command-line flag is present.
+ * runtime settings policy requests auto-initialization.
  */
 UCLASS()
 class SQLUICORE_API USQLUILayoutRepositoryRuntimeSubsystem : public UGameInstanceSubsystem
