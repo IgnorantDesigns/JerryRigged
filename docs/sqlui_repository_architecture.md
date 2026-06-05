@@ -27,6 +27,8 @@ Runtime-facing code can choose a repository backend through `FSQLUILayoutReposit
 
 `USQLUILayoutRepositoryRuntimeProvider` is the storage-agnostic UObject holder above the runtime integration helper. It stores the active `ISQLUILayoutRepository` implementation, exposes the last integration result, supports explicit reset/reinitialization, and initializes only when caller code provides a runtime integration request, runtime config, or command-line string. It delegates repository creation to `FSQLUILayoutRepositoryRuntimeIntegration`; it does not construct concrete repositories directly, auto-start, attach widgets, choose SQLite by default, run migrations by itself, or create a subsystem.
 
+The packaged runtime provider startup smoke proves the intended startup integration shape without changing normal startup. When `-SQLUIRuntimeProviderStartupSmoke` is present, SQLUISamples creates the provider after engine-loop initialization, initializes it from command-line repository settings, uses the active repository through the repository contract for save/load, verifies SQLite list readback in smoke-only code, resets the provider, removes the smoke database, and exits. When the flag is absent, SQLUISamples does not auto-initialize the provider.
+
 `ESQLUILayoutRepositoryBackend` currently supports:
 
 - `Unavailable`: creates `USQLUILayoutRepository`, which reports `bBackendUnavailable` for load and save.
@@ -196,7 +198,7 @@ The default, JSON fixture, in-memory, JSON file, and unavailable paths do not us
 
 The current SQLite runtime status is consolidated in [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md). In short, SQLite is explicitly selectable through the repository factory, supports the current layout repository lifecycle, can opt into schema initialization, has a first schema version/status helper for known migrations, and can opt into serialized async execution for callback-style `LoadLayout` and `SaveLayout`. SQLite is still not the default backend, the factory still passes settings only, and full production async service behavior plus actual future schema migration upgrades remain open.
 
-Local packaged-build validation is documented in [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md). That script is a local `RunUAT BuildCookRun` scaffold for checking project packaging compatibility with SQLUI and SQLiteCore wiring, and it can optionally launch the packaged executable SQLite lifecycle smoke through an explicit flag. It does not add CI or change normal startup.
+Local packaged-build validation is documented in [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md). That script is a local `RunUAT BuildCookRun` scaffold for checking project packaging compatibility with SQLUI and SQLiteCore wiring, and it can optionally launch explicit packaged runtime smoke paths for the SQLite lifecycle and runtime provider startup. It does not add CI or change normal startup.
 
 The SQLite schema is documented in [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md). That document defines the current planned tables, keys, indexes, revision/history behavior, soft-delete semantics for normal remove operations, destructive clear behavior for scoped cleanup, migration/versioning expectations, validation boundaries, threading expectations, and repository-operation mapping.
 
@@ -214,7 +216,7 @@ The SQLite implementation should:
 - Preserve the current document validation boundary before saving and after loading.
 - Use `Saved/SQLUI/...` for writable runtime database state, with explicit seed-copy behavior handled before repository mutation.
 
-SQLite repository smoke coverage is broad enough for the current local lifecycle, and the first migration version/status framework plus an explicit runtime provider proof exist. Actual future production migrations, full async database execution, broader shutdown behavior, product startup integration, and broader packaged validation should happen in later implementation work.
+SQLite repository smoke coverage is broad enough for the current local lifecycle, and the first migration version/status framework plus explicit editor and packaged runtime provider proofs exist. Actual future production migrations, full async database execution, broader shutdown behavior, normal product startup integration, and broader packaged validation should happen in later implementation work.
 
 ## Suggested Next Steps
 

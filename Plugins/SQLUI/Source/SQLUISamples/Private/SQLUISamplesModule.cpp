@@ -4,6 +4,7 @@
 #include "Misc/CoreDelegates.h"
 #include "Misc/Parse.h"
 #include "Modules/ModuleManager.h"
+#include "SQLUISamplePackagedRuntimeProviderStartupSmoke.h"
 #include "SQLUISamplePackagedRuntimeSQLiteSmoke.h"
 
 DEFINE_LOG_CATEGORY(LogSQLUISamples);
@@ -17,6 +18,14 @@ void FSQLUISamplesModule::StartupModule()
 				this,
 				&FSQLUISamplesModule::RunPackagedRuntimeSQLiteSmoke);
 	}
+
+	if (FParse::Param(FCommandLine::Get(), TEXT("SQLUIRuntimeProviderStartupSmoke")))
+	{
+		PackagedRuntimeProviderStartupSmokeDelegateHandle =
+			FCoreDelegates::OnFEngineLoopInitComplete.AddRaw(
+				this,
+				&FSQLUISamplesModule::RunPackagedRuntimeProviderStartupSmoke);
+	}
 }
 
 void FSQLUISamplesModule::ShutdownModule()
@@ -25,6 +34,13 @@ void FSQLUISamplesModule::ShutdownModule()
 	{
 		FCoreDelegates::OnFEngineLoopInitComplete.Remove(PackagedRuntimeSQLiteSmokeDelegateHandle);
 		PackagedRuntimeSQLiteSmokeDelegateHandle.Reset();
+	}
+
+	if (PackagedRuntimeProviderStartupSmokeDelegateHandle.IsValid())
+	{
+		FCoreDelegates::OnFEngineLoopInitComplete.Remove(
+			PackagedRuntimeProviderStartupSmokeDelegateHandle);
+		PackagedRuntimeProviderStartupSmokeDelegateHandle.Reset();
 	}
 }
 
@@ -37,6 +53,18 @@ void FSQLUISamplesModule::RunPackagedRuntimeSQLiteSmoke()
 	}
 
 	FSQLUISamplePackagedRuntimeSQLiteSmoke::RunAndRequestExit();
+}
+
+void FSQLUISamplesModule::RunPackagedRuntimeProviderStartupSmoke()
+{
+	if (PackagedRuntimeProviderStartupSmokeDelegateHandle.IsValid())
+	{
+		FCoreDelegates::OnFEngineLoopInitComplete.Remove(
+			PackagedRuntimeProviderStartupSmokeDelegateHandle);
+		PackagedRuntimeProviderStartupSmokeDelegateHandle.Reset();
+	}
+
+	FSQLUISamplePackagedRuntimeProviderStartupSmoke::RunAndRequestExit();
 }
 
 IMPLEMENT_MODULE(FSQLUISamplesModule, SQLUISamples)
