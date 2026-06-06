@@ -2784,6 +2784,74 @@ void LogSQLUISampleSmokeTestSQLiteSchemaInitHardeningResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestPersistenceStatusSurfaceProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedPersistenceStatusSurfaceProbe)
+	{
+		return;
+	}
+
+	const FSQLUISamplePersistenceStatusSurfaceProbeResult& ProbeResult =
+		Result.PersistenceStatusSurfaceProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI persistence status surface probe database path: '%s'"),
+		*ProbeResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI persistence status surface probe sidecar database path: '%s'"),
+		*ProbeResult.SidecarDatabasePath);
+
+	const auto LogPersistenceStatusSurfaceBool =
+		[](const TCHAR* Label, bool bValue)
+		{
+			UE_LOG(
+				LogSQLUISamples,
+				Log,
+				TEXT("SQLUI persistence status surface probe %s: %s"),
+				Label,
+				bValue ? TEXT("true") : TEXT("false"));
+		};
+
+	LogPersistenceStatusSurfaceBool(TEXT("default status succeeded"), ProbeResult.bDefaultStatusSucceeded);
+	LogPersistenceStatusSurfaceBool(TEXT("default backend InMemory"), ProbeResult.bDefaultBackendInMemory);
+	LogPersistenceStatusSurfaceBool(TEXT("default provider not initialized"), ProbeResult.bDefaultProviderNotInitialized);
+	LogPersistenceStatusSurfaceBool(TEXT("default repository not active"), ProbeResult.bDefaultRepositoryNotActive);
+	LogPersistenceStatusSurfaceBool(TEXT("default status did not create DB"), ProbeResult.bDefaultStatusDidNotCreateDb);
+	LogPersistenceStatusSurfaceBool(TEXT("SQLite database prepared"), ProbeResult.bSQLiteDatabasePrepared);
+	LogPersistenceStatusSurfaceBool(TEXT("SQLite status succeeded"), ProbeResult.bSQLiteStatusSucceeded);
+	LogPersistenceStatusSurfaceBool(TEXT("SQLite path resolved"), ProbeResult.bSQLitePathResolved);
+	LogPersistenceStatusSurfaceBool(TEXT("SQLite database detected"), ProbeResult.bSQLiteDatabaseDetected);
+	LogPersistenceStatusSurfaceBool(TEXT("SQLite database size positive"), ProbeResult.bSQLiteDatabaseSizePositive);
+	LogPersistenceStatusSurfaceBool(TEXT("SQLite sidecars detected"), ProbeResult.bSQLiteSidecarsDetected);
+	LogPersistenceStatusSurfaceBool(TEXT("SQLite migration status checked"), ProbeResult.bSQLiteMigrationStatusChecked);
+	LogPersistenceStatusSurfaceBool(TEXT("SQLite migration status succeeded"), ProbeResult.bSQLiteMigrationStatusSucceeded);
+	LogPersistenceStatusSurfaceBool(TEXT("SQLite schema ready"), ProbeResult.bSQLiteSchemaReady);
+	LogPersistenceStatusSurfaceBool(TEXT("SQLite status read-only"), ProbeResult.bSQLiteStatusReadOnly);
+	LogPersistenceStatusSurfaceBool(TEXT("database files removed"), ProbeResult.bDatabaseFilesRemoved);
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Log,
+			TEXT("SQLUI persistence status surface probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI persistence status surface probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestSQLiteSeedDatabaseCopyPolicyProbeResult(
 	const FSQLUISampleSmokeTestResult& Result)
 {
@@ -3035,6 +3103,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeSettingsProbeResult(Result);
 	LogSQLUISampleSmokeTestLayoutPersistenceWorkflowProbeResult(Result);
 	LogSQLUISampleSmokeTestLayoutRepositoryDatabaseManagementProbeResult(Result);
+	LogSQLUISampleSmokeTestPersistenceStatusSurfaceProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(Result);
@@ -3146,6 +3215,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseLayoutRepositoryDatabaseManagementProbe =
 		FParse::Param(*Params, TEXT("UseLayoutRepositoryDatabaseManagementProbe"))
 		|| FParse::Param(*Params, TEXT("LayoutRepositoryDatabaseManagementProbe"));
+	const bool bUsePersistenceStatusSurfaceProbe =
+		FParse::Param(*Params, TEXT("UsePersistenceStatusSurfaceProbe"))
+		|| FParse::Param(*Params, TEXT("PersistenceStatusSurfaceProbe"));
 	const bool bUseSQLiteMigrationProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteMigrationProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteMigrationProbe"));
@@ -3260,6 +3332,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout repository database management probe selected: true"));
 	}
 
+	if (bUsePersistenceStatusSurfaceProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI persistence status surface probe selected: true"));
+	}
+
 	if (bUseSQLiteMigrationProbe)
 	{
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite migration probe selected: true"));
@@ -3360,6 +3437,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseLayoutRepositoryRuntimeSettingsProbe = bUseLayoutRepositoryRuntimeSettingsProbe;
 		Request.bUseLayoutPersistenceWorkflowProbe = bUseLayoutPersistenceWorkflowProbe;
 		Request.bUseLayoutRepositoryDatabaseManagementProbe = bUseLayoutRepositoryDatabaseManagementProbe;
+		Request.bUsePersistenceStatusSurfaceProbe = bUsePersistenceStatusSurfaceProbe;
 		Request.bUseSQLiteMigrationProbe = bUseSQLiteMigrationProbe;
 		Request.bUseSQLiteLayoutSchemaMigrationProbe = bUseSQLiteLayoutSchemaMigrationProbe;
 		Request.bUseSQLiteLayoutReadProbe = bUseSQLiteLayoutReadProbe;
