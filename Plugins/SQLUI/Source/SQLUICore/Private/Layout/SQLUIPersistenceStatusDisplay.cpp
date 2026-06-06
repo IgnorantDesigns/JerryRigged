@@ -178,7 +178,7 @@ USQLUIPersistenceStatusDisplayLibrary::MakePersistenceStatusDisplayRows(
 		SQLUIPersistenceStatusDisplayString(Snapshot.ActiveBackendName),
 		Snapshot.bRepositoryActive
 			? ESQLUIPersistenceStatusDisplayState::Good
-			: ESQLUIPersistenceStatusDisplayState::Unavailable,
+			: ESQLUIPersistenceStatusDisplayState::Normal,
 		TEXT("Active backend is unavailable until a repository is initialized."));
 
 	AddSQLUIPersistenceStatusDisplayRow(
@@ -205,7 +205,7 @@ USQLUIPersistenceStatusDisplayLibrary::MakePersistenceStatusDisplayRows(
 				? ESQLUIPersistenceStatusDisplayState::Good
 				: ESQLUIPersistenceStatusDisplayState::Warning)
 			: ESQLUIPersistenceStatusDisplayState::Normal,
-		TEXT("Missing is normal when SQLite is not the configured backend."));
+		TEXT("Missing is expected before an explicitly configured SQLite repository creates or prepares the database."));
 
 	AddSQLUIPersistenceStatusDisplayRow(
 		Rows,
