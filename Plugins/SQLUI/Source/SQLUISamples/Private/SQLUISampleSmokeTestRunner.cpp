@@ -1,5 +1,6 @@
 #include "SQLUISampleSmokeTestRunner.h"
 
+#include "SQLUISamplePersistenceStatusPresenter.h"
 #include "Database/SQLUIDatabaseAsyncQueue.h"
 #include "Database/SQLUIDatabaseAsyncRunner.h"
 #include "Database/SQLUISQLiteLayoutReadProbe.h"
@@ -7956,6 +7957,318 @@ RunSQLUISamplePersistenceStatusDisplayRowsProbe(UObject* Outer)
 	return Result;
 }
 
+void AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
+	FSQLUISamplePersistenceStatusSampleSurfaceProbeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISamplePersistenceStatusSampleSurfacePath(
+	const TCHAR* DatabaseFileName)
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("PersistenceStatusSampleSurface"),
+		DatabaseFileName);
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+TArray<FString> MakeSQLUISamplePersistenceStatusSampleSurfaceFiles(
+	const FString& DatabasePath)
+{
+	return {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+}
+
+bool DoesSQLUISamplePersistenceStatusSampleSurfaceFileExist(
+	const FString& DatabasePath)
+{
+	for (const FString& Path : MakeSQLUISamplePersistenceStatusSampleSurfaceFiles(DatabasePath))
+	{
+		if (FPaths::FileExists(Path))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DeleteSQLUISamplePersistenceStatusSampleSurfaceFiles(
+	const FString& DatabasePath,
+	FSQLUISamplePersistenceStatusSampleSurfaceProbeResult& Result)
+{
+	bool bRemoved = true;
+	for (const FString& Path : MakeSQLUISamplePersistenceStatusSampleSurfaceFiles(DatabasePath))
+	{
+		if (FPaths::FileExists(Path)
+			&& !IFileManager::Get().Delete(*Path, false, true, true))
+		{
+			AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI persistence status sample surface probe failed: could not remove '%s'."),
+					*Path));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+bool DeleteSQLUISamplePersistenceStatusSampleSurfaceFiles(
+	FSQLUISamplePersistenceStatusSampleSurfaceProbeResult& Result)
+{
+	return DeleteSQLUISamplePersistenceStatusSampleSurfaceFiles(Result.DatabasePath, Result)
+		&& DeleteSQLUISamplePersistenceStatusSampleSurfaceFiles(Result.SidecarDatabasePath, Result);
+}
+
+bool DoesAnySQLUISamplePersistenceStatusSampleSurfaceFileExist(
+	const FSQLUISamplePersistenceStatusSampleSurfaceProbeResult& Result)
+{
+	return DoesSQLUISamplePersistenceStatusSampleSurfaceFileExist(Result.DatabasePath)
+		|| DoesSQLUISamplePersistenceStatusSampleSurfaceFileExist(Result.SidecarDatabasePath);
+}
+
+bool WriteSQLUISamplePersistenceStatusSampleSurfaceSidecar(
+	const FString& Path,
+	FSQLUISamplePersistenceStatusSampleSurfaceProbeResult& Result)
+{
+	const FString Directory = FPaths::GetPath(Path);
+	if (!IFileManager::Get().MakeDirectory(*Directory, true))
+	{
+		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI persistence status sample surface probe failed: could not create directory '%s'."),
+				*Directory));
+		return false;
+	}
+
+	if (!FFileHelper::SaveStringToFile(TEXT("SQLUI persistence status sample surface sidecar probe"), *Path))
+	{
+		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI persistence status sample surface probe failed: could not create sidecar '%s'."),
+				*Path));
+		return false;
+	}
+
+	return true;
+}
+
+bool DoesSQLUISamplePersistenceStatusSampleSurfaceLineStartWith(
+	const TArray<FString>& Lines,
+	const FString& ExpectedPrefix)
+{
+	for (const FString& Line : Lines)
+	{
+		if (Line.StartsWith(ExpectedPrefix))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DoesSQLUISamplePersistenceStatusSampleSurfaceLineContain(
+	const TArray<FString>& Lines,
+	const FString& ExpectedText)
+{
+	for (const FString& Line : Lines)
+	{
+		if (Line.Contains(ExpectedText))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+FSQLUILayoutRepositoryRuntimeConfig MakeSQLUISamplePersistenceStatusSampleSurfaceSQLiteConfig(
+	const FString& DatabasePath)
+{
+	FSQLUILayoutRepositoryRuntimeConfig Config;
+	Config.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	Config.SQLiteDatabasePath = DatabasePath;
+	return Config;
+}
+
+FSQLUISamplePersistenceStatusSampleSurfaceProbeResult
+RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
+{
+	FSQLUISamplePersistenceStatusSampleSurfaceProbeResult Result;
+	Result.DatabasePath =
+		MakeSQLUISamplePersistenceStatusSampleSurfacePath(TEXT("PersistenceStatusSampleSurface.db"));
+	Result.SidecarDatabasePath =
+		MakeSQLUISamplePersistenceStatusSampleSurfacePath(TEXT("PersistenceStatusSampleSurfaceSidecarOnly.db"));
+
+	DeleteSQLUISamplePersistenceStatusSampleSurfaceFiles(Result);
+
+	USQLUISamplePersistenceStatusPresenter* Presenter =
+		NewObject<USQLUISamplePersistenceStatusPresenter>(Outer);
+	Result.bPresenterCreated = IsValid(Presenter);
+	if (!Result.bPresenterCreated)
+	{
+		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
+			Result,
+			TEXT("SQLUI persistence status sample surface probe failed: presenter was not created."));
+		Result.bDatabaseFilesRemoved =
+			DeleteSQLUISamplePersistenceStatusSampleSurfaceFiles(Result)
+			&& !DoesAnySQLUISamplePersistenceStatusSampleSurfaceFileExist(Result);
+		return Result;
+	}
+
+	const FSQLUILayoutRepositoryRuntimeConfig DefaultConfig =
+		FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault();
+	Presenter->RefreshFromRuntimeConfig(Outer, DefaultConfig);
+	const TArray<FSQLUIPersistenceStatusDisplayRow> DefaultRows =
+		Presenter->GetRows();
+	const TArray<FString> DefaultLines = Presenter->GetFormattedLines();
+	Result.bDefaultRowsPresented = DefaultRows.Num() >= 8;
+	Result.bDefaultFormattedLinesGenerated =
+		DefaultLines.Num() == DefaultRows.Num()
+		&& DefaultLines.Num() > 0;
+	Result.bDefaultBackendLineFound =
+		DoesSQLUISamplePersistenceStatusSampleSurfaceLineStartWith(
+			DefaultLines,
+			TEXT("Backend: InMemory"));
+	Result.bDefaultProviderLineFound =
+		DoesSQLUISamplePersistenceStatusSampleSurfaceLineStartWith(
+			DefaultLines,
+			TEXT("Provider initialized: No"));
+	Result.bDefaultRepositoryLineFound =
+		DoesSQLUISamplePersistenceStatusSampleSurfaceLineStartWith(
+			DefaultLines,
+			TEXT("Repository active: No"));
+	Result.bDefaultSQLiteRowsGraceful =
+		DoesSQLUISamplePersistenceStatusDisplayRowHaveValue(
+			DefaultRows,
+			TEXT("SQLite database path"),
+			TEXT("Not applicable"))
+		&& DoesSQLUISamplePersistenceStatusDisplayRowHaveValue(
+			DefaultRows,
+			TEXT("SQLite database exists"),
+			TEXT("Not applicable"))
+		&& DoesSQLUISamplePersistenceStatusDisplayRowHaveValue(
+			DefaultRows,
+			TEXT("Schema status"),
+			TEXT("Not applicable"));
+	Result.bDefaultSurfaceDidNotCreateDb =
+		!DoesAnySQLUISamplePersistenceStatusSampleSurfaceFileExist(Result);
+
+	if (!Result.bDefaultRowsPresented
+		|| !Result.bDefaultFormattedLinesGenerated
+		|| !Result.bDefaultBackendLineFound
+		|| !Result.bDefaultProviderLineFound
+		|| !Result.bDefaultRepositoryLineFound
+		|| !Result.bDefaultSQLiteRowsGraceful
+		|| !Result.bDefaultSurfaceDidNotCreateDb)
+	{
+		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
+			Result,
+			TEXT("SQLUI persistence status sample surface probe failed: default presenter rows were not safe/read-only."));
+	}
+
+	const FSQLUILayoutRepositoryRuntimeConfig MissingSQLiteConfig =
+		MakeSQLUISamplePersistenceStatusSampleSurfaceSQLiteConfig(Result.DatabasePath);
+	Presenter->RefreshFromRuntimeConfig(Outer, MissingSQLiteConfig);
+	const TArray<FSQLUIPersistenceStatusDisplayRow> MissingSQLiteRows =
+		Presenter->GetRows();
+	const TArray<FString> MissingSQLiteLines = Presenter->GetFormattedLines();
+	Result.bMissingSQLiteRowsPresented = MissingSQLiteRows.Num() >= 8;
+	Result.bMissingSQLitePathLineFound =
+		DoesSQLUISamplePersistenceStatusSampleSurfaceLineContain(
+			MissingSQLiteLines,
+			Result.DatabasePath);
+	Result.bMissingSQLiteDatabaseAbsentLineFound =
+		DoesSQLUISamplePersistenceStatusDisplayRowHaveValue(
+			MissingSQLiteRows,
+			TEXT("SQLite database exists"),
+			TEXT("No"));
+	Result.bMissingSQLiteSurfaceDidNotCreateDb =
+		!DoesSQLUISamplePersistenceStatusSampleSurfaceFileExist(Result.DatabasePath);
+
+	if (!Result.bMissingSQLiteRowsPresented
+		|| !Result.bMissingSQLitePathLineFound
+		|| !Result.bMissingSQLiteDatabaseAbsentLineFound
+		|| !Result.bMissingSQLiteSurfaceDidNotCreateDb)
+	{
+		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
+			Result,
+			TEXT("SQLUI persistence status sample surface probe failed: missing SQLite database rows were not graceful/read-only."));
+	}
+
+	const FString SidecarPath = Result.SidecarDatabasePath + TEXT("-wal");
+	const bool bSidecarCreated =
+		WriteSQLUISamplePersistenceStatusSampleSurfaceSidecar(SidecarPath, Result);
+	const FSQLUILayoutRepositoryRuntimeConfig SidecarConfig =
+		MakeSQLUISamplePersistenceStatusSampleSurfaceSQLiteConfig(Result.SidecarDatabasePath);
+	Presenter->RefreshFromRuntimeConfig(Outer, SidecarConfig);
+	Result.bSidecarStillPresentAfterRefresh =
+		bSidecarCreated
+		&& FPaths::FileExists(SidecarPath)
+		&& !FPaths::FileExists(Result.SidecarDatabasePath)
+		&& DoesSQLUISamplePersistenceStatusSampleSurfaceLineContain(
+			Presenter->GetFormattedLines(),
+			TEXT("wal"));
+	if (!Result.bSidecarStillPresentAfterRefresh)
+	{
+		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
+			Result,
+			TEXT("SQLUI persistence status sample surface probe failed: presenter refresh deleted or hid a smoke-owned sidecar."));
+	}
+
+	Result.bDatabaseFilesRemoved =
+		DeleteSQLUISamplePersistenceStatusSampleSurfaceFiles(Result)
+		&& !DoesAnySQLUISamplePersistenceStatusSampleSurfaceFileExist(Result);
+	if (!Result.bDatabaseFilesRemoved)
+	{
+		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
+			Result,
+			TEXT("SQLUI persistence status sample surface probe failed: probe database files were not removed."));
+	}
+
+	Result.bSucceeded =
+		Result.bPresenterCreated
+		&& Result.bDefaultRowsPresented
+		&& Result.bDefaultFormattedLinesGenerated
+		&& Result.bDefaultBackendLineFound
+		&& Result.bDefaultProviderLineFound
+		&& Result.bDefaultRepositoryLineFound
+		&& Result.bDefaultSQLiteRowsGraceful
+		&& Result.bDefaultSurfaceDidNotCreateDb
+		&& Result.bMissingSQLiteRowsPresented
+		&& Result.bMissingSQLitePathLineFound
+		&& Result.bMissingSQLiteDatabaseAbsentLineFound
+		&& Result.bMissingSQLiteSurfaceDidNotCreateDb
+		&& Result.bSidecarStillPresentAfterRefresh
+		&& Result.bDatabaseFilesRemoved;
+
+	return Result;
+}
+
 void AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
 	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& Result,
 	const FString& ErrorMessage)
@@ -10438,6 +10751,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.PersistenceStatusDisplayRowsProbe.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI persistence status display rows probe failed.")
 					: Result.PersistenceStatusDisplayRowsProbe.ErrorMessage);
+		}
+	}
+
+	if (Request.bUsePersistenceStatusSampleSurfaceProbe)
+	{
+		Result.bUsedPersistenceStatusSampleSurfaceProbe = true;
+		Result.PersistenceStatusSampleSurfaceProbe =
+			RunSQLUISamplePersistenceStatusSampleSurfaceProbe(Outer);
+		if (!Result.PersistenceStatusSampleSurfaceProbe.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.PersistenceStatusSampleSurfaceProbe.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI persistence status sample surface probe failed.")
+					: Result.PersistenceStatusSampleSurfaceProbe.ErrorMessage);
 		}
 	}
 
