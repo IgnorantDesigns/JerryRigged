@@ -9,6 +9,7 @@ Related docs:
 - [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md) describes the SQLite schema and repository-operation mapping.
 - [`sqlui_sqlite_async_backend_plan.md`](sqlui_sqlite_async_backend_plan.md) describes the async/threading direction.
 - [`sqlui_sqlite_backend_evaluation.md`](sqlui_sqlite_backend_evaluation.md) describes why engine `SQLiteCore` is the active backend candidate.
+- [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) describes the future user-facing persistence/settings UX policy.
 - [`sqlui_smoke_test.md`](sqlui_smoke_test.md) is the command reference for local smoke paths.
 - [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) describes the local packaged-build validation scaffold.
 
@@ -111,6 +112,8 @@ The helper accepts plain `FSQLUILayoutRepositoryRuntimeConfig` request data and 
 Reset is idempotent: a missing file is treated as already reset. Empty SQLite paths fail reset clearly so callers cannot accidentally delete arbitrary files. The helper does not open SQLite, run SQL, initialize schema, create directories, create databases, copy seed files, seed data, create repositories, touch the factory, initialize providers/subsystems, or change startup behavior.
 
 This is a policy helper only. It does not add a UI surface; product settings screens and admin tools remain future work.
+
+The future product-facing settings surface is documented in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md). That design keeps `InMemory` as the default, keeps SQLite explicit, recommends an app-managed SQLite path under `Saved/SQLUI/LayoutRepositories/LayoutRepository.sqlite`, and routes status/reset through this helper.
 
 ## Seed Database Copy Policy
 
@@ -252,7 +255,7 @@ Remaining work includes:
 - Production async database service design beyond the current per-repository callback queue.
 - Cancellation, shutdown draining beyond stale-callback suppression, and async coverage for all repository operations.
 - Actual future schema migrations, upgrade-specific data transforms, and version-specific compatibility policy beyond the current version/status framework.
-- User-facing runtime configuration surfaces, production database path UX that calls the SQLUICore database management helper, and product startup policy beyond the passive subsystem and explicit packaged smoke flags.
+- Implementing the user-facing persistence settings surface described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), plus product startup policy beyond the passive subsystem and explicit packaged smoke flags.
 - Product seed database asset/package/version policy, if seed DBs are added.
 - Optional lifecycle features such as history APIs, checkpoints, previews, restore flows, and richer search.
 

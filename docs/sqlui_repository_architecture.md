@@ -4,7 +4,7 @@ SQLUI layout persistence sits behind repository interfaces. Runtime widget code 
 
 This boundary keeps `SQLUI.Widgets` focused on building and updating UMG widgets, keeps `SQLUI.Core` responsible for data access contracts, and lets the project swap storage implementations without rewriting widget or runtime pipeline code.
 
-For the consolidated SQLite phase roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md). For the deeper current runtime state, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
+For the consolidated SQLite phase roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md). For the deeper current runtime state, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md). For the future user-facing persistence/settings UX policy, see [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md).
 
 ## Repository Boundary
 
@@ -179,7 +179,7 @@ Saved/SQLUI/SmokeTests/Layouts
 
 Future seed data may live in source-controlled project or plugin locations, but writable runtime copies should still be made under `Saved` before mutation.
 
-Future user-facing database status/reset controls should call the SQLUICore database management helper instead of deleting files directly. That keeps path resolution and SQLite sidecar naming in SQLUICore while preserving the repository boundary for widgets and runtime UI.
+Future user-facing database status/reset controls should follow [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) and call the SQLUICore database management helper instead of deleting files directly. That keeps path resolution and SQLite sidecar naming in SQLUICore while preserving the repository boundary for widgets and runtime UI.
 
 ## Current Smoke-Test Paths
 
@@ -234,7 +234,7 @@ The SQLite implementation should:
 - Preserve the current document validation boundary before saving and after loading.
 - Use `Saved/SQLUI/...` for writable runtime database state, with explicit seed-copy behavior handled before repository mutation.
 
-SQLite repository smoke coverage is broad enough for the current local lifecycle, and the first migration version/status framework plus explicit editor and packaged runtime provider/subsystem proofs exist. A config-backed runtime settings policy exists with safe defaults, but actual future production migrations, full async database execution, broader shutdown behavior, user-facing settings/DB path UX, and broader packaged validation should happen in later implementation work.
+SQLite repository smoke coverage is broad enough for the current local lifecycle, and the first migration version/status framework plus explicit editor and packaged runtime provider/subsystem proofs exist. A config-backed runtime settings policy exists with safe defaults, and the future user-facing persistence settings UX is documented, but actual future production migrations, full async database execution, broader shutdown behavior, UI implementation, and broader packaged validation should happen in later implementation work.
 
 ## Suggested Next Steps
 
@@ -243,6 +243,6 @@ Near-term implementation work can stay small and repository-focused:
 1. Run and expand packaged-build validation for the `SQLiteCore` path on target platforms.
 2. Extend the async database boundary beyond callback-style `LoadLayout` and `SaveLayout` before using SQLite for normal runtime persistence.
 3. Keep SQLite factory selection explicitly configured and unavailable when required settings are missing.
-4. Add actual future schema migrations, upgrade behavior, and product database file handling in SQLUICore, using the database management helper for status/reset flows instead of widget-owned file deletion.
+4. Implement the first persistence settings UI slice from [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), using the database management helper for status/reset flows instead of widget-owned file deletion.
 5. Define product seed database asset/package/version rules before shipping source-controlled seed DBs.
 6. Extend lifecycle features through repository contracts instead of exposing storage details to widgets.
