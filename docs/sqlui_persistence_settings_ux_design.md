@@ -46,6 +46,8 @@ Those pieces are backend and policy readiness, not product UI. They do not make 
 
 The first implementation slice for this design now exists as `USQLUIPersistenceStatusLibrary` and `FSQLUIPersistenceStatusSnapshot`. It is a read-only SQLUICore status surface that future UI can call to inspect configured backend, provider/repository state, resolved SQLite path, database file status, sidecar status, and migration status when a database already exists. It does not add a settings widget, settings editing, reset action, startup behavior, or default backend change.
 
+The first UI-consumption slice also exists as `USQLUIPersistenceStatusDisplayLibrary` and `FSQLUIPersistenceStatusDisplayRow`. It converts the read-only status snapshot into label/value/state/detail rows that a future settings panel can bind to directly. The display library does not perform its own file checks, initialize providers, create repositories, create databases, run migrations, copy seeds, reset databases, or delete files.
+
 ## UX Goals
 
 - Make the safe default obvious: layout persistence can be off or in-memory without durable database writes.
@@ -170,9 +172,11 @@ Browsing or selecting a path should not create files. File creation should happe
 
 ## Database Status Display
 
-Database status should use `FSQLUILayoutRepositoryDatabaseManagement`.
+Database status should use `FSQLUILayoutRepositoryDatabaseManagement` and the read-only status/display helpers.
 
 The current read-only status snapshot surface is `USQLUIPersistenceStatusLibrary`. It composes runtime settings/config policy, provider state, `FSQLUILayoutRepositoryDatabaseManagement`, and SQLite schema version status. It should be the first UI-facing API for a status panel.
+
+The current UI-facing row adapter is `USQLUIPersistenceStatusDisplayLibrary`. It formats `FSQLUIPersistenceStatusSnapshot` into `FSQLUIPersistenceStatusDisplayRow` values with a label, value, state, and detail text. Widgets or view models can use those rows instead of duplicating storage status wording. The row adapter is still read-only and delegates status gathering to the snapshot helper.
 
 Suggested status fields:
 
@@ -307,7 +311,7 @@ Start with a read-only status panel:
 - Sidecars present?
 - Current schema/migration status if available.
 
-The first proof slice implements this as a SQLUICore status snapshot plus smoke coverage, not a widget. The next UI PR can bind a small panel to that snapshot without adding settings editing or destructive actions.
+The first proof slice implements this as a SQLUICore status snapshot plus a display-row adapter and smoke coverage, not a widget. The next UI PR can bind a small panel to those rows without adding settings editing or destructive actions.
 
 Then add opt-in persistence selection:
 

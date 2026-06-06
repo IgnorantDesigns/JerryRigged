@@ -94,6 +94,8 @@ The resolver can also map explicit seed-copy options into `FSQLUISQLiteSeedDatab
 
 `USQLUIPersistenceStatusLibrary` is the first read-only SQLUICore status surface intended for future settings/admin UI. It returns `FSQLUIPersistenceStatusSnapshot` with configured backend, active backend, provider initialized state, repository active state, resolved SQLite path, database file status, sidecar status, and migration status when an existing SQLite database can be inspected. It does not initialize providers, create repositories, create directories, create databases, run migrations, copy seed databases, reset databases, delete files, or change startup behavior.
 
+`USQLUIPersistenceStatusDisplayLibrary` is the first UI-consumption adapter above that snapshot. It returns `FSQLUIPersistenceStatusDisplayRow` values with a label, value, state, and detail text for UI binding. It delegates status gathering to `USQLUIPersistenceStatusLibrary` and does not perform direct file checks, initialize providers, create repositories, create databases, run migrations, copy seed databases, reset databases, delete files, or change startup behavior.
+
 The packaged runtime provider startup smoke proves this holder can be intentionally created from packaged startup/runtime code and initialized from command-line repository settings. That proof runs only with `-SQLUIRuntimeProviderStartupSmoke`; normal startup still does not auto-initialize a provider or SQLite.
 
 The packaged runtime provider subsystem smoke proves the app-level subsystem holder path. It runs only with `-SQLUIRuntimeProviderSubsystemSmoke` plus explicit `-SQLUILayoutRepositoryProviderAutoInit` and repository settings. When the flags are absent, the subsystem remains passive and normal startup still does not initialize SQLite.
@@ -210,6 +212,7 @@ Current SQLite-related smoke flags are:
 - `-UseLayoutPersistenceWorkflowProbe`: verifies the storage-agnostic runtime workflow helper for null/missing repository failures, in-memory save/list/load, explicit SQLite save/list/load, SQLite unavailable behavior, and cleanup.
 - `-UseLayoutRepositoryDatabaseManagementProbe`: verifies the SQLUICore database management helper for non-SQLite no-op behavior, SQLite empty-path handling, status before/after repository save, reset/idempotent reset, fake sidecar cleanup, relative path resolution under `Saved/SQLUI/LayoutRepositories`, and cleanup.
 - `-UsePersistenceStatusSurfaceProbe`: verifies the read-only SQLUICore persistence status snapshot for default `InMemory` state, provider/repository inactive state without forced initialization, SQLite path/file/sidecar/schema status against pre-created probe files, and cleanup.
+- `-UsePersistenceStatusDisplayRowsProbe`: verifies the read-only SQLUICore display-row adapter for default and SQLite snapshots, sidecar reporting, no formatter-side database mutation, and cleanup.
 - `-UseSQLiteMigrationProbe`: proves the minimal migration runner with a smoke-only migration.
 - `-UseSQLiteLayoutSchemaMigrationProbe`: applies and verifies the planned initial layout schema.
 - `-UseSQLiteLayoutReadProbe`: seeds one layout and verifies list/load mapping against the schema.
