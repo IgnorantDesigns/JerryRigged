@@ -1205,6 +1205,79 @@ void LogSQLUISampleSmokeTestLayoutPersistenceWorkflowProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestLayoutRepositoryDatabaseManagementProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedLayoutRepositoryDatabaseManagementProbe)
+	{
+		return;
+	}
+
+	const FSQLUISampleLayoutRepositoryDatabaseManagementProbeResult& ProbeResult =
+		Result.LayoutRepositoryDatabaseManagementProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository database management probe database path: '%s'"),
+		*ProbeResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository database management probe sidecar database path: '%s'"),
+		*ProbeResult.SidecarDatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI layout repository database management probe resolved relative database path: '%s'"),
+		*ProbeResult.ResolvedRelativeDatabasePath);
+
+	const auto LogLayoutRepositoryDatabaseManagementBool =
+		[&ProbeResult](const TCHAR* Label, bool bValue)
+		{
+			UE_LOG(
+				LogSQLUISamples,
+				Log,
+				TEXT("SQLUI layout repository database management probe %s: %s"),
+				Label,
+				bValue ? TEXT("true") : TEXT("false"));
+		};
+
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("non-SQLite status safe"), ProbeResult.bNonSQLiteStatusSafe);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("non-SQLite reset safe"), ProbeResult.bNonSQLiteResetSafe);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("SQLite empty path status handled"), ProbeResult.bSQLiteEmptyPathStatusHandled);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("SQLite empty path reset failed clearly"), ProbeResult.bSQLiteEmptyPathResetFailedClearly);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("SQLite status before create succeeded"), ProbeResult.bSQLiteStatusBeforeCreateSucceeded);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("SQLite status before create absent"), ProbeResult.bSQLiteStatusBeforeCreateAbsent);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("SQLite status after save detected database"), ProbeResult.bSQLiteStatusAfterSaveDetectedDatabase);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("SQLite status after save size positive"), ProbeResult.bSQLiteStatusAfterSaveSizePositive);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("SQLite reset succeeded"), ProbeResult.bSQLiteResetSucceeded);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("SQLite reset removed database"), ProbeResult.bSQLiteResetRemovedDatabase);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("SQLite reset idempotent"), ProbeResult.bSQLiteResetIdempotent);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("SQLite status after reset absent"), ProbeResult.bSQLiteStatusAfterResetAbsent);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("SQLite sidecar removal succeeded"), ProbeResult.bSQLiteSidecarRemovalSucceeded);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("relative path resolved under Saved"), ProbeResult.bRelativePathResolvedUnderSaved);
+	LogLayoutRepositoryDatabaseManagementBool(TEXT("database files removed"), ProbeResult.bDatabaseFilesRemoved);
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Log,
+			TEXT("SQLUI layout repository database management probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI layout repository database management probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(
 	const FSQLUISampleSmokeTestResult& Result)
 {
@@ -2961,6 +3034,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeProviderProbeResult(Result);
 	LogSQLUISampleSmokeTestLayoutRepositoryRuntimeSettingsProbeResult(Result);
 	LogSQLUISampleSmokeTestLayoutPersistenceWorkflowProbeResult(Result);
+	LogSQLUISampleSmokeTestLayoutRepositoryDatabaseManagementProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(Result);
@@ -3069,6 +3143,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUseLayoutPersistenceWorkflowProbe =
 		FParse::Param(*Params, TEXT("UseLayoutPersistenceWorkflowProbe"))
 		|| FParse::Param(*Params, TEXT("LayoutPersistenceWorkflowProbe"));
+	const bool bUseLayoutRepositoryDatabaseManagementProbe =
+		FParse::Param(*Params, TEXT("UseLayoutRepositoryDatabaseManagementProbe"))
+		|| FParse::Param(*Params, TEXT("LayoutRepositoryDatabaseManagementProbe"));
 	const bool bUseSQLiteMigrationProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteMigrationProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteMigrationProbe"));
@@ -3178,6 +3255,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout persistence workflow probe selected: true"));
 	}
 
+	if (bUseLayoutRepositoryDatabaseManagementProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI layout repository database management probe selected: true"));
+	}
+
 	if (bUseSQLiteMigrationProbe)
 	{
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite migration probe selected: true"));
@@ -3277,6 +3359,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseLayoutRepositoryRuntimeProviderProbe = bUseLayoutRepositoryRuntimeProviderProbe;
 		Request.bUseLayoutRepositoryRuntimeSettingsProbe = bUseLayoutRepositoryRuntimeSettingsProbe;
 		Request.bUseLayoutPersistenceWorkflowProbe = bUseLayoutPersistenceWorkflowProbe;
+		Request.bUseLayoutRepositoryDatabaseManagementProbe = bUseLayoutRepositoryDatabaseManagementProbe;
 		Request.bUseSQLiteMigrationProbe = bUseSQLiteMigrationProbe;
 		Request.bUseSQLiteLayoutSchemaMigrationProbe = bUseSQLiteLayoutSchemaMigrationProbe;
 		Request.bUseSQLiteLayoutReadProbe = bUseSQLiteLayoutReadProbe;

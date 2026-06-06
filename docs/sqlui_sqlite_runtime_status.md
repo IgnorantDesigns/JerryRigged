@@ -97,6 +97,21 @@ The packaged runtime provider subsystem smoke proves the app-level subsystem hol
 
 The packaged runtime persistence workflow smoke proves the first cross-launch packaged workflow path. It runs only with `-SQLUIRuntimePersistenceWorkflowSmoke` and an explicit `Save`, `Verify`, or `Cleanup` phase. The Save phase uses `USQLUILayoutRepositoryRuntimeSubsystem` plus `FSQLUILayoutPersistenceWorkflow` to save/list/load one layout and leave the SQLite database under `Saved/SQLUI/LayoutRepositories/PackagedRuntimeSmoke/PersistenceWorkflow`. The Verify phase starts a separate packaged process and list/loads the same persisted layout without saving first. The Cleanup phase removes the database and SQLite sidecars.
 
+## Runtime Database Management Policy
+
+`FSQLUILayoutRepositoryDatabaseManagement` is a SQLUICore-owned helper for future app/settings/admin flows that need to inspect or reset the configured SQLite layout repository database.
+
+The helper accepts plain `FSQLUILayoutRepositoryRuntimeConfig` request data and uses `FSQLUILayoutRepositoryRuntimeConfigResolver::ResolveSQLiteDatabasePath` for path policy. For non-SQLite backends, status and reset are safe no-ops. For SQLite, status reports the resolved path, database-file existence, sidecar existence, and database file size. Reset removes only the resolved database file and its SQLite sidecars:
+
+- `<database>.db`
+- `<database>.db-journal`
+- `<database>.db-wal`
+- `<database>.db-shm`
+
+Reset is idempotent: a missing file is treated as already reset. Empty SQLite paths fail reset clearly so callers cannot accidentally delete arbitrary files. The helper does not open SQLite, run SQL, initialize schema, create directories, create databases, copy seed files, seed data, create repositories, touch the factory, initialize providers/subsystems, or change startup behavior.
+
+This is a policy helper only. It does not add a UI surface; product settings screens and admin tools remain future work.
+
 ## Seed Database Copy Policy
 
 `FSQLUISQLiteSeedDatabaseCopy` is a SQLUICore-owned helper for explicitly copying a closed SQLite seed database into a writable runtime database path before repository use.
@@ -188,6 +203,7 @@ Current SQLite-related smoke flags are:
 - `-UseLayoutRepositoryRuntimeProviderProbe`: verifies the runtime provider across default in-memory initialization, reset/reinitialization, explicit SQLite save/list/load, command-line SQLite initialization, explicit seed-copy initialization/readback, fatal missing-seed handling, and cleanup.
 - `-UseLayoutRepositoryRuntimeSettingsProbe`: verifies config-backed runtime settings safe defaults, settings-driven `InMemory`, settings-driven SQLite, command-line override behavior, disabled overrides, explicit SQLite missing-path unavailable behavior, and cleanup.
 - `-UseLayoutPersistenceWorkflowProbe`: verifies the storage-agnostic runtime workflow helper for null/missing repository failures, in-memory save/list/load, explicit SQLite save/list/load, SQLite unavailable behavior, and cleanup.
+- `-UseLayoutRepositoryDatabaseManagementProbe`: verifies the SQLUICore database management helper for non-SQLite no-op behavior, SQLite empty-path handling, status before/after repository save, reset/idempotent reset, fake sidecar cleanup, relative path resolution under `Saved/SQLUI/LayoutRepositories`, and cleanup.
 - `-UseSQLiteMigrationProbe`: proves the minimal migration runner with a smoke-only migration.
 - `-UseSQLiteLayoutSchemaMigrationProbe`: applies and verifies the planned initial layout schema.
 - `-UseSQLiteLayoutReadProbe`: seeds one layout and verifies list/load mapping against the schema.
@@ -220,6 +236,8 @@ SQLite details belong in SQLUICore and the SQLUISamples smoke harness only. Widg
 
 Runtime-writable databases should live under `Saved/SQLUI/...`. Smoke tests use narrower `Saved/SQLUI/SmokeTests/...` folders. SQLite runtime paths should not write to `Content/`, maps, plugin content, generated folders, or source-controlled database files.
 
+Database reset/status flows should use `FSQLUILayoutRepositoryDatabaseManagement` so path resolution and sidecar cleanup stay in SQLUICore. App UI should not delete arbitrary files, infer sidecar names itself, or open SQLite just to answer whether the configured DB exists.
+
 JerryRigged remains a thin host. It should not own SQLite schema, SQL strings, migration logic, worker details, or storage-specific widget behavior.
 
 ## Remaining Work
@@ -234,7 +252,7 @@ Remaining work includes:
 - Production async database service design beyond the current per-repository callback queue.
 - Cancellation, shutdown draining beyond stale-callback suppression, and async coverage for all repository operations.
 - Actual future schema migrations, upgrade-specific data transforms, and version-specific compatibility policy beyond the current version/status framework.
-- User-facing runtime configuration surfaces, production database path policy, and product startup policy beyond the passive subsystem and explicit packaged smoke flags.
+- User-facing runtime configuration surfaces, production database path UX that calls the SQLUICore database management helper, and product startup policy beyond the passive subsystem and explicit packaged smoke flags.
 - Product seed database asset/package/version policy, if seed DBs are added.
 - Optional lifecycle features such as history APIs, checkpoints, previews, restore flows, and richer search.
 

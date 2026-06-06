@@ -18,6 +18,7 @@
 #include "Layout/SQLUIInMemoryLayoutRepository.h"
 #include "Layout/SQLUIJsonFileLayoutRepository.h"
 #include "Layout/SQLUILayoutJson.h"
+#include "Layout/SQLUILayoutRepositoryDatabaseManagement.h"
 #include "Layout/SQLUILayoutRepositoryFactory.h"
 #include "Layout/SQLUILayoutPersistenceWorkflow.h"
 #include "Layout/SQLUILayoutRepositoryRuntimeConfig.h"
@@ -26,6 +27,7 @@
 #include "Layout/SQLUILayoutRepositoryRuntimeSettings.h"
 #include "Layout/SQLUISQLiteLayoutRepository.h"
 #include "Layout/SQLUILayoutTypes.h"
+#include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "Runtime/SQLUIRuntimeContext.h"
 #include "Variables/SQLUIVariableStore.h"
@@ -6864,6 +6866,474 @@ RunSQLUISampleLayoutPersistenceWorkflowProbe(UObject* Outer)
 	return Result;
 }
 
+void AppendSQLUISampleLayoutRepositoryDatabaseManagementProbeError(
+	FSQLUISampleLayoutRepositoryDatabaseManagementProbeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISampleLayoutRepositoryDatabaseManagementPath(
+	const TCHAR* DatabaseFileName)
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("LayoutRepositoryDatabaseManagement"),
+		DatabaseFileName);
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+TArray<FString> MakeSQLUISampleLayoutRepositoryDatabaseManagementDatabasePaths(
+	const FSQLUISampleLayoutRepositoryDatabaseManagementProbeResult& Result)
+{
+	TArray<FString> DatabasePaths;
+	DatabasePaths.Add(Result.DatabasePath);
+	DatabasePaths.Add(Result.SidecarDatabasePath);
+	DatabasePaths.Add(Result.ResolvedRelativeDatabasePath);
+	return DatabasePaths;
+}
+
+bool DoSQLUISampleLayoutRepositoryDatabaseManagementFilesExist(
+	const FString& DatabasePath)
+{
+	if (DatabasePath.IsEmpty())
+	{
+		return false;
+	}
+
+	const TArray<FString> PathsToCheck = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	for (const FString& PathToCheck : PathsToCheck)
+	{
+		if (FPaths::FileExists(PathToCheck))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DeleteSQLUISampleLayoutRepositoryDatabaseManagementFiles(
+	const FString& DatabasePath,
+	FSQLUISampleLayoutRepositoryDatabaseManagementProbeResult& Result)
+{
+	if (DatabasePath.IsEmpty())
+	{
+		return true;
+	}
+
+	const TArray<FString> PathsToRemove = {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+
+	bool bRemoved = true;
+	for (const FString& PathToRemove : PathsToRemove)
+	{
+		if (FPaths::FileExists(PathToRemove)
+			&& !IFileManager::Get().Delete(*PathToRemove, false, true, true))
+		{
+			AppendSQLUISampleLayoutRepositoryDatabaseManagementProbeError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI layout repository database management probe failed: could not remove '%s'."),
+					*PathToRemove));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+bool DeleteSQLUISampleLayoutRepositoryDatabaseManagementFiles(
+	FSQLUISampleLayoutRepositoryDatabaseManagementProbeResult& Result)
+{
+	bool bRemoved = true;
+	for (const FString& DatabasePath :
+		MakeSQLUISampleLayoutRepositoryDatabaseManagementDatabasePaths(Result))
+	{
+		bRemoved =
+			DeleteSQLUISampleLayoutRepositoryDatabaseManagementFiles(DatabasePath, Result)
+			&& bRemoved;
+	}
+
+	return bRemoved;
+}
+
+bool DoesAnySQLUISampleLayoutRepositoryDatabaseManagementFileExist(
+	const FSQLUISampleLayoutRepositoryDatabaseManagementProbeResult& Result)
+{
+	for (const FString& DatabasePath :
+		MakeSQLUISampleLayoutRepositoryDatabaseManagementDatabasePaths(Result))
+	{
+		if (DoSQLUISampleLayoutRepositoryDatabaseManagementFilesExist(DatabasePath))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool WriteSQLUISampleLayoutRepositoryDatabaseManagementFile(
+	const FString& Path,
+	FSQLUISampleLayoutRepositoryDatabaseManagementProbeResult& Result)
+{
+	const FString Directory = FPaths::GetPath(Path);
+	if (!IFileManager::Get().MakeDirectory(*Directory, true))
+	{
+		AppendSQLUISampleLayoutRepositoryDatabaseManagementProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI layout repository database management probe failed: could not create directory '%s'."),
+				*Directory));
+		return false;
+	}
+
+	if (!FFileHelper::SaveStringToFile(TEXT("SQLUI probe sidecar"), *Path))
+	{
+		AppendSQLUISampleLayoutRepositoryDatabaseManagementProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI layout repository database management probe failed: could not create file '%s'."),
+				*Path));
+		return false;
+	}
+
+	return true;
+}
+
+FSQLUILayoutDocument MakeSQLUISampleLayoutRepositoryDatabaseManagementDocument()
+{
+	FSQLUILayoutDocument Document =
+		MakeSQLUISampleSQLiteFactorySchemaInitRepositoryDocument();
+	Document.Version.Label = TEXT("Layout Repository Database Management Probe");
+	Document.Metadata.LayoutId =
+		TEXT("sqlui.smoke.layout-repository-database-management");
+	Document.Metadata.DisplayName =
+		TEXT("SQLUI Layout Repository Database Management Probe");
+	Document.Metadata.Description =
+		TEXT("Smoke/probe layout for runtime SQLite database management policy.");
+	Document.Metadata.CreatedBy = TEXT("SQLUISamples");
+	Document.Metadata.CreatedAtUtc = TEXT("2026-06-06T00:00:00Z");
+	Document.Metadata.UpdatedAtUtc = Document.Metadata.CreatedAtUtc;
+	Document.Metadata.Tags.Reset();
+	Document.Metadata.Tags.Add(TEXT("sqlite"));
+	Document.Metadata.Tags.Add(TEXT("smoke"));
+	Document.Metadata.Tags.Add(TEXT("database-management"));
+	Document.Metadata.SearchMetadata.Add(
+		TEXT("Probe"),
+		TEXT("LayoutRepositoryDatabaseManagement"));
+	Document.RootWidgetId = TEXT("SQLUI.LayoutRepositoryDatabaseManagement.Root");
+
+	if (Document.Nodes.Num() > 0)
+	{
+		Document.Nodes[0].WidgetId = Document.RootWidgetId;
+		Document.Nodes[0].Properties.Add(TEXT("Text"), Document.Metadata.DisplayName);
+		Document.Nodes[0].Tags.Reset();
+		Document.Nodes[0].Tags.Add(TEXT("sqlite"));
+		Document.Nodes[0].Tags.Add(TEXT("database-management"));
+		Document.Nodes[0].SearchMetadata.Add(
+			TEXT("Probe"),
+			TEXT("LayoutRepositoryDatabaseManagement"));
+	}
+
+	return Document;
+}
+
+FSQLUILayoutRepositoryRuntimeConfig
+MakeSQLUISampleLayoutRepositoryDatabaseManagementSQLiteConfig(
+	const FString& DatabasePath)
+{
+	FSQLUILayoutRepositoryRuntimeConfig Config;
+	Config.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	Config.SQLiteDatabasePath = DatabasePath;
+	Config.bSQLiteReadOnly = false;
+	Config.bSQLiteInitializeSchemaIfMissing = true;
+	Config.bSQLiteCreateDatabaseIfMissing = true;
+	return Config;
+}
+
+FSQLUISampleLayoutRepositoryDatabaseManagementProbeResult
+RunSQLUISampleLayoutRepositoryDatabaseManagementProbe(UObject* Outer)
+{
+	FSQLUISampleLayoutRepositoryDatabaseManagementProbeResult Result;
+	Result.DatabasePath =
+		MakeSQLUISampleLayoutRepositoryDatabaseManagementPath(
+			TEXT("LayoutRepositoryDatabaseManagement.db"));
+	Result.SidecarDatabasePath =
+		MakeSQLUISampleLayoutRepositoryDatabaseManagementPath(
+			TEXT("LayoutRepositoryDatabaseManagementSidecars.db"));
+	Result.RelativeDatabasePath =
+		TEXT("LayoutRepositoryDatabaseManagement/RelativeDatabaseManagement.db");
+	Result.ResolvedRelativeDatabasePath =
+		FSQLUILayoutRepositoryRuntimeConfigResolver::ResolveSQLiteDatabasePath(
+			Result.RelativeDatabasePath);
+
+	DeleteSQLUISampleLayoutRepositoryDatabaseManagementFiles(Result);
+
+	FSQLUILayoutRepositoryRuntimeConfig NonSQLiteConfig =
+		FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault();
+	NonSQLiteConfig.SQLiteDatabasePath = Result.DatabasePath;
+	FSQLUILayoutRepositoryDatabaseStatusRequest NonSQLiteStatusRequest;
+	NonSQLiteStatusRequest.RuntimeConfig = NonSQLiteConfig;
+	const FSQLUILayoutRepositoryDatabaseStatusResult NonSQLiteStatus =
+		FSQLUILayoutRepositoryDatabaseManagement::GetStatus(NonSQLiteStatusRequest);
+	FSQLUILayoutRepositoryDatabaseResetRequest NonSQLiteResetRequest;
+	NonSQLiteResetRequest.RuntimeConfig = NonSQLiteConfig;
+	const FSQLUILayoutRepositoryDatabaseResetResult NonSQLiteReset =
+		FSQLUILayoutRepositoryDatabaseManagement::ResetDatabase(NonSQLiteResetRequest);
+	Result.bNonSQLiteStatusSafe =
+		NonSQLiteStatus.bSucceeded
+		&& !NonSQLiteStatus.bBackendIsSQLite
+		&& !NonSQLiteStatus.bDatabasePathResolved
+		&& !DoSQLUISampleLayoutRepositoryDatabaseManagementFilesExist(Result.DatabasePath);
+	Result.bNonSQLiteResetSafe =
+		NonSQLiteReset.bSucceeded
+		&& !NonSQLiteReset.bBackendIsSQLite
+		&& !NonSQLiteReset.bDatabasePathResolved
+		&& !DoSQLUISampleLayoutRepositoryDatabaseManagementFilesExist(Result.DatabasePath);
+	if (!Result.bNonSQLiteStatusSafe || !Result.bNonSQLiteResetSafe)
+	{
+		AppendSQLUISampleLayoutRepositoryDatabaseManagementProbeError(
+			Result,
+			TEXT("SQLUI layout repository database management probe failed: non-SQLite status/reset was not a safe no-op."));
+	}
+
+	FSQLUILayoutRepositoryRuntimeConfig EmptySQLiteConfig;
+	EmptySQLiteConfig.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	FSQLUILayoutRepositoryDatabaseStatusRequest EmptyStatusRequest;
+	EmptyStatusRequest.RuntimeConfig = EmptySQLiteConfig;
+	const FSQLUILayoutRepositoryDatabaseStatusResult EmptyStatus =
+		FSQLUILayoutRepositoryDatabaseManagement::GetStatus(EmptyStatusRequest);
+	FSQLUILayoutRepositoryDatabaseResetRequest EmptyResetRequest;
+	EmptyResetRequest.RuntimeConfig = EmptySQLiteConfig;
+	const FSQLUILayoutRepositoryDatabaseResetResult EmptyReset =
+		FSQLUILayoutRepositoryDatabaseManagement::ResetDatabase(EmptyResetRequest);
+	Result.bSQLiteEmptyPathStatusHandled =
+		EmptyStatus.bSucceeded
+		&& EmptyStatus.bBackendIsSQLite
+		&& !EmptyStatus.bDatabasePathResolved
+		&& !EmptyStatus.ErrorMessage.IsEmpty();
+	Result.bSQLiteEmptyPathResetFailedClearly =
+		!EmptyReset.bSucceeded
+		&& EmptyReset.bBackendIsSQLite
+		&& !EmptyReset.bDatabasePathResolved
+		&& !EmptyReset.ErrorMessage.IsEmpty();
+	if (!Result.bSQLiteEmptyPathStatusHandled
+		|| !Result.bSQLiteEmptyPathResetFailedClearly)
+	{
+		AppendSQLUISampleLayoutRepositoryDatabaseManagementProbeError(
+			Result,
+			TEXT("SQLUI layout repository database management probe failed: SQLite empty path was not handled clearly."));
+	}
+
+	const FSQLUILayoutRepositoryRuntimeConfig SQLiteConfig =
+		MakeSQLUISampleLayoutRepositoryDatabaseManagementSQLiteConfig(
+			Result.DatabasePath);
+	FSQLUILayoutRepositoryDatabaseStatusRequest SQLiteStatusRequest;
+	SQLiteStatusRequest.RuntimeConfig = SQLiteConfig;
+	const FSQLUILayoutRepositoryDatabaseStatusResult StatusBeforeCreate =
+		FSQLUILayoutRepositoryDatabaseManagement::GetStatus(SQLiteStatusRequest);
+	Result.bSQLiteStatusBeforeCreateSucceeded =
+		StatusBeforeCreate.bSucceeded
+		&& StatusBeforeCreate.bBackendIsSQLite
+		&& StatusBeforeCreate.bDatabasePathResolved
+		&& StatusBeforeCreate.DatabasePath == Result.DatabasePath;
+	Result.bSQLiteStatusBeforeCreateAbsent =
+		Result.bSQLiteStatusBeforeCreateSucceeded
+		&& !StatusBeforeCreate.bAnyDatabaseFileExists
+		&& !StatusBeforeCreate.bDatabaseExists;
+	if (!Result.bSQLiteStatusBeforeCreateSucceeded
+		|| !Result.bSQLiteStatusBeforeCreateAbsent)
+	{
+		AppendSQLUISampleLayoutRepositoryDatabaseManagementProbeError(
+			Result,
+			TEXT("SQLUI layout repository database management probe failed: SQLite status before create was not absent and resolved."));
+	}
+
+	FSQLUILayoutRepositoryFactorySettings FactorySettings =
+		FSQLUILayoutRepositoryRuntimeConfigResolver::ToFactorySettings(SQLiteConfig);
+	USQLUILayoutRepository* Repository =
+		USQLUILayoutRepositoryFactory::CreateLayoutRepository(Outer, FactorySettings);
+	const FSQLUILayoutDocument Document =
+		MakeSQLUISampleLayoutRepositoryDatabaseManagementDocument();
+	const FSQLUILayoutSaveResult SaveResult =
+		SaveSQLUISampleLayoutToRepository(
+			Repository,
+			TEXT("SQLite database management repository"),
+			Document);
+	if (!SaveResult.bSucceeded)
+	{
+		AppendSQLUISampleLayoutRepositoryDatabaseManagementProbeError(
+			Result,
+			SaveResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI layout repository database management probe failed: SaveLayout did not create the SQLite database.")
+				: SaveResult.ErrorMessage);
+	}
+
+	const FSQLUILayoutRepositoryDatabaseStatusResult StatusAfterSave =
+		FSQLUILayoutRepositoryDatabaseManagement::GetStatus(SQLiteStatusRequest);
+	Result.bSQLiteStatusAfterSaveDetectedDatabase =
+		StatusAfterSave.bSucceeded
+		&& StatusAfterSave.bDatabaseExists
+		&& StatusAfterSave.bAnyDatabaseFileExists;
+	Result.bSQLiteStatusAfterSaveSizePositive =
+		StatusAfterSave.bDatabaseExists
+		&& StatusAfterSave.DatabaseFileSizeBytes > 0;
+	if (!Result.bSQLiteStatusAfterSaveDetectedDatabase
+		|| !Result.bSQLiteStatusAfterSaveSizePositive)
+	{
+		AppendSQLUISampleLayoutRepositoryDatabaseManagementProbeError(
+			Result,
+			TEXT("SQLUI layout repository database management probe failed: status after save did not detect a non-empty database file."));
+	}
+
+	FSQLUILayoutRepositoryDatabaseResetRequest SQLiteResetRequest;
+	SQLiteResetRequest.RuntimeConfig = SQLiteConfig;
+	const FSQLUILayoutRepositoryDatabaseResetResult ResetAfterSave =
+		FSQLUILayoutRepositoryDatabaseManagement::ResetDatabase(SQLiteResetRequest);
+	Result.bSQLiteResetSucceeded = ResetAfterSave.bSucceeded;
+	Result.bSQLiteResetRemovedDatabase =
+		ResetAfterSave.bDatabaseRemoved
+		&& ResetAfterSave.bAllDatabaseFilesAbsent
+		&& !DoSQLUISampleLayoutRepositoryDatabaseManagementFilesExist(Result.DatabasePath);
+	const FSQLUILayoutRepositoryDatabaseResetResult ResetAgain =
+		FSQLUILayoutRepositoryDatabaseManagement::ResetDatabase(SQLiteResetRequest);
+	Result.bSQLiteResetIdempotent =
+		ResetAgain.bSucceeded
+		&& ResetAgain.bDatabaseRemoved
+		&& ResetAgain.bAllDatabaseFilesAbsent;
+	const FSQLUILayoutRepositoryDatabaseStatusResult StatusAfterReset =
+		FSQLUILayoutRepositoryDatabaseManagement::GetStatus(SQLiteStatusRequest);
+	Result.bSQLiteStatusAfterResetAbsent =
+		StatusAfterReset.bSucceeded
+		&& !StatusAfterReset.bAnyDatabaseFileExists
+		&& !StatusAfterReset.bDatabaseExists;
+	if (!Result.bSQLiteResetSucceeded
+		|| !Result.bSQLiteResetRemovedDatabase
+		|| !Result.bSQLiteResetIdempotent
+		|| !Result.bSQLiteStatusAfterResetAbsent)
+	{
+		AppendSQLUISampleLayoutRepositoryDatabaseManagementProbeError(
+			Result,
+			ResetAfterSave.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI layout repository database management probe failed: SQLite reset was not successful and idempotent.")
+				: ResetAfterSave.ErrorMessage);
+	}
+
+	const bool bSidecarsCreated =
+		WriteSQLUISampleLayoutRepositoryDatabaseManagementFile(
+			Result.SidecarDatabasePath + TEXT("-journal"),
+			Result)
+		&& WriteSQLUISampleLayoutRepositoryDatabaseManagementFile(
+			Result.SidecarDatabasePath + TEXT("-wal"),
+			Result)
+		&& WriteSQLUISampleLayoutRepositoryDatabaseManagementFile(
+			Result.SidecarDatabasePath + TEXT("-shm"),
+			Result);
+	FSQLUILayoutRepositoryRuntimeConfig SidecarConfig =
+		MakeSQLUISampleLayoutRepositoryDatabaseManagementSQLiteConfig(
+			Result.SidecarDatabasePath);
+	FSQLUILayoutRepositoryDatabaseResetRequest SidecarResetRequest;
+	SidecarResetRequest.RuntimeConfig = SidecarConfig;
+	const FSQLUILayoutRepositoryDatabaseResetResult SidecarReset =
+		FSQLUILayoutRepositoryDatabaseManagement::ResetDatabase(SidecarResetRequest);
+	Result.bSQLiteSidecarRemovalSucceeded =
+		bSidecarsCreated
+		&& SidecarReset.bSucceeded
+		&& SidecarReset.bJournalRemoved
+		&& SidecarReset.bWalRemoved
+		&& SidecarReset.bShmRemoved
+		&& !DoSQLUISampleLayoutRepositoryDatabaseManagementFilesExist(
+			Result.SidecarDatabasePath);
+	if (!Result.bSQLiteSidecarRemovalSucceeded)
+	{
+		AppendSQLUISampleLayoutRepositoryDatabaseManagementProbeError(
+			Result,
+			SidecarReset.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI layout repository database management probe failed: fake sidecar files were not removed.")
+				: SidecarReset.ErrorMessage);
+	}
+
+	FSQLUILayoutRepositoryRuntimeConfig RelativeConfig =
+		MakeSQLUISampleLayoutRepositoryDatabaseManagementSQLiteConfig(
+			Result.RelativeDatabasePath);
+	FSQLUILayoutRepositoryDatabaseStatusRequest RelativeStatusRequest;
+	RelativeStatusRequest.RuntimeConfig = RelativeConfig;
+	const FSQLUILayoutRepositoryDatabaseStatusResult RelativeStatus =
+		FSQLUILayoutRepositoryDatabaseManagement::GetStatus(RelativeStatusRequest);
+	FString ExpectedRelativeBaseDirectory = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("LayoutRepositories"));
+	FPaths::NormalizeFilename(ExpectedRelativeBaseDirectory);
+	ExpectedRelativeBaseDirectory =
+		FPaths::ConvertRelativePathToFull(ExpectedRelativeBaseDirectory);
+	Result.bRelativePathResolvedUnderSaved =
+		RelativeStatus.bSucceeded
+		&& RelativeStatus.bDatabasePathResolved
+		&& RelativeStatus.DatabasePath == Result.ResolvedRelativeDatabasePath
+		&& RelativeStatus.DatabasePath.StartsWith(ExpectedRelativeBaseDirectory)
+		&& !RelativeStatus.bAnyDatabaseFileExists;
+	if (!Result.bRelativePathResolvedUnderSaved)
+	{
+		AppendSQLUISampleLayoutRepositoryDatabaseManagementProbeError(
+			Result,
+			TEXT("SQLUI layout repository database management probe failed: relative SQLite path did not resolve under Saved/SQLUI/LayoutRepositories without creating files."));
+	}
+
+	Result.bDatabaseFilesRemoved =
+		DeleteSQLUISampleLayoutRepositoryDatabaseManagementFiles(Result)
+		&& !DoesAnySQLUISampleLayoutRepositoryDatabaseManagementFileExist(Result);
+	if (!Result.bDatabaseFilesRemoved)
+	{
+		AppendSQLUISampleLayoutRepositoryDatabaseManagementProbeError(
+			Result,
+			TEXT("SQLUI layout repository database management probe failed: probe database files were not removed."));
+	}
+
+	Result.bSucceeded =
+		Result.bNonSQLiteStatusSafe
+		&& Result.bNonSQLiteResetSafe
+		&& Result.bSQLiteEmptyPathStatusHandled
+		&& Result.bSQLiteEmptyPathResetFailedClearly
+		&& Result.bSQLiteStatusBeforeCreateSucceeded
+		&& Result.bSQLiteStatusBeforeCreateAbsent
+		&& Result.bSQLiteStatusAfterSaveDetectedDatabase
+		&& Result.bSQLiteStatusAfterSaveSizePositive
+		&& Result.bSQLiteResetSucceeded
+		&& Result.bSQLiteResetRemovedDatabase
+		&& Result.bSQLiteResetIdempotent
+		&& Result.bSQLiteStatusAfterResetAbsent
+		&& Result.bSQLiteSidecarRemovalSucceeded
+		&& Result.bRelativePathResolvedUnderSaved
+		&& Result.bDatabaseFilesRemoved;
+
+	return Result;
+}
+
 void AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
 	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& Result,
 	const FString& ErrorMessage)
@@ -9298,6 +9768,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.LayoutPersistenceWorkflowProbe.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI layout persistence workflow probe failed.")
 					: Result.LayoutPersistenceWorkflowProbe.ErrorMessage);
+		}
+	}
+
+	if (Request.bUseLayoutRepositoryDatabaseManagementProbe)
+	{
+		Result.bUsedLayoutRepositoryDatabaseManagementProbe = true;
+		Result.LayoutRepositoryDatabaseManagementProbe =
+			RunSQLUISampleLayoutRepositoryDatabaseManagementProbe(Outer);
+		if (!Result.LayoutRepositoryDatabaseManagementProbe.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.LayoutRepositoryDatabaseManagementProbe.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI layout repository database management probe failed.")
+					: Result.LayoutRepositoryDatabaseManagementProbe.ErrorMessage);
 		}
 	}
 
