@@ -2955,12 +2955,16 @@ void LogSQLUISampleSmokeTestPersistenceStatusSampleSurfaceProbeResult(
 
 	LogPersistenceStatusSampleSurfaceBool(TEXT("presenter created"), ProbeResult.bPresenterCreated);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("default rows presented"), ProbeResult.bDefaultRowsPresented);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("explicit refresh result succeeded"), ProbeResult.bExplicitRefreshResultSucceeded);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("default formatted lines generated"), ProbeResult.bDefaultFormattedLinesGenerated);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("default backend line found"), ProbeResult.bDefaultBackendLineFound);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("default provider line found"), ProbeResult.bDefaultProviderLineFound);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("default repository line found"), ProbeResult.bDefaultRepositoryLineFound);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("default SQLite rows graceful"), ProbeResult.bDefaultSQLiteRowsGraceful);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("default surface did not create DB"), ProbeResult.bDefaultSurfaceDidNotCreateDb);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("repeated refresh succeeded"), ProbeResult.bRepeatedRefreshSucceeded);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("repeated refresh deterministic"), ProbeResult.bRepeatedRefreshDeterministic);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("repeated refresh did not create DB"), ProbeResult.bRepeatedRefreshDidNotCreateDb);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("missing SQLite rows presented"), ProbeResult.bMissingSQLiteRowsPresented);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("missing SQLite path line found"), ProbeResult.bMissingSQLitePathLineFound);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("missing SQLite database absent line found"), ProbeResult.bMissingSQLiteDatabaseAbsentLineFound);
