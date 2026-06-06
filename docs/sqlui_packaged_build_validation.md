@@ -2,7 +2,7 @@
 
 This document describes the local packaged-build validation scaffold for JerryRigged and SQLUI SQLite readiness checks.
 
-For the concise SQLite phase status and roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md).
+For the concise SQLite phase status and roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md). For the future persistence/settings UX policy that should sit above the packaged persistence workflow, see [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md).
 
 ## Purpose
 
@@ -469,6 +469,6 @@ Future work still includes:
 - CI automation if Unreal-capable build agents become available.
 - Broader packaged runtime database path coverage beyond the first `Saved/SQLUI/PackagedRuntimeSmoke` lifecycle proof.
 - More packaged persistence-across-launches scenarios beyond the first explicit workflow smoke.
-- User-facing runtime settings/DB path UX and product startup policy beyond the safe config-backed settings object, passive provider subsystem, and explicit packaged smoke flags.
+- Implementing the user-facing persistence settings/DB path UX documented in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), plus product startup policy beyond the safe config-backed settings object, passive provider subsystem, and explicit packaged smoke flags.
 - Production async database service, queue, cancellation, and shutdown hardening.
 - Migration upgrade/versioning validation beyond the initial schema.
