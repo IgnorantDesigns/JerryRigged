@@ -34,6 +34,8 @@ param(
 
 	[switch]$UsePersistenceStatusDisplayRowsProbe,
 
+	[switch]$UsePersistenceStatusSampleSurfaceProbe,
+
 	[switch]$UseSQLiteMigrationProbe,
 
 	[switch]$UseSQLiteLayoutSchemaMigrationProbe,
@@ -135,6 +137,9 @@ Parameters:
   -UsePersistenceStatusDisplayRowsProbe
       Run the optional SQLUICore read-only persistence status display-row probe.
 
+  -UsePersistenceStatusSampleSurfaceProbe
+      Run the optional SQLUISamples read-only persistence status sample surface probe.
+
   -UseSQLiteMigrationProbe
       Run the optional SQLUICore SQLite migration-runner probe.
 
@@ -199,6 +204,7 @@ Examples:
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseLayoutRepositoryDatabaseManagementProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UsePersistenceStatusSurfaceProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UsePersistenceStatusDisplayRowsProbe
+  .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UsePersistenceStatusSampleSurfaceProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteMigrationProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteLayoutSchemaMigrationProbe
   .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UseSQLiteLayoutReadProbe
@@ -388,6 +394,11 @@ if ($UsePersistenceStatusSurfaceProbe)
 if ($UsePersistenceStatusDisplayRowsProbe)
 {
 	$CommandletArgs += '-PersistenceStatusDisplayRowsProbe'
+}
+
+if ($UsePersistenceStatusSampleSurfaceProbe)
+{
+	$CommandletArgs += '-PersistenceStatusSampleSurfaceProbe'
 }
 
 if ($UseSQLiteMigrationProbe)

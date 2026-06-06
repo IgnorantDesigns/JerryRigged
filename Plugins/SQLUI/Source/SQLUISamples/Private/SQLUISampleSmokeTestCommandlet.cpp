@@ -2919,6 +2919,72 @@ void LogSQLUISampleSmokeTestPersistenceStatusDisplayRowsProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestPersistenceStatusSampleSurfaceProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedPersistenceStatusSampleSurfaceProbe)
+	{
+		return;
+	}
+
+	const FSQLUISamplePersistenceStatusSampleSurfaceProbeResult& ProbeResult =
+		Result.PersistenceStatusSampleSurfaceProbe;
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI persistence status sample surface probe database path: '%s'"),
+		*ProbeResult.DatabasePath);
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI persistence status sample surface probe sidecar database path: '%s'"),
+		*ProbeResult.SidecarDatabasePath);
+
+	const auto LogPersistenceStatusSampleSurfaceBool =
+		[](const TCHAR* Label, bool bValue)
+		{
+			UE_LOG(
+				LogSQLUISamples,
+				Log,
+				TEXT("SQLUI persistence status sample surface probe %s: %s"),
+				Label,
+				bValue ? TEXT("true") : TEXT("false"));
+		};
+
+	LogPersistenceStatusSampleSurfaceBool(TEXT("presenter created"), ProbeResult.bPresenterCreated);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("default rows presented"), ProbeResult.bDefaultRowsPresented);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("default formatted lines generated"), ProbeResult.bDefaultFormattedLinesGenerated);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("default backend line found"), ProbeResult.bDefaultBackendLineFound);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("default provider line found"), ProbeResult.bDefaultProviderLineFound);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("default repository line found"), ProbeResult.bDefaultRepositoryLineFound);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("default SQLite rows graceful"), ProbeResult.bDefaultSQLiteRowsGraceful);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("default surface did not create DB"), ProbeResult.bDefaultSurfaceDidNotCreateDb);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("missing SQLite rows presented"), ProbeResult.bMissingSQLiteRowsPresented);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("missing SQLite path line found"), ProbeResult.bMissingSQLitePathLineFound);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("missing SQLite database absent line found"), ProbeResult.bMissingSQLiteDatabaseAbsentLineFound);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("missing SQLite surface did not create DB"), ProbeResult.bMissingSQLiteSurfaceDidNotCreateDb);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("sidecar still present after refresh"), ProbeResult.bSidecarStillPresentAfterRefresh);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("database files removed"), ProbeResult.bDatabaseFilesRemoved);
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Log,
+			TEXT("SQLUI persistence status sample surface probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI persistence status sample surface probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestSQLiteSeedDatabaseCopyPolicyProbeResult(
 	const FSQLUISampleSmokeTestResult& Result)
 {
@@ -3172,6 +3238,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestLayoutRepositoryDatabaseManagementProbeResult(Result);
 	LogSQLUISampleSmokeTestPersistenceStatusSurfaceProbeResult(Result);
 	LogSQLUISampleSmokeTestPersistenceStatusDisplayRowsProbeResult(Result);
+	LogSQLUISampleSmokeTestPersistenceStatusSampleSurfaceProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(Result);
@@ -3289,6 +3356,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUsePersistenceStatusDisplayRowsProbe =
 		FParse::Param(*Params, TEXT("UsePersistenceStatusDisplayRowsProbe"))
 		|| FParse::Param(*Params, TEXT("PersistenceStatusDisplayRowsProbe"));
+	const bool bUsePersistenceStatusSampleSurfaceProbe =
+		FParse::Param(*Params, TEXT("UsePersistenceStatusSampleSurfaceProbe"))
+		|| FParse::Param(*Params, TEXT("PersistenceStatusSampleSurfaceProbe"));
 	const bool bUseSQLiteMigrationProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteMigrationProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteMigrationProbe"));
@@ -3413,6 +3483,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI persistence status display rows probe selected: true"));
 	}
 
+	if (bUsePersistenceStatusSampleSurfaceProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI persistence status sample surface probe selected: true"));
+	}
+
 	if (bUseSQLiteMigrationProbe)
 	{
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite migration probe selected: true"));
@@ -3515,6 +3590,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUseLayoutRepositoryDatabaseManagementProbe = bUseLayoutRepositoryDatabaseManagementProbe;
 		Request.bUsePersistenceStatusSurfaceProbe = bUsePersistenceStatusSurfaceProbe;
 		Request.bUsePersistenceStatusDisplayRowsProbe = bUsePersistenceStatusDisplayRowsProbe;
+		Request.bUsePersistenceStatusSampleSurfaceProbe = bUsePersistenceStatusSampleSurfaceProbe;
 		Request.bUseSQLiteMigrationProbe = bUseSQLiteMigrationProbe;
 		Request.bUseSQLiteLayoutSchemaMigrationProbe = bUseSQLiteLayoutSchemaMigrationProbe;
 		Request.bUseSQLiteLayoutReadProbe = bUseSQLiteLayoutReadProbe;

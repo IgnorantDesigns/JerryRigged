@@ -1,8 +1,8 @@
 # SQLUI Persistence Settings UX Design
 
-This document defines the intended user-facing settings surface for SQLUI layout persistence before any widget, menu, or settings UI implementation is added.
+This document defines the intended user-facing settings surface for SQLUI layout persistence before any product widget, menu, or settings UI implementation is added.
 
-The backend and policy pieces now exist for a safe first UI, but the UI itself is still future work. This design keeps SQLite explicit, keeps `InMemory` as the safe default, and routes database status/reset behavior through SQLUICore helpers instead of widget-owned storage logic.
+The backend and policy pieces now exist for a safe first UI. A tiny optional SQLUISamples sample/dev presenter now exposes the read-only display rows for validation and Blueprint/sample consumption, but the full product settings UI is still future work. This design keeps SQLite explicit, keeps `InMemory` as the safe default, and routes database status/reset behavior through SQLUICore helpers instead of widget-owned storage logic.
 
 Related docs:
 
@@ -48,6 +48,8 @@ The first implementation slice for this design now exists as `USQLUIPersistenceS
 
 The first UI-consumption slice also exists as `USQLUIPersistenceStatusDisplayLibrary` and `FSQLUIPersistenceStatusDisplayRow`. It converts the read-only status snapshot into label/value/state/detail rows that a future settings panel can bind to directly. The display library does not perform its own file checks, initialize providers, create repositories, create databases, run migrations, copy seeds, reset databases, or delete files.
 
+`USQLUISamplePersistenceStatusPresenter` is the first optional SQLUISamples sample/dev surface over those rows. It stores the display rows plus stable formatted strings for simple sample UI or commandlet presentation. It is not wired into startup, maps, or default config, and it does not add settings editing, reset/delete actions, provider initialization, repository initialization, migrations, seed copy, database creation, or file deletion.
+
 ## UX Goals
 
 - Make the safe default obvious: layout persistence can be off or in-memory without durable database writes.
@@ -61,7 +63,8 @@ The first UI-consumption slice also exists as `USQLUIPersistenceStatusDisplayLib
 
 ## Non-Goals
 
-- No widget, menu, Project Settings, editor tooling, or runtime UI is implemented by this document.
+- No product settings widget, menu, Project Settings, editor tooling, or runtime UI is implemented by this document.
+- No settings editing or reset/delete controls are added by the optional SQLUISamples status presenter.
 - No startup auto-init behavior changes.
 - No default backend changes.
 - No database file creation by browsing or selecting a path.
@@ -177,6 +180,8 @@ Database status should use `FSQLUILayoutRepositoryDatabaseManagement` and the re
 The current read-only status snapshot surface is `USQLUIPersistenceStatusLibrary`. It composes runtime settings/config policy, provider state, `FSQLUILayoutRepositoryDatabaseManagement`, and SQLite schema version status. It should be the first UI-facing API for a status panel.
 
 The current UI-facing row adapter is `USQLUIPersistenceStatusDisplayLibrary`. It formats `FSQLUIPersistenceStatusSnapshot` into `FSQLUIPersistenceStatusDisplayRow` values with a label, value, state, and detail text. Widgets or view models can use those rows instead of duplicating storage status wording. The row adapter is still read-only and delegates status gathering to the snapshot helper.
+
+The current sample/dev-facing presenter is `USQLUISamplePersistenceStatusPresenter` in SQLUISamples. It consumes the row adapter and turns rows into formatted strings for optional sample surfaces or commandlet logs. It is a passive presenter only: refresh regenerates rows, but does not create DBs, run migrations, copy seeds, initialize providers/repositories, delete files, attach widgets, or change startup behavior.
 
 Suggested status fields:
 
