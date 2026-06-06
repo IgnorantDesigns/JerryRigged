@@ -92,6 +92,8 @@ The resolver can also map explicit seed-copy options into `FSQLUISQLiteSeedDatab
 
 `FSQLUILayoutPersistenceWorkflow` sits above that subsystem as the first storage-agnostic runtime persistence workflow proof. It assumes the subsystem/provider was already configured by caller code or explicit settings. When a repository is active, it saves, lists, and loads through the repository surface. When the subsystem is null or no repository is active, it returns clear failures and creates no database files.
 
+`USQLUIPersistenceStatusLibrary` is the first read-only SQLUICore status surface intended for future settings/admin UI. It returns `FSQLUIPersistenceStatusSnapshot` with configured backend, active backend, provider initialized state, repository active state, resolved SQLite path, database file status, sidecar status, and migration status when an existing SQLite database can be inspected. It does not initialize providers, create repositories, create directories, create databases, run migrations, copy seed databases, reset databases, delete files, or change startup behavior.
+
 The packaged runtime provider startup smoke proves this holder can be intentionally created from packaged startup/runtime code and initialized from command-line repository settings. That proof runs only with `-SQLUIRuntimeProviderStartupSmoke`; normal startup still does not auto-initialize a provider or SQLite.
 
 The packaged runtime provider subsystem smoke proves the app-level subsystem holder path. It runs only with `-SQLUIRuntimeProviderSubsystemSmoke` plus explicit `-SQLUILayoutRepositoryProviderAutoInit` and repository settings. When the flags are absent, the subsystem remains passive and normal startup still does not initialize SQLite.
@@ -207,6 +209,7 @@ Current SQLite-related smoke flags are:
 - `-UseLayoutRepositoryRuntimeSettingsProbe`: verifies config-backed runtime settings safe defaults, settings-driven `InMemory`, settings-driven SQLite, command-line override behavior, disabled overrides, explicit SQLite missing-path unavailable behavior, and cleanup.
 - `-UseLayoutPersistenceWorkflowProbe`: verifies the storage-agnostic runtime workflow helper for null/missing repository failures, in-memory save/list/load, explicit SQLite save/list/load, SQLite unavailable behavior, and cleanup.
 - `-UseLayoutRepositoryDatabaseManagementProbe`: verifies the SQLUICore database management helper for non-SQLite no-op behavior, SQLite empty-path handling, status before/after repository save, reset/idempotent reset, fake sidecar cleanup, relative path resolution under `Saved/SQLUI/LayoutRepositories`, and cleanup.
+- `-UsePersistenceStatusSurfaceProbe`: verifies the read-only SQLUICore persistence status snapshot for default `InMemory` state, provider/repository inactive state without forced initialization, SQLite path/file/sidecar/schema status against pre-created probe files, and cleanup.
 - `-UseSQLiteMigrationProbe`: proves the minimal migration runner with a smoke-only migration.
 - `-UseSQLiteLayoutSchemaMigrationProbe`: applies and verifies the planned initial layout schema.
 - `-UseSQLiteLayoutReadProbe`: seeds one layout and verifies list/load mapping against the schema.
@@ -239,7 +242,7 @@ SQLite details belong in SQLUICore and the SQLUISamples smoke harness only. Widg
 
 Runtime-writable databases should live under `Saved/SQLUI/...`. Smoke tests use narrower `Saved/SQLUI/SmokeTests/...` folders. SQLite runtime paths should not write to `Content/`, maps, plugin content, generated folders, or source-controlled database files.
 
-Database reset/status flows should use `FSQLUILayoutRepositoryDatabaseManagement` so path resolution and sidecar cleanup stay in SQLUICore. App UI should not delete arbitrary files, infer sidecar names itself, or open SQLite just to answer whether the configured DB exists.
+Database reset/status flows should use `USQLUIPersistenceStatusLibrary` for UI-facing read-only snapshots and `FSQLUILayoutRepositoryDatabaseManagement` for explicit database status/reset policy so path resolution and sidecar cleanup stay in SQLUICore. App UI should not delete arbitrary files, infer sidecar names itself, or open SQLite just to answer whether the configured DB exists.
 
 JerryRigged remains a thin host. It should not own SQLite schema, SQL strings, migration logic, worker details, or storage-specific widget behavior.
 
@@ -255,7 +258,7 @@ Remaining work includes:
 - Production async database service design beyond the current per-repository callback queue.
 - Cancellation, shutdown draining beyond stale-callback suppression, and async coverage for all repository operations.
 - Actual future schema migrations, upgrade-specific data transforms, and version-specific compatibility policy beyond the current version/status framework.
-- Implementing the user-facing persistence settings surface described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), plus product startup policy beyond the passive subsystem and explicit packaged smoke flags.
+- Implementing the user-facing persistence settings UI described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md). The first read-only SQLUICore status snapshot exists; settings editing, reset UI, and product startup policy remain future work.
 - Product seed database asset/package/version policy, if seed DBs are added.
 - Optional lifecycle features such as history APIs, checkpoints, previews, restore flows, and richer search.
 

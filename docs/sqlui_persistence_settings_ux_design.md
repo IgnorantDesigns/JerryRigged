@@ -44,6 +44,8 @@ SQLUICore currently has the runtime pieces needed for a safe settings UI:
 
 Those pieces are backend and policy readiness, not product UI. They do not make SQLite the default backend and do not create database files during normal startup.
 
+The first implementation slice for this design now exists as `USQLUIPersistenceStatusLibrary` and `FSQLUIPersistenceStatusSnapshot`. It is a read-only SQLUICore status surface that future UI can call to inspect configured backend, provider/repository state, resolved SQLite path, database file status, sidecar status, and migration status when a database already exists. It does not add a settings widget, settings editing, reset action, startup behavior, or default backend change.
+
 ## UX Goals
 
 - Make the safe default obvious: layout persistence can be off or in-memory without durable database writes.
@@ -170,6 +172,8 @@ Browsing or selecting a path should not create files. File creation should happe
 
 Database status should use `FSQLUILayoutRepositoryDatabaseManagement`.
 
+The current read-only status snapshot surface is `USQLUIPersistenceStatusLibrary`. It composes runtime settings/config policy, provider state, `FSQLUILayoutRepositoryDatabaseManagement`, and SQLite schema version status. It should be the first UI-facing API for a status panel.
+
 Suggested status fields:
 
 - Backend
@@ -183,7 +187,9 @@ Suggested status fields:
 - Warning when backend is not SQLite
 - Warning when SQLite path is empty
 
-Status refresh should be read-only. It should not create directories, create databases, open SQLite, initialize schema, copy seed databases, or change the active repository.
+Status refresh should be read-only. It should not create directories, create databases, initialize schema, copy seed databases, or change the active repository.
+
+Basic file status should use the closed-file database management helper. The migration/status portion may open an existing SQLite database read-only through the SQLUICore schema versioning helper. It must not apply migrations or create missing database files.
 
 ## Reset / Clear / Delete Semantics
 
@@ -300,6 +306,8 @@ Start with a read-only status panel:
 - DB file size.
 - Sidecars present?
 - Current schema/migration status if available.
+
+The first proof slice implements this as a SQLUICore status snapshot plus smoke coverage, not a widget. The next UI PR can bind a small panel to that snapshot without adding settings editing or destructive actions.
 
 Then add opt-in persistence selection:
 
