@@ -18,6 +18,7 @@
 #include "Layout/SQLUIInMemoryLayoutRepository.h"
 #include "Layout/SQLUIJsonFileLayoutRepository.h"
 #include "Layout/SQLUIPersistenceStatus.h"
+#include "Layout/SQLUIPersistenceStatusDisplay.h"
 #include "Layout/SQLUILayoutJson.h"
 #include "Layout/SQLUILayoutRepositoryDatabaseManagement.h"
 #include "Layout/SQLUILayoutRepositoryFactory.h"
@@ -7615,6 +7616,346 @@ RunSQLUISamplePersistenceStatusSurfaceProbe(UObject* Outer)
 	return Result;
 }
 
+void AppendSQLUISamplePersistenceStatusDisplayRowsProbeError(
+	FSQLUISamplePersistenceStatusDisplayRowsProbeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISamplePersistenceStatusDisplayRowsPath(
+	const TCHAR* DatabaseFileName)
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("PersistenceStatusDisplayRows"),
+		DatabaseFileName);
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+TArray<FString> MakeSQLUISamplePersistenceStatusDisplayRowsFiles(
+	const FString& DatabasePath)
+{
+	return {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+}
+
+bool DoesSQLUISamplePersistenceStatusDisplayRowsFileExist(
+	const FString& DatabasePath)
+{
+	for (const FString& Path : MakeSQLUISamplePersistenceStatusDisplayRowsFiles(DatabasePath))
+	{
+		if (FPaths::FileExists(Path))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DeleteSQLUISamplePersistenceStatusDisplayRowsFiles(
+	const FString& DatabasePath,
+	FSQLUISamplePersistenceStatusDisplayRowsProbeResult& Result)
+{
+	bool bRemoved = true;
+	for (const FString& Path : MakeSQLUISamplePersistenceStatusDisplayRowsFiles(DatabasePath))
+	{
+		if (FPaths::FileExists(Path)
+			&& !IFileManager::Get().Delete(*Path, false, true, true))
+		{
+			AppendSQLUISamplePersistenceStatusDisplayRowsProbeError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI persistence status display rows probe failed: could not remove '%s'."),
+					*Path));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+bool DeleteSQLUISamplePersistenceStatusDisplayRowsFiles(
+	FSQLUISamplePersistenceStatusDisplayRowsProbeResult& Result)
+{
+	return DeleteSQLUISamplePersistenceStatusDisplayRowsFiles(Result.DatabasePath, Result)
+		&& DeleteSQLUISamplePersistenceStatusDisplayRowsFiles(Result.SidecarDatabasePath, Result);
+}
+
+bool DoesAnySQLUISamplePersistenceStatusDisplayRowsFileExist(
+	const FSQLUISamplePersistenceStatusDisplayRowsProbeResult& Result)
+{
+	return DoesSQLUISamplePersistenceStatusDisplayRowsFileExist(Result.DatabasePath)
+		|| DoesSQLUISamplePersistenceStatusDisplayRowsFileExist(Result.SidecarDatabasePath);
+}
+
+bool WriteSQLUISamplePersistenceStatusDisplayRowsSidecar(
+	const FString& Path,
+	FSQLUISamplePersistenceStatusDisplayRowsProbeResult& Result)
+{
+	const FString Directory = FPaths::GetPath(Path);
+	if (!IFileManager::Get().MakeDirectory(*Directory, true))
+	{
+		AppendSQLUISamplePersistenceStatusDisplayRowsProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI persistence status display rows probe failed: could not create directory '%s'."),
+				*Directory));
+		return false;
+	}
+
+	if (!FFileHelper::SaveStringToFile(TEXT("SQLUI persistence status display sidecar probe"), *Path))
+	{
+		AppendSQLUISamplePersistenceStatusDisplayRowsProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI persistence status display rows probe failed: could not create sidecar '%s'."),
+				*Path));
+		return false;
+	}
+
+	return true;
+}
+
+const FSQLUIPersistenceStatusDisplayRow* FindSQLUISamplePersistenceStatusDisplayRow(
+	const TArray<FSQLUIPersistenceStatusDisplayRow>& Rows,
+	const TCHAR* Label)
+{
+	for (const FSQLUIPersistenceStatusDisplayRow& Row : Rows)
+	{
+		if (Row.Label.ToString() == Label)
+		{
+			return &Row;
+		}
+	}
+
+	return nullptr;
+}
+
+bool DoesSQLUISamplePersistenceStatusDisplayRowHaveValue(
+	const TArray<FSQLUIPersistenceStatusDisplayRow>& Rows,
+	const TCHAR* Label,
+	const TCHAR* ExpectedValue)
+{
+	const FSQLUIPersistenceStatusDisplayRow* Row =
+		FindSQLUISamplePersistenceStatusDisplayRow(Rows, Label);
+	return Row != nullptr && Row->Value.ToString() == ExpectedValue;
+}
+
+bool DoesSQLUISamplePersistenceStatusDisplayRowContainValue(
+	const TArray<FSQLUIPersistenceStatusDisplayRow>& Rows,
+	const TCHAR* Label,
+	const FString& ExpectedValue)
+{
+	const FSQLUIPersistenceStatusDisplayRow* Row =
+		FindSQLUISamplePersistenceStatusDisplayRow(Rows, Label);
+	return Row != nullptr && Row->Value.ToString().Contains(ExpectedValue);
+}
+
+FSQLUILayoutRepositoryRuntimeConfig MakeSQLUISamplePersistenceStatusDisplayRowsSQLiteConfig(
+	const FString& DatabasePath)
+{
+	FSQLUILayoutRepositoryRuntimeConfig Config;
+	Config.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	Config.SQLiteDatabasePath = DatabasePath;
+	return Config;
+}
+
+FSQLUISamplePersistenceStatusDisplayRowsProbeResult
+RunSQLUISamplePersistenceStatusDisplayRowsProbe(UObject* Outer)
+{
+	FSQLUISamplePersistenceStatusDisplayRowsProbeResult Result;
+	Result.DatabasePath =
+		MakeSQLUISamplePersistenceStatusDisplayRowsPath(TEXT("PersistenceStatusDisplayRows.db"));
+	Result.SidecarDatabasePath =
+		MakeSQLUISamplePersistenceStatusDisplayRowsPath(TEXT("PersistenceStatusDisplaySidecarOnly.db"));
+
+	DeleteSQLUISamplePersistenceStatusDisplayRowsFiles(Result);
+
+	const FSQLUILayoutRepositoryRuntimeConfig DefaultConfig =
+		FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault();
+	const TArray<FSQLUIPersistenceStatusDisplayRow> DefaultRows =
+		USQLUIPersistenceStatusDisplayLibrary::GetPersistenceStatusDisplayRowsFromRuntimeConfig(
+			Outer,
+			DefaultConfig);
+	Result.bDefaultRowsGenerated = DefaultRows.Num() >= 8;
+	Result.bDefaultBackendRowFound =
+		DoesSQLUISamplePersistenceStatusDisplayRowHaveValue(
+			DefaultRows,
+			TEXT("Backend"),
+			TEXT("InMemory"));
+	Result.bDefaultProviderRowFound =
+		DoesSQLUISamplePersistenceStatusDisplayRowHaveValue(
+			DefaultRows,
+			TEXT("Provider initialized"),
+			TEXT("No"));
+	Result.bDefaultRepositoryRowFound =
+		DoesSQLUISamplePersistenceStatusDisplayRowHaveValue(
+			DefaultRows,
+			TEXT("Repository active"),
+			TEXT("No"));
+	Result.bDefaultSQLiteRowsGraceful =
+		DoesSQLUISamplePersistenceStatusDisplayRowHaveValue(
+			DefaultRows,
+			TEXT("SQLite database path"),
+			TEXT("Not applicable"))
+		&& DoesSQLUISamplePersistenceStatusDisplayRowHaveValue(
+			DefaultRows,
+			TEXT("SQLite database exists"),
+			TEXT("Not applicable"))
+		&& DoesSQLUISamplePersistenceStatusDisplayRowHaveValue(
+			DefaultRows,
+			TEXT("Schema status"),
+			TEXT("Not applicable"));
+	Result.bDefaultRowsDidNotCreateDb =
+		!DoesAnySQLUISamplePersistenceStatusDisplayRowsFileExist(Result);
+	if (!Result.bDefaultRowsGenerated
+		|| !Result.bDefaultBackendRowFound
+		|| !Result.bDefaultProviderRowFound
+		|| !Result.bDefaultRepositoryRowFound
+		|| !Result.bDefaultSQLiteRowsGraceful
+		|| !Result.bDefaultRowsDidNotCreateDb)
+	{
+		AppendSQLUISamplePersistenceStatusDisplayRowsProbeError(
+			Result,
+			TEXT("SQLUI persistence status display rows probe failed: default display rows were not safe/read-only."));
+	}
+
+	const FSQLUISQLiteLayoutSchemaInitializationResult SchemaResult =
+		FSQLUISQLiteLayoutSchemaMigration::ApplyInitialSchema(
+			Result.DatabasePath,
+			true);
+	Result.bSQLiteDatabasePrepared =
+		SchemaResult.bSucceeded
+		&& FPaths::FileExists(Result.DatabasePath);
+	if (!Result.bSQLiteDatabasePrepared)
+	{
+		AppendSQLUISamplePersistenceStatusDisplayRowsProbeError(
+			Result,
+			SchemaResult.ErrorMessage.IsEmpty()
+				? TEXT("SQLUI persistence status display rows probe failed: could not prepare SQLite display database.")
+				: SchemaResult.ErrorMessage);
+	}
+
+	const int64 DatabaseSizeBeforeRows =
+		FPaths::FileExists(Result.DatabasePath)
+			? IFileManager::Get().FileSize(*Result.DatabasePath)
+			: 0;
+	const FSQLUILayoutRepositoryRuntimeConfig SQLiteConfig =
+		MakeSQLUISamplePersistenceStatusDisplayRowsSQLiteConfig(Result.DatabasePath);
+	const TArray<FSQLUIPersistenceStatusDisplayRow> SQLiteRows =
+		USQLUIPersistenceStatusDisplayLibrary::GetPersistenceStatusDisplayRowsFromRuntimeConfig(
+			Outer,
+			SQLiteConfig);
+	const int64 DatabaseSizeAfterRows =
+		FPaths::FileExists(Result.DatabasePath)
+			? IFileManager::Get().FileSize(*Result.DatabasePath)
+			: 0;
+
+	Result.bSQLiteRowsGenerated = SQLiteRows.Num() >= 8;
+	Result.bSQLitePathRowFound =
+		DoesSQLUISamplePersistenceStatusDisplayRowContainValue(
+			SQLiteRows,
+			TEXT("SQLite database path"),
+			Result.DatabasePath);
+	Result.bSQLiteDatabaseExistsRowFound =
+		DoesSQLUISamplePersistenceStatusDisplayRowHaveValue(
+			SQLiteRows,
+			TEXT("SQLite database exists"),
+			TEXT("Yes"));
+	Result.bSQLiteDatabaseSizeRowFound =
+		FindSQLUISamplePersistenceStatusDisplayRow(
+			SQLiteRows,
+			TEXT("SQLite database size")) != nullptr;
+	Result.bSQLiteSchemaRowFound =
+		DoesSQLUISamplePersistenceStatusDisplayRowHaveValue(
+			SQLiteRows,
+			TEXT("Schema status"),
+			TEXT("Ready"));
+	Result.bSQLiteRowsReadOnly =
+		DatabaseSizeBeforeRows > 0
+		&& DatabaseSizeAfterRows == DatabaseSizeBeforeRows
+		&& FPaths::FileExists(Result.DatabasePath);
+
+	const bool bSidecarCreated =
+		WriteSQLUISamplePersistenceStatusDisplayRowsSidecar(
+			Result.SidecarDatabasePath + TEXT("-wal"),
+			Result);
+	const FSQLUILayoutRepositoryRuntimeConfig SidecarConfig =
+		MakeSQLUISamplePersistenceStatusDisplayRowsSQLiteConfig(Result.SidecarDatabasePath);
+	const TArray<FSQLUIPersistenceStatusDisplayRow> SidecarRows =
+		USQLUIPersistenceStatusDisplayLibrary::GetPersistenceStatusDisplayRowsFromRuntimeConfig(
+			Outer,
+			SidecarConfig);
+	Result.bSQLiteSidecarsRowFound =
+		bSidecarCreated
+		&& DoesSQLUISamplePersistenceStatusDisplayRowContainValue(
+			SidecarRows,
+			TEXT("SQLite sidecars"),
+			TEXT("wal"))
+		&& FPaths::FileExists(Result.SidecarDatabasePath + TEXT("-wal"));
+
+	if (!Result.bSQLiteRowsGenerated
+		|| !Result.bSQLitePathRowFound
+		|| !Result.bSQLiteDatabaseExistsRowFound
+		|| !Result.bSQLiteDatabaseSizeRowFound
+		|| !Result.bSQLiteSidecarsRowFound
+		|| !Result.bSQLiteSchemaRowFound
+		|| !Result.bSQLiteRowsReadOnly)
+	{
+		AppendSQLUISamplePersistenceStatusDisplayRowsProbeError(
+			Result,
+			TEXT("SQLUI persistence status display rows probe failed: SQLite display rows were incomplete or not read-only."));
+	}
+
+	Result.bDatabaseFilesRemoved =
+		DeleteSQLUISamplePersistenceStatusDisplayRowsFiles(Result)
+		&& !DoesAnySQLUISamplePersistenceStatusDisplayRowsFileExist(Result);
+	if (!Result.bDatabaseFilesRemoved)
+	{
+		AppendSQLUISamplePersistenceStatusDisplayRowsProbeError(
+			Result,
+			TEXT("SQLUI persistence status display rows probe failed: probe database files were not removed."));
+	}
+
+	Result.bSucceeded =
+		Result.bDefaultRowsGenerated
+		&& Result.bDefaultBackendRowFound
+		&& Result.bDefaultProviderRowFound
+		&& Result.bDefaultRepositoryRowFound
+		&& Result.bDefaultSQLiteRowsGraceful
+		&& Result.bDefaultRowsDidNotCreateDb
+		&& Result.bSQLiteDatabasePrepared
+		&& Result.bSQLiteRowsGenerated
+		&& Result.bSQLitePathRowFound
+		&& Result.bSQLiteDatabaseExistsRowFound
+		&& Result.bSQLiteDatabaseSizeRowFound
+		&& Result.bSQLiteSidecarsRowFound
+		&& Result.bSQLiteSchemaRowFound
+		&& Result.bSQLiteRowsReadOnly
+		&& Result.bDatabaseFilesRemoved;
+
+	return Result;
+}
+
 void AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
 	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& Result,
 	const FString& ErrorMessage)
@@ -10081,6 +10422,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.PersistenceStatusSurfaceProbe.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI persistence status surface probe failed.")
 					: Result.PersistenceStatusSurfaceProbe.ErrorMessage);
+		}
+	}
+
+	if (Request.bUsePersistenceStatusDisplayRowsProbe)
+	{
+		Result.bUsedPersistenceStatusDisplayRowsProbe = true;
+		Result.PersistenceStatusDisplayRowsProbe =
+			RunSQLUISamplePersistenceStatusDisplayRowsProbe(Outer);
+		if (!Result.PersistenceStatusDisplayRowsProbe.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.PersistenceStatusDisplayRowsProbe.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI persistence status display rows probe failed.")
+					: Result.PersistenceStatusDisplayRowsProbe.ErrorMessage);
 		}
 	}
 
