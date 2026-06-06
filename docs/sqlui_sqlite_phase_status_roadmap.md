@@ -32,6 +32,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - An explicit packaged runtime SQLite lifecycle smoke exists and runs only with `-RunPackagedSQLiteSmoke` / `-SQLUIPackagedRuntimeSQLiteSmoke`.
 - An explicit packaged runtime provider startup smoke exists and runs only with `-RunPackagedProviderStartupSmoke` / `-SQLUIRuntimeProviderStartupSmoke`.
 - An explicit packaged runtime provider subsystem smoke exists and runs only with `-RunPackagedProviderSubsystemSmoke` / `-SQLUIRuntimeProviderSubsystemSmoke`.
+- An explicit packaged runtime persistence workflow smoke exists and runs only with `-RunPackagedPersistenceWorkflowSmoke` / `-SQLUIRuntimePersistenceWorkflowSmoke`; it saves in one packaged launch, verifies the persisted layout in a second launch, and cleans up in a third launch.
 
 This is still not a default production persistence policy. Runtime integration, user-facing settings, broader platform validation, production async service hardening, and actual future schema upgrades remain future work.
 
@@ -99,6 +100,7 @@ This is still not a default production persistence policy. Runtime integration, 
 | Packaged runtime SQLite smoke | `RunSQLUIPackagedBuildValidation.ps1 -CleanPackageOutput -RunPackagedSQLiteSmoke` | Local Win64 Development covered | Launches packaged executable with `-SQLUIPackagedRuntimeSQLiteSmoke`. |
 | Packaged runtime provider startup smoke | `RunSQLUIPackagedBuildValidation.ps1 -CleanPackageOutput -RunPackagedProviderStartupSmoke` | Local Win64 Development covered | Launches packaged executable with `-SQLUIRuntimeProviderStartupSmoke` and explicit SQLite repository command-line settings. |
 | Packaged runtime provider subsystem smoke | `RunSQLUIPackagedBuildValidation.ps1 -CleanPackageOutput -RunPackagedProviderSubsystemSmoke` | Local Win64 Development covered | Launches packaged executable with `-SQLUIRuntimeProviderSubsystemSmoke`, `-SQLUILayoutRepositoryProviderAutoInit`, and explicit SQLite repository command-line settings. |
+| Packaged runtime persistence workflow smoke | `RunSQLUIPackagedBuildValidation.ps1 -CleanPackageOutput -RunPackagedPersistenceWorkflowSmoke` | Local Win64 Development covered | Launches Save, Verify, and Cleanup packaged processes with `-SQLUIRuntimePersistenceWorkflowSmoke` and proves one workflow-saved layout persists across separate runs. |
 
 ## Runtime And Packaging Status
 
@@ -106,10 +108,12 @@ The local packaged validation path now proves that this checkout can build, cook
 
 The packaged runtime SQLite smoke goes one step further: it launches the packaged executable with an explicit smoke flag, creates a factory-configured SQLite repository, runs save/list/load/remove/clear under the packaged runtime saved directory, verifies the success log, and removes the smoke database.
 
+The packaged runtime persistence workflow smoke proves a narrower but important runtime behavior: `USQLUILayoutRepositoryRuntimeSubsystem` plus `FSQLUILayoutPersistenceWorkflow` can save one layout in a packaged process, a later packaged process can list/load the same persisted layout without saving first, and a final packaged process can remove the database and sidecars.
+
 This does not yet prove:
 
 - Target-platform coverage beyond the local validation target.
-- Long-running packaged gameplay persistence behavior.
+- Long-running packaged gameplay persistence behavior beyond the explicit three-launch smoke.
 - Production async service lifecycle, cancellation, or shutdown draining.
 - Product DB path UX and user-facing runtime settings flow.
 - Future migration upgrade transforms beyond `001_initial_layout_schema`.
@@ -141,9 +145,11 @@ The current SQLite path keeps these boundaries:
 - Packaged runtime smoke runs only with the explicit `-SQLUIPackagedRuntimeSQLiteSmoke` command-line flag.
 - Packaged runtime provider startup smoke runs only with the explicit `-SQLUIRuntimeProviderStartupSmoke` command-line flag.
 - Packaged runtime provider subsystem smoke runs only with the explicit `-SQLUIRuntimeProviderSubsystemSmoke` command-line flag.
+- Packaged runtime persistence workflow smoke runs only with the explicit `-SQLUIRuntimePersistenceWorkflowSmoke` command-line flag and a `Save`, `Verify`, or `Cleanup` phase argument.
 - Editor smoke DB writes stay under `Saved/SQLUI/SmokeTests/...` and remove DB files afterward.
 - Packaged runtime smoke DB writes stay under packaged runtime `Saved/SQLUI/PackagedRuntimeSmoke/...` and remove DB files afterward.
 - Packaged runtime provider startup/subsystem smoke DB writes resolve under packaged runtime `Saved/SQLUI/LayoutRepositories/PackagedRuntimeSmoke/...` and remove DB files afterward.
+- Packaged runtime persistence workflow smoke DB writes resolve under packaged runtime `Saved/SQLUI/LayoutRepositories/PackagedRuntimeSmoke/PersistenceWorkflow`, intentionally remain on disk between Save and Verify, and are removed by the Cleanup phase.
 
 ## What Is Still Explicit / Non-Default
 
@@ -169,7 +175,7 @@ Prioritized remaining work:
 5. Cancellation and shutdown draining beyond stale-callback suppression.
 6. Async APIs or async wrappers for `ListLayouts`, `LoadLayoutById`, `RemoveLayout`, and `ClearLayouts` if runtime workflows require them.
 7. Seed database asset packaging, versioning, and upgrade policy if seed DBs are shipped.
-8. Broader packaged target-platform validation beyond local Win64 Development.
+8. Broader packaged target-platform validation and persistence-across-launches scenarios beyond local Win64 Development.
 9. CI only if Unreal-capable build agents become available.
 10. Optional lifecycle features: history APIs, checkpoints, previews, restore flows, richer search, and retention policy.
 

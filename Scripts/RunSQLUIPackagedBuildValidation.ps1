@@ -32,6 +32,12 @@ param(
 
 	[string]$PackagedProviderSubsystemSmokeLogPath,
 
+	[switch]$RunPackagedPersistenceWorkflowSmoke,
+
+	[int]$PackagedPersistenceWorkflowSmokeTimeoutSeconds = 120,
+
+	[string]$PackagedPersistenceWorkflowSmokeLogDirectory,
+
 	[switch]$NoBuild,
 
 	[switch]$NoCook,
@@ -98,6 +104,13 @@ Parameters:
       and explicit SQLite repository command-line settings, then verify the
       runtime provider subsystem smoke log.
 
+  -RunPackagedPersistenceWorkflowSmoke
+      After BuildCookRun succeeds, launch the packaged executable three times
+      with -SQLUIRuntimePersistenceWorkflowSmoke for Save, Verify, and Cleanup
+      phases. Save leaves the SQLite database on disk, Verify reads it in a
+      separate process without saving first, and Cleanup removes the database
+      and SQLite sidecar files. Cleanup runs even when Verify fails.
+
   -PackagedSmokeTimeoutSeconds
       Timeout for the packaged runtime smoke process. Defaults to 120.
 
@@ -122,6 +135,16 @@ Parameters:
       Saved\SQLUI\PackagedValidation\<Platform>\<Configuration>\RuntimeSmoke\SQLUIPackagedRuntimeProviderSubsystemSmoke.log
       The resolved path must stay under Saved\SQLUI\PackagedValidation.
 
+  -PackagedPersistenceWorkflowSmokeTimeoutSeconds
+      Timeout for each packaged runtime persistence workflow phase process.
+      Defaults to 120.
+
+  -PackagedPersistenceWorkflowSmokeLogDirectory
+      Optional packaged runtime persistence workflow smoke log directory.
+      Defaults to:
+      Saved\SQLUI\PackagedValidation\<Platform>\<Configuration>\RuntimeSmoke\PersistenceWorkflow
+      The resolved directory must stay under Saved\SQLUI\PackagedValidation.
+
   -NoBuild
       Omit the BuildCookRun -build flag. Use only when build outputs already exist.
 
@@ -144,7 +167,8 @@ Examples:
   .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedSQLiteSmoke
   .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedProviderStartupSmoke
   .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedProviderSubsystemSmoke
-  .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedSQLiteSmoke -RunPackagedProviderStartupSmoke -RunPackagedProviderSubsystemSmoke
+  .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedPersistenceWorkflowSmoke
+  .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -CleanPackageOutput -RunPackagedSQLiteSmoke -RunPackagedProviderStartupSmoke -RunPackagedProviderSubsystemSmoke -RunPackagedPersistenceWorkflowSmoke
   .\Scripts\RunSQLUIPackagedBuildValidation.ps1 -RunUATPath "C:\UE\Engine\Build\BatchFiles\RunUAT.bat" -Platform Win64 -Configuration Development
 '@
 
@@ -622,6 +646,270 @@ function Invoke-SQLUIPackagedRuntimeProviderSubsystemSmoke
 	return 0
 }
 
+function Get-SQLUIPackagedPersistenceWorkflowDatabasePathFromLog
+{
+	param(
+		[Parameter(Mandatory = $true)]
+		[string]$LogText
+	)
+
+	$Match = [regex]::Match(
+		$LogText,
+		"SQLUI packaged runtime persistence workflow smoke database path: '([^']+)'")
+	if ($Match.Success)
+	{
+		return $Match.Groups[1].Value
+	}
+
+	return $null
+}
+
+function Test-SQLUIPackagedPersistenceWorkflowDatabaseFilesAbsent
+{
+	param(
+		[Parameter(Mandatory = $true)]
+		[string]$DatabasePath
+	)
+
+	$PathsToCheck = @(
+		$DatabasePath,
+		"$DatabasePath-journal",
+		"$DatabasePath-wal",
+		"$DatabasePath-shm"
+	)
+
+	foreach ($PathToCheck in $PathsToCheck)
+	{
+		if (Test-Path -LiteralPath $PathToCheck)
+		{
+			Write-Warning "SQLUI packaged runtime persistence workflow smoke cleanup left a database file behind: $PathToCheck"
+			return $false
+		}
+	}
+
+	return $true
+}
+
+function Invoke-SQLUIPackagedRuntimePersistenceWorkflowSmokePhase
+{
+	param(
+		[Parameter(Mandatory = $true)]
+		[string]$ExecutablePath,
+
+		[Parameter(Mandatory = $true)]
+		[string]$Phase,
+
+		[Parameter(Mandatory = $true)]
+		[string]$LogPath,
+
+		[Parameter(Mandatory = $true)]
+		[int]$TimeoutSeconds
+	)
+
+	if ($TimeoutSeconds -lt 1)
+	{
+		Stop-WithUsageError 'PackagedPersistenceWorkflowSmokeTimeoutSeconds must be 1 or greater.'
+	}
+
+	if ($Phase -notin @('Save', 'Verify', 'Cleanup'))
+	{
+		Stop-WithUsageError "Packaged persistence workflow phase must be Save, Verify, or Cleanup. Received: $Phase"
+	}
+
+	$LogDirectory = Split-Path -Parent $LogPath
+	New-Item -ItemType Directory -Force -Path $LogDirectory | Out-Null
+
+	if (Test-Path -LiteralPath $LogPath)
+	{
+		Remove-Item -LiteralPath $LogPath -Force
+	}
+
+	$PersistenceWorkflowSQLitePath = 'PackagedRuntimeSmoke/PersistenceWorkflow/PersistenceWorkflow.db'
+	$SmokeArgs = @(
+		'-SQLUIRuntimePersistenceWorkflowSmoke',
+		"-SQLUIRuntimePersistenceWorkflowSmokePhase=$Phase",
+		'-SQLUILayoutRepositoryProviderAutoInit',
+		'-SQLUILayoutRepositoryBackend=SQLite',
+		"-SQLUISQLiteLayoutRepositoryPath=`"$PersistenceWorkflowSQLitePath`"",
+		'-SQLUISQLiteLayoutRepositoryInitializeSchema',
+		'-SQLUISQLiteLayoutRepositoryCreateDatabase',
+		'-unattended',
+		'-nosound',
+		'-NullRHI',
+		"-abslog=`"$LogPath`""
+	)
+
+	$PrintableCommandParts = @($ExecutablePath) + $SmokeArgs
+	$PrintableCommand = '& ' + (($PrintableCommandParts | ForEach-Object { Format-PowerShellCommandPart -Value $_ }) -join ' ')
+
+	Write-Host "Running SQLUI packaged runtime persistence workflow $Phase phase command:"
+	Write-Host $PrintableCommand
+	Write-Host "SQLUI packaged runtime persistence workflow smoke relative SQLite path: $PersistenceWorkflowSQLitePath"
+	Write-Host "SQLUI packaged runtime persistence workflow smoke $Phase phase log path: $LogPath"
+
+	$Process = Start-Process -FilePath $ExecutablePath -ArgumentList $SmokeArgs -WindowStyle Hidden -PassThru
+	$TimeoutMilliseconds = [Math]::Max(1, $TimeoutSeconds) * 1000
+	if (-not $Process.WaitForExit($TimeoutMilliseconds))
+	{
+		Write-Warning "SQLUI packaged runtime persistence workflow $Phase phase timed out after $TimeoutSeconds second(s)."
+		try
+		{
+			$Process.Kill()
+		}
+		catch
+		{
+			Write-Warning "SQLUI packaged runtime persistence workflow $Phase phase could not kill timed-out process: $($_.Exception.Message)"
+		}
+		return 4
+	}
+
+	$RuntimeExitCode = $Process.ExitCode
+	Write-Host "SQLUI packaged runtime persistence workflow $Phase phase process exit code: $RuntimeExitCode"
+
+	if (-not (Test-Path -LiteralPath $LogPath -PathType Leaf))
+	{
+		Write-Warning "SQLUI packaged runtime persistence workflow $Phase phase log was not created: $LogPath"
+		return 5
+	}
+
+	$LogText = Get-Content -LiteralPath $LogPath -Raw
+	if ($LogText.Contains('SQLUI packaged runtime persistence workflow smoke failed:'))
+	{
+		Write-Warning "SQLUI packaged runtime persistence workflow $Phase phase log contains a failure line."
+		return 6
+	}
+
+	$SelectedPhaseLine = "SQLUI packaged runtime persistence workflow smoke selected phase: $Phase"
+	if (-not $LogText.Contains($SelectedPhaseLine))
+	{
+		Write-Warning "SQLUI packaged runtime persistence workflow $Phase phase selected-phase line was not found in the runtime log."
+		return 7
+	}
+
+	$PhaseSuccessLine = "SQLUI packaged runtime persistence workflow smoke $Phase phase succeeded."
+	if (-not $LogText.Contains($PhaseSuccessLine))
+	{
+		Write-Warning "SQLUI packaged runtime persistence workflow $Phase phase success line was not found in the runtime log."
+		return 8
+	}
+
+	if (-not $LogText.Contains('SQLUI packaged runtime persistence workflow smoke succeeded.'))
+	{
+		Write-Warning "SQLUI packaged runtime persistence workflow $Phase phase generic success line was not found in the runtime log."
+		return 9
+	}
+
+	if ($RuntimeExitCode -ne 0)
+	{
+		Write-Warning "SQLUI packaged runtime persistence workflow $Phase phase process did not exit cleanly. ExitCode=$RuntimeExitCode"
+		return $RuntimeExitCode
+	}
+
+	if ($Phase -eq 'Cleanup')
+	{
+		$DatabasePath = Get-SQLUIPackagedPersistenceWorkflowDatabasePathFromLog -LogText $LogText
+		if ([string]::IsNullOrWhiteSpace($DatabasePath))
+		{
+			Write-Warning 'SQLUI packaged runtime persistence workflow cleanup phase did not log a resolved database path.'
+			return 10
+		}
+
+		if (-not (Test-SQLUIPackagedPersistenceWorkflowDatabaseFilesAbsent -DatabasePath $DatabasePath))
+		{
+			return 11
+		}
+	}
+
+	Write-Host "SQLUI packaged runtime persistence workflow $Phase phase succeeded."
+	return 0
+}
+
+function Invoke-SQLUIPackagedRuntimePersistenceWorkflowSmoke
+{
+	param(
+		[Parameter(Mandatory = $true)]
+		[string]$ExecutablePath,
+
+		[Parameter(Mandatory = $true)]
+		[string]$LogDirectory,
+
+		[Parameter(Mandatory = $true)]
+		[int]$TimeoutSeconds
+	)
+
+	New-Item -ItemType Directory -Force -Path $LogDirectory | Out-Null
+
+	$PhaseLogs = @{
+		Save = Join-Path -Path $LogDirectory -ChildPath 'SQLUIPackagedRuntimePersistenceWorkflowSave.log'
+		Verify = Join-Path -Path $LogDirectory -ChildPath 'SQLUIPackagedRuntimePersistenceWorkflowVerify.log'
+		Cleanup = Join-Path -Path $LogDirectory -ChildPath 'SQLUIPackagedRuntimePersistenceWorkflowCleanup.log'
+	}
+
+	Write-Host "SQLUI packaged runtime persistence workflow smoke save log path: $($PhaseLogs.Save)"
+	Write-Host "SQLUI packaged runtime persistence workflow smoke verify log path: $($PhaseLogs.Verify)"
+	Write-Host "SQLUI packaged runtime persistence workflow smoke cleanup log path: $($PhaseLogs.Cleanup)"
+
+	$FinalExitCode = 0
+
+	$SaveExitCode = Invoke-SQLUIPackagedRuntimePersistenceWorkflowSmokePhase `
+		-ExecutablePath $ExecutablePath `
+		-Phase 'Save' `
+		-LogPath $PhaseLogs.Save `
+		-TimeoutSeconds $TimeoutSeconds
+	Write-Host "SQLUI packaged runtime persistence workflow Save phase exit code: $SaveExitCode"
+	if ($SaveExitCode -ne 0)
+	{
+		$FinalExitCode = $SaveExitCode
+	}
+
+	if ($SaveExitCode -eq 0)
+	{
+		$VerifyExitCode = Invoke-SQLUIPackagedRuntimePersistenceWorkflowSmokePhase `
+			-ExecutablePath $ExecutablePath `
+			-Phase 'Verify' `
+			-LogPath $PhaseLogs.Verify `
+			-TimeoutSeconds $TimeoutSeconds
+		Write-Host "SQLUI packaged runtime persistence workflow Verify phase exit code: $VerifyExitCode"
+		if ($VerifyExitCode -ne 0 -and $FinalExitCode -eq 0)
+		{
+			$FinalExitCode = $VerifyExitCode
+		}
+	}
+	else
+	{
+		Write-Host 'Skipping SQLUI packaged runtime persistence workflow Verify phase because Save failed.'
+	}
+
+	$CleanupExitCode = Invoke-SQLUIPackagedRuntimePersistenceWorkflowSmokePhase `
+		-ExecutablePath $ExecutablePath `
+		-Phase 'Cleanup' `
+		-LogPath $PhaseLogs.Cleanup `
+		-TimeoutSeconds $TimeoutSeconds
+	Write-Host "SQLUI packaged runtime persistence workflow Cleanup phase exit code: $CleanupExitCode"
+	if ($CleanupExitCode -ne 0)
+	{
+		if ($FinalExitCode -eq 0)
+		{
+			$FinalExitCode = $CleanupExitCode
+		}
+		else
+		{
+			Write-Warning "SQLUI packaged runtime persistence workflow Cleanup also failed. Preserving earlier failure exit code $FinalExitCode."
+		}
+	}
+
+	if ($FinalExitCode -eq 0)
+	{
+		Write-Host 'SQLUI packaged runtime persistence workflow smoke succeeded.'
+	}
+	else
+	{
+		Write-Warning "SQLUI packaged runtime persistence workflow smoke failed. ExitCode=$FinalExitCode"
+	}
+
+	return $FinalExitCode
+}
+
 if ($Help)
 {
 	Show-SQLUIPackagedBuildValidationHelp
@@ -678,11 +966,19 @@ if ([string]::IsNullOrWhiteSpace($PackagedProviderSubsystemSmokeLogPath))
 		-ChildPath 'RuntimeSmoke\SQLUIPackagedRuntimeProviderSubsystemSmoke.log'
 }
 
+if ([string]::IsNullOrWhiteSpace($PackagedPersistenceWorkflowSmokeLogDirectory))
+{
+	$PackagedPersistenceWorkflowSmokeLogDirectory = Join-Path `
+		-Path $DefaultOutputRoot `
+		-ChildPath 'RuntimeSmoke\PersistenceWorkflow'
+}
+
 $ResolvedArchiveDirectory = Resolve-FullPath -Path $ArchiveDirectory -BasePath $ProjectRoot
 $ResolvedStageDirectory = Resolve-FullPath -Path $StageDirectory -BasePath $ProjectRoot
 $ResolvedPackagedSmokeLogPath = Resolve-FullPath -Path $PackagedSmokeLogPath -BasePath $ProjectRoot
 $ResolvedPackagedProviderStartupSmokeLogPath = Resolve-FullPath -Path $PackagedProviderStartupSmokeLogPath -BasePath $ProjectRoot
 $ResolvedPackagedProviderSubsystemSmokeLogPath = Resolve-FullPath -Path $PackagedProviderSubsystemSmokeLogPath -BasePath $ProjectRoot
+$ResolvedPackagedPersistenceWorkflowSmokeLogDirectory = Resolve-FullPath -Path $PackagedPersistenceWorkflowSmokeLogDirectory -BasePath $ProjectRoot
 
 if (-not (Test-IsPathUnder -Path $ResolvedArchiveDirectory -RootPath $PackagedValidationRoot))
 {
@@ -707,6 +1003,11 @@ if (-not (Test-IsPathUnder -Path $ResolvedPackagedProviderStartupSmokeLogPath -R
 if (-not (Test-IsPathUnder -Path $ResolvedPackagedProviderSubsystemSmokeLogPath -RootPath $PackagedValidationRoot))
 {
 	Stop-WithUsageError "PackagedProviderSubsystemSmokeLogPath must be under Saved\SQLUI\PackagedValidation: $ResolvedPackagedProviderSubsystemSmokeLogPath"
+}
+
+if (-not (Test-IsPathUnder -Path $ResolvedPackagedPersistenceWorkflowSmokeLogDirectory -RootPath $PackagedValidationRoot))
+{
+	Stop-WithUsageError "PackagedPersistenceWorkflowSmokeLogDirectory must be under Saved\SQLUI\PackagedValidation: $ResolvedPackagedPersistenceWorkflowSmokeLogDirectory"
 }
 
 if ($CleanPackageOutput)
@@ -796,6 +1097,12 @@ if ($RunPackagedProviderSubsystemSmoke)
 	Write-Host "SQLUI packaged runtime provider subsystem smoke timeout seconds: $PackagedProviderSubsystemSmokeTimeoutSeconds"
 	Write-Host "SQLUI packaged runtime provider subsystem smoke log path: $ResolvedPackagedProviderSubsystemSmokeLogPath"
 }
+if ($RunPackagedPersistenceWorkflowSmoke)
+{
+	Write-Host "SQLUI packaged runtime persistence workflow smoke requested: true"
+	Write-Host "SQLUI packaged runtime persistence workflow smoke timeout seconds: $PackagedPersistenceWorkflowSmokeTimeoutSeconds"
+	Write-Host "SQLUI packaged runtime persistence workflow smoke log directory: $ResolvedPackagedPersistenceWorkflowSmokeLogDirectory"
+}
 
 & $ResolvedRunUATPath @BuildCookRunArgs
 $ExitCode = $LASTEXITCODE
@@ -806,7 +1113,7 @@ if ($null -eq $ExitCode)
 }
 
 Write-Host "SQLUI packaged-build validation exit code: $ExitCode"
-if ($ExitCode -ne 0 -or (-not $RunPackagedSQLiteSmoke -and -not $RunPackagedProviderStartupSmoke -and -not $RunPackagedProviderSubsystemSmoke))
+if ($ExitCode -ne 0 -or (-not $RunPackagedSQLiteSmoke -and -not $RunPackagedProviderStartupSmoke -and -not $RunPackagedProviderSubsystemSmoke -and -not $RunPackagedPersistenceWorkflowSmoke))
 {
 	exit $ExitCode
 }
@@ -861,5 +1168,19 @@ if ($RunPackagedProviderSubsystemSmoke)
 		-TimeoutSeconds $PackagedProviderSubsystemSmokeTimeoutSeconds
 
 	Write-Host "SQLUI packaged runtime provider subsystem smoke exit code: $SmokeExitCode"
+	if ($SmokeExitCode -ne 0)
+	{
+		exit $SmokeExitCode
+	}
+}
+
+if ($RunPackagedPersistenceWorkflowSmoke)
+{
+	$SmokeExitCode = Invoke-SQLUIPackagedRuntimePersistenceWorkflowSmoke `
+		-ExecutablePath $PackagedExecutablePath `
+		-LogDirectory $ResolvedPackagedPersistenceWorkflowSmokeLogDirectory `
+		-TimeoutSeconds $PackagedPersistenceWorkflowSmokeTimeoutSeconds
+
+	Write-Host "SQLUI packaged runtime persistence workflow smoke exit code: $SmokeExitCode"
 }
 exit $SmokeExitCode
