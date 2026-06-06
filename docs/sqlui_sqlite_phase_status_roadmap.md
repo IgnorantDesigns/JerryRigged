@@ -24,6 +24,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - Config-backed SQLUICore runtime repository settings can request provider auto-init when explicitly configured, while default settings remain passive and `InMemory`.
 - A passive SQLUICore runtime repository `GameInstance` subsystem can own/access the provider and auto-initializes only when config-backed settings or `-SQLUILayoutRepositoryProviderAutoInit` explicitly request it.
 - A SQLUICore runtime layout persistence workflow helper can save, list, and load through the subsystem's active repository without knowing SQLite details.
+- A SQLUICore runtime database management policy helper can inspect and reset the explicitly configured SQLite database path plus sidecars without opening SQLite, creating schema, selecting repositories, or changing startup.
 - Schema initialization and database creation are repository-owned and opt-in.
 - The current known production migration set is only `001_initial_layout_schema`.
 - `LoadLayout` and `SaveLayout` callback APIs can opt into serialized async execution with shutdown/stale-callback suppression.
@@ -60,6 +61,7 @@ This is still not a default production persistence policy. Runtime integration, 
 | Runtime settings policy | Implemented | `Config=Game` UObject settings default to no auto-init/`InMemory`; command-line overrides can be allowed or disabled. |
 | Runtime repository subsystem | Implemented | Passive `GameInstance` subsystem can own/access the provider; startup auto-init requires explicit settings or `-SQLUILayoutRepositoryProviderAutoInit`. |
 | Runtime layout persistence workflow | Implemented | Storage-agnostic save/list/load helper uses the subsystem's active repository and keeps SQLite details out of callers. |
+| Runtime database management policy | Implemented | Storage-agnostic status/reset helper inspects or removes only the resolved SQLite DB and sidecars. |
 | Seed database copy policy | Implemented | Explicit pre-repository closed-file copy helper; not factory-owned. |
 | Migration version/status framework | Implemented | Reports known/applied/pending status for current known migration set. |
 | Packaged build validation | Implemented locally | Local Win64 Development BuildCookRun validation passed with UE 5.7 preferred MSVC toolchain. |
@@ -81,6 +83,7 @@ This is still not a default production persistence policy. Runtime integration, 
 | Runtime repository provider | `-UseLayoutRepositoryRuntimeProviderProbe` | Covered | Verifies provider initialization, reset/reinit, explicit SQLite save/list/load, command-line config, seed-copy integration, fatal missing-seed behavior, and cleanup. |
 | Runtime settings policy | `-UseLayoutRepositoryRuntimeSettingsProbe` | Covered | Verifies safe defaults, settings-driven `InMemory`, settings-driven SQLite, command-line override behavior, disabled overrides, missing-path unavailable behavior, and cleanup. |
 | Runtime layout persistence workflow | `-UseLayoutPersistenceWorkflowProbe` | Covered | Verifies null/missing repository failure, in-memory save/list/load, explicit SQLite save/list/load, unavailable SQLite behavior, and cleanup. |
+| Runtime database management policy | `-UseLayoutRepositoryDatabaseManagementProbe` | Covered | Verifies non-SQLite no-op status/reset, SQLite empty-path behavior, status before/after save, reset/idempotent reset, sidecar removal, relative path resolution, and cleanup. |
 | SQLite migration runner | `-UseSQLiteMigrationProbe` | Covered | Smoke-only migration runner proof. |
 | Layout schema migration | `-UseSQLiteLayoutSchemaMigrationProbe` | Covered | Applies and verifies `001_initial_layout_schema`. |
 | SQLite layout read probe | `-UseSQLiteLayoutReadProbe` | Covered | Seeds one layout and verifies list/load mapping. |
@@ -130,6 +133,8 @@ The current SQLite path keeps these boundaries:
 - `USQLUILayoutRepositoryRuntimeProvider` initializes only when caller code or smoke tests explicitly invoke it.
 - `USQLUILayoutRepositoryRuntimeSubsystem` is passive by default; startup auto-init requires explicit runtime settings or `-SQLUILayoutRepositoryProviderAutoInit`.
 - `FSQLUILayoutPersistenceWorkflow` uses only the subsystem's active repository; it does not initialize providers, create repositories, know SQLite paths, run migrations, copy seed databases, attach widgets, or change startup behavior.
+- `FSQLUILayoutRepositoryDatabaseManagement` only resolves configured SQLite paths, reports file status, and removes the resolved database plus `.db-journal`, `.db-wal`, and `.db-shm` sidecars when explicitly asked.
+- Database management reset is idempotent and does not open SQLite, run migrations, create directories, create databases, seed data, select repositories, or remove arbitrary directories.
 - The factory passes settings only.
 - The factory does not run migrations.
 - The factory does not copy seed databases.
@@ -169,7 +174,7 @@ The safe default remains non-SQLite.
 Prioritized remaining work:
 
 1. Production/user-facing runtime settings surface and normal startup policy that intentionally configures the passive runtime provider subsystem outside packaged smoke flags.
-2. Product database path policy and UX, including where user layouts should live and how users/admins inspect or reset them.
+2. Product database path policy and UX, including how user-facing settings/admin flows call the SQLUICore database status/reset helper.
 3. Actual future schema migrations and data transforms beyond `001_initial_layout_schema`.
 4. Production async database service design beyond the current per-repository callback queue.
 5. Cancellation and shutdown draining beyond stale-callback suppression.
@@ -184,7 +189,7 @@ Prioritized remaining work:
 Suggested next PRs, in priority order:
 
 1. Runtime settings surface and product startup provider-subsystem initialization policy.
-   Keep SQLite opt-in, keep `InMemory` as the safe default, and keep widgets away from SQLite settings and paths.
+   Keep SQLite opt-in, keep `InMemory` as the safe default, and route any user-facing database inspect/reset controls through the SQLUICore database management helper.
 2. Production async service design doc or small scaffold.
    Decide whether the current per-repository callback queue is enough or whether SQLUI needs a longer-lived DB service for production runtime use.
 3. SQLite history/checkpoint/previews API planning.

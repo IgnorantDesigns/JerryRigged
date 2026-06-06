@@ -1045,6 +1045,75 @@ struct SQLUISAMPLES_API FSQLUISampleLayoutPersistenceWorkflowProbeResult
 };
 
 USTRUCT(BlueprintType)
+struct SQLUISAMPLES_API FSQLUISampleLayoutRepositoryDatabaseManagementProbeResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bNonSQLiteStatusSafe = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bNonSQLiteResetSafe = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSQLiteEmptyPathStatusHandled = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSQLiteEmptyPathResetFailedClearly = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSQLiteStatusBeforeCreateSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSQLiteStatusBeforeCreateAbsent = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSQLiteStatusAfterSaveDetectedDatabase = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSQLiteStatusAfterSaveSizePositive = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSQLiteResetSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSQLiteResetRemovedDatabase = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSQLiteResetIdempotent = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSQLiteStatusAfterResetAbsent = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSQLiteSidecarRemovalSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bRelativePathResolvedUnderSaved = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bDatabaseFilesRemoved = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FString DatabasePath;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FString SidecarDatabasePath;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FString RelativeDatabasePath;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FString ResolvedRelativeDatabasePath;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FString ErrorMessage;
+};
+
+USTRUCT(BlueprintType)
 struct SQLUISAMPLES_API FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult
 {
 	GENERATED_BODY()
@@ -1416,6 +1485,9 @@ struct SQLUISAMPLES_API FSQLUISampleSmokeTestRequest
 	bool bUseLayoutPersistenceWorkflowProbe = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bUseLayoutRepositoryDatabaseManagementProbe = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bUseSQLiteMigrationProbe = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
@@ -1606,6 +1678,12 @@ struct SQLUISAMPLES_API FSQLUISampleSmokeTestResult
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	FSQLUISampleLayoutPersistenceWorkflowProbeResult LayoutPersistenceWorkflowProbe;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bUsedLayoutRepositoryDatabaseManagementProbe = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	FSQLUISampleLayoutRepositoryDatabaseManagementProbeResult LayoutRepositoryDatabaseManagementProbe;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bUsedSQLiteMigrationProbe = false;
