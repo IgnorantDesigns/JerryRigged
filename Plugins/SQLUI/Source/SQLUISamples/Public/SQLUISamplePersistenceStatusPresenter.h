@@ -7,14 +7,33 @@
 
 #include "SQLUISamplePersistenceStatusPresenter.generated.h"
 
+USTRUCT(BlueprintType)
+struct SQLUISAMPLES_API FSQLUISamplePersistenceStatusRefreshResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples|Persistence")
+	bool bSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples|Persistence")
+	TArray<FSQLUIPersistenceStatusDisplayRow> Rows;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples|Persistence")
+	TArray<FString> FormattedLines;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples|Persistence")
+	FString SummaryText;
+};
+
 /**
  * Minimal sample/dev-facing presenter for read-only persistence status rows.
  *
  * This SQLUISamples helper consumes SQLUICore display rows and stores stable
- * strings for simple UI, Blueprint, or commandlet presentation. It does not
- * probe files directly, initialize providers, create repositories, create
- * databases, run migrations, copy seed databases, reset databases, or delete
- * files.
+ * strings for simple UI, Blueprint, or commandlet presentation. Refresh is an
+ * explicit caller-invoked re-query of the SQLUICore status/display surfaces. It
+ * does not probe files directly, initialize providers, create repositories,
+ * create databases, run migrations, copy seed databases, reset databases, or
+ * delete files.
  */
 UCLASS(BlueprintType)
 class SQLUISAMPLES_API USQLUISamplePersistenceStatusPresenter : public UObject
@@ -30,6 +49,15 @@ public:
 		UObject* WorldContextObject,
 		const FSQLUILayoutRepositoryRuntimeConfig& RuntimeConfig);
 
+	UFUNCTION(BlueprintCallable, Category = "SQLUI|Samples|Persistence", meta = (WorldContext = "WorldContextObject"))
+	FSQLUISamplePersistenceStatusRefreshResult RefreshPersistenceStatus(
+		UObject* WorldContextObject);
+
+	UFUNCTION(BlueprintCallable, Category = "SQLUI|Samples|Persistence", meta = (WorldContext = "WorldContextObject"))
+	FSQLUISamplePersistenceStatusRefreshResult RefreshPersistenceStatusFromRuntimeConfig(
+		UObject* WorldContextObject,
+		const FSQLUILayoutRepositoryRuntimeConfig& RuntimeConfig);
+
 	UFUNCTION(BlueprintPure, Category = "SQLUI|Samples|Persistence")
 	TArray<FSQLUIPersistenceStatusDisplayRow> GetRows() const;
 
@@ -37,7 +65,8 @@ public:
 	TArray<FString> GetFormattedLines() const;
 
 private:
-	void SetRows(TArray<FSQLUIPersistenceStatusDisplayRow>&& InRows);
+	FSQLUISamplePersistenceStatusRefreshResult SetRows(
+		TArray<FSQLUIPersistenceStatusDisplayRow>&& InRows);
 	void RebuildFormattedLines();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SQLUI|Samples|Persistence", meta = (AllowPrivateAccess = "true"))

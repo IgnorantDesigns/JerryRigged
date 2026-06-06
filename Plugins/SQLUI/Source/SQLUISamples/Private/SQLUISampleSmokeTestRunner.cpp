@@ -8106,6 +8106,26 @@ bool DoesSQLUISamplePersistenceStatusSampleSurfaceLineContain(
 	return false;
 }
 
+bool AreSQLUISamplePersistenceStatusSampleSurfaceLinesEqual(
+	const TArray<FString>& Left,
+	const TArray<FString>& Right)
+{
+	if (Left.Num() != Right.Num())
+	{
+		return false;
+	}
+
+	for (int32 Index = 0; Index < Left.Num(); ++Index)
+	{
+		if (Left[Index] != Right[Index])
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 FSQLUILayoutRepositoryRuntimeConfig MakeSQLUISamplePersistenceStatusSampleSurfaceSQLiteConfig(
 	const FString& DatabasePath)
 {
@@ -8142,10 +8162,16 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 
 	const FSQLUILayoutRepositoryRuntimeConfig DefaultConfig =
 		FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault();
-	Presenter->RefreshFromRuntimeConfig(Outer, DefaultConfig);
+	const FSQLUISamplePersistenceStatusRefreshResult DefaultRefresh =
+		Presenter->RefreshPersistenceStatusFromRuntimeConfig(Outer, DefaultConfig);
 	const TArray<FSQLUIPersistenceStatusDisplayRow> DefaultRows =
 		Presenter->GetRows();
 	const TArray<FString> DefaultLines = Presenter->GetFormattedLines();
+	Result.bExplicitRefreshResultSucceeded =
+		DefaultRefresh.bSucceeded
+		&& DefaultRefresh.Rows.Num() == DefaultRows.Num()
+		&& DefaultRefresh.FormattedLines.Num() == DefaultLines.Num()
+		&& DefaultRefresh.SummaryText.Contains(TEXT("Refreshed"));
 	Result.bDefaultRowsPresented = DefaultRows.Num() >= 8;
 	Result.bDefaultFormattedLinesGenerated =
 		DefaultLines.Num() == DefaultRows.Num()
@@ -8178,22 +8204,40 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 	Result.bDefaultSurfaceDidNotCreateDb =
 		!DoesAnySQLUISamplePersistenceStatusSampleSurfaceFileExist(Result);
 
+	const FSQLUISamplePersistenceStatusRefreshResult RepeatedRefresh =
+		Presenter->RefreshPersistenceStatusFromRuntimeConfig(Outer, DefaultConfig);
+	const TArray<FString> RepeatedLines = Presenter->GetFormattedLines();
+	Result.bRepeatedRefreshSucceeded =
+		RepeatedRefresh.bSucceeded
+		&& RepeatedRefresh.Rows.Num() == DefaultRows.Num()
+		&& RepeatedRefresh.FormattedLines.Num() == DefaultLines.Num();
+	Result.bRepeatedRefreshDeterministic =
+		AreSQLUISamplePersistenceStatusSampleSurfaceLinesEqual(
+			DefaultLines,
+			RepeatedLines);
+	Result.bRepeatedRefreshDidNotCreateDb =
+		!DoesAnySQLUISamplePersistenceStatusSampleSurfaceFileExist(Result);
+
 	if (!Result.bDefaultRowsPresented
+		|| !Result.bExplicitRefreshResultSucceeded
 		|| !Result.bDefaultFormattedLinesGenerated
 		|| !Result.bDefaultBackendLineFound
 		|| !Result.bDefaultProviderLineFound
 		|| !Result.bDefaultRepositoryLineFound
 		|| !Result.bDefaultSQLiteRowsGraceful
-		|| !Result.bDefaultSurfaceDidNotCreateDb)
+		|| !Result.bDefaultSurfaceDidNotCreateDb
+		|| !Result.bRepeatedRefreshSucceeded
+		|| !Result.bRepeatedRefreshDeterministic
+		|| !Result.bRepeatedRefreshDidNotCreateDb)
 	{
 		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
 			Result,
-			TEXT("SQLUI persistence status sample surface probe failed: default presenter rows were not safe/read-only."));
+			TEXT("SQLUI persistence status sample surface probe failed: default presenter refresh rows were not safe/read-only."));
 	}
 
 	const FSQLUILayoutRepositoryRuntimeConfig MissingSQLiteConfig =
 		MakeSQLUISamplePersistenceStatusSampleSurfaceSQLiteConfig(Result.DatabasePath);
-	Presenter->RefreshFromRuntimeConfig(Outer, MissingSQLiteConfig);
+	Presenter->RefreshPersistenceStatusFromRuntimeConfig(Outer, MissingSQLiteConfig);
 	const TArray<FSQLUIPersistenceStatusDisplayRow> MissingSQLiteRows =
 		Presenter->GetRows();
 	const TArray<FString> MissingSQLiteLines = Presenter->GetFormattedLines();
@@ -8225,7 +8269,7 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 		WriteSQLUISamplePersistenceStatusSampleSurfaceSidecar(SidecarPath, Result);
 	const FSQLUILayoutRepositoryRuntimeConfig SidecarConfig =
 		MakeSQLUISamplePersistenceStatusSampleSurfaceSQLiteConfig(Result.SidecarDatabasePath);
-	Presenter->RefreshFromRuntimeConfig(Outer, SidecarConfig);
+	Presenter->RefreshPersistenceStatusFromRuntimeConfig(Outer, SidecarConfig);
 	Result.bSidecarStillPresentAfterRefresh =
 		bSidecarCreated
 		&& FPaths::FileExists(SidecarPath)
@@ -8253,12 +8297,16 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 	Result.bSucceeded =
 		Result.bPresenterCreated
 		&& Result.bDefaultRowsPresented
+		&& Result.bExplicitRefreshResultSucceeded
 		&& Result.bDefaultFormattedLinesGenerated
 		&& Result.bDefaultBackendLineFound
 		&& Result.bDefaultProviderLineFound
 		&& Result.bDefaultRepositoryLineFound
 		&& Result.bDefaultSQLiteRowsGraceful
 		&& Result.bDefaultSurfaceDidNotCreateDb
+		&& Result.bRepeatedRefreshSucceeded
+		&& Result.bRepeatedRefreshDeterministic
+		&& Result.bRepeatedRefreshDidNotCreateDb
 		&& Result.bMissingSQLiteRowsPresented
 		&& Result.bMissingSQLitePathLineFound
 		&& Result.bMissingSQLiteDatabaseAbsentLineFound

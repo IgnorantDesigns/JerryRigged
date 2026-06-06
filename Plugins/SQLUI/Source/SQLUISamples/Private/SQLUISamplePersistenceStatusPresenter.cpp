@@ -41,16 +41,31 @@ FString FormatSQLUISamplePersistenceStatusLine(
 
 void USQLUISamplePersistenceStatusPresenter::Refresh(UObject* WorldContextObject)
 {
-	SetRows(
-		USQLUIPersistenceStatusDisplayLibrary::GetPersistenceStatusDisplayRows(
-			WorldContextObject));
+	RefreshPersistenceStatus(WorldContextObject);
 }
 
 void USQLUISamplePersistenceStatusPresenter::RefreshFromRuntimeConfig(
 	UObject* WorldContextObject,
 	const FSQLUILayoutRepositoryRuntimeConfig& RuntimeConfig)
 {
-	SetRows(
+	RefreshPersistenceStatusFromRuntimeConfig(WorldContextObject, RuntimeConfig);
+}
+
+FSQLUISamplePersistenceStatusRefreshResult
+USQLUISamplePersistenceStatusPresenter::RefreshPersistenceStatus(
+	UObject* WorldContextObject)
+{
+	return SetRows(
+		USQLUIPersistenceStatusDisplayLibrary::GetPersistenceStatusDisplayRows(
+			WorldContextObject));
+}
+
+FSQLUISamplePersistenceStatusRefreshResult
+USQLUISamplePersistenceStatusPresenter::RefreshPersistenceStatusFromRuntimeConfig(
+	UObject* WorldContextObject,
+	const FSQLUILayoutRepositoryRuntimeConfig& RuntimeConfig)
+{
+	return SetRows(
 		USQLUIPersistenceStatusDisplayLibrary::
 			GetPersistenceStatusDisplayRowsFromRuntimeConfig(
 				WorldContextObject,
@@ -68,11 +83,21 @@ TArray<FString> USQLUISamplePersistenceStatusPresenter::GetFormattedLines() cons
 	return FormattedLines;
 }
 
-void USQLUISamplePersistenceStatusPresenter::SetRows(
+FSQLUISamplePersistenceStatusRefreshResult
+USQLUISamplePersistenceStatusPresenter::SetRows(
 	TArray<FSQLUIPersistenceStatusDisplayRow>&& InRows)
 {
 	Rows = MoveTemp(InRows);
 	RebuildFormattedLines();
+
+	FSQLUISamplePersistenceStatusRefreshResult Result;
+	Result.Rows = Rows;
+	Result.FormattedLines = FormattedLines;
+	Result.bSucceeded = Rows.Num() > 0;
+	Result.SummaryText = FString::Printf(
+		TEXT("Refreshed %d persistence status row(s)."),
+		Rows.Num());
+	return Result;
 }
 
 void USQLUISamplePersistenceStatusPresenter::RebuildFormattedLines()

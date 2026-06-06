@@ -1257,6 +1257,9 @@ struct SQLUISAMPLES_API FSQLUISamplePersistenceStatusSampleSurfaceProbeResult
 	bool bDefaultRowsPresented = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bExplicitRefreshResultSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bDefaultFormattedLinesGenerated = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
@@ -1273,6 +1276,15 @@ struct SQLUISAMPLES_API FSQLUISamplePersistenceStatusSampleSurfaceProbeResult
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bDefaultSurfaceDidNotCreateDb = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bRepeatedRefreshSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bRepeatedRefreshDeterministic = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bRepeatedRefreshDidNotCreateDb = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bMissingSQLiteRowsPresented = false;
