@@ -37,6 +37,7 @@
 #include "Variables/SQLUIVariableTypes.h"
 #include "WidgetCatalog/SQLUIWidgetCatalog.h"
 #include "WidgetCatalog/SQLUIWidgetCatalogRegistrar.h"
+#include "UObject/Class.h"
 #include "UObject/Package.h"
 
 namespace
@@ -8126,6 +8127,38 @@ bool AreSQLUISamplePersistenceStatusSampleSurfaceLinesEqual(
 	return true;
 }
 
+bool IsSQLUISamplePersistenceStatusPresenterFunctionBlueprintCallable(
+	const UClass* PresenterClass,
+	const FName FunctionName)
+{
+	const UFunction* Function =
+		PresenterClass ? PresenterClass->FindFunctionByName(FunctionName) : nullptr;
+	return Function && Function->HasAnyFunctionFlags(FUNC_BlueprintCallable);
+}
+
+bool IsSQLUISamplePersistenceStatusRefreshResultReflected()
+{
+	const UScriptStruct* RefreshResultStruct =
+		FSQLUISamplePersistenceStatusRefreshResult::StaticStruct();
+	return RefreshResultStruct
+		&& RefreshResultStruct->FindPropertyByName(
+			GET_MEMBER_NAME_CHECKED(
+				FSQLUISamplePersistenceStatusRefreshResult,
+				bSucceeded))
+		&& RefreshResultStruct->FindPropertyByName(
+			GET_MEMBER_NAME_CHECKED(
+				FSQLUISamplePersistenceStatusRefreshResult,
+				Rows))
+		&& RefreshResultStruct->FindPropertyByName(
+			GET_MEMBER_NAME_CHECKED(
+				FSQLUISamplePersistenceStatusRefreshResult,
+				FormattedLines))
+		&& RefreshResultStruct->FindPropertyByName(
+			GET_MEMBER_NAME_CHECKED(
+				FSQLUISamplePersistenceStatusRefreshResult,
+				SummaryText));
+}
+
 FSQLUILayoutRepositoryRuntimeConfig MakeSQLUISamplePersistenceStatusSampleSurfaceSQLiteConfig(
 	const FString& DatabasePath)
 {
@@ -8158,6 +8191,31 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 			DeleteSQLUISamplePersistenceStatusSampleSurfaceFiles(Result)
 			&& !DoesAnySQLUISamplePersistenceStatusSampleSurfaceFileExist(Result);
 		return Result;
+	}
+
+	const UClass* PresenterClass = Presenter->GetClass();
+	Result.bBlueprintRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPresenterFunctionBlueprintCallable(
+			PresenterClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPresenter,
+				RefreshPersistenceStatus));
+	Result.bBlueprintRuntimeConfigRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPresenterFunctionBlueprintCallable(
+			PresenterClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPresenter,
+				RefreshPersistenceStatusFromRuntimeConfig));
+	Result.bBlueprintRefreshResultReflected =
+		IsSQLUISamplePersistenceStatusRefreshResultReflected();
+
+	if (!Result.bBlueprintRefreshFunctionCallable
+		|| !Result.bBlueprintRuntimeConfigRefreshFunctionCallable
+		|| !Result.bBlueprintRefreshResultReflected)
+	{
+		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
+			Result,
+			TEXT("SQLUI persistence status sample surface probe failed: presenter refresh hook was not Blueprint-callable/reflected."));
 	}
 
 	const FSQLUILayoutRepositoryRuntimeConfig DefaultConfig =
@@ -8296,6 +8354,9 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 
 	Result.bSucceeded =
 		Result.bPresenterCreated
+		&& Result.bBlueprintRefreshFunctionCallable
+		&& Result.bBlueprintRuntimeConfigRefreshFunctionCallable
+		&& Result.bBlueprintRefreshResultReflected
 		&& Result.bDefaultRowsPresented
 		&& Result.bExplicitRefreshResultSucceeded
 		&& Result.bDefaultFormattedLinesGenerated

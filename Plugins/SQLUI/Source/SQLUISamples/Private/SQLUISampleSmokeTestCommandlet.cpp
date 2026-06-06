@@ -2954,6 +2954,15 @@ void LogSQLUISampleSmokeTestPersistenceStatusSampleSurfaceProbeResult(
 		};
 
 	LogPersistenceStatusSampleSurfaceBool(TEXT("presenter created"), ProbeResult.bPresenterCreated);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("Blueprint refresh function callable"),
+		ProbeResult.bBlueprintRefreshFunctionCallable);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("Blueprint runtime config refresh function callable"),
+		ProbeResult.bBlueprintRuntimeConfigRefreshFunctionCallable);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("Blueprint refresh result reflected"),
+		ProbeResult.bBlueprintRefreshResultReflected);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("default rows presented"), ProbeResult.bDefaultRowsPresented);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("explicit refresh result succeeded"), ProbeResult.bExplicitRefreshResultSucceeded);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("default formatted lines generated"), ProbeResult.bDefaultFormattedLinesGenerated);

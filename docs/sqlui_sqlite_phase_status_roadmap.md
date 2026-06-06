@@ -70,7 +70,7 @@ This is still not a default production persistence policy. Implementing the user
 | Persistence settings UX design | Documented | Future UI policy covers storage modes, defaults, DB path/status/reset, seed, migration, error, and startup behavior. |
 | Read-only persistence status surface | Implemented | Blueprint-callable SQLUICore snapshot exposes backend/provider/repository/SQLite file status without settings edits or destructive actions. |
 | Read-only persistence status display rows | Implemented | Blueprint-callable SQLUICore adapter formats the status snapshot into UI-friendly rows without probing files directly or mutating state. |
-| Persistence status sample surface | Implemented | Optional SQLUISamples presenter exposes display rows/formatted lines without startup wiring, settings editing, or destructive actions. |
+| Persistence status sample surface / Blueprint hook | Implemented | Optional SQLUISamples presenter exposes Blueprint-callable display-row refresh/formatted lines without startup wiring, settings editing, or destructive actions. |
 | Seed database copy policy | Implemented | Explicit pre-repository closed-file copy helper; not factory-owned. |
 | Migration version/status framework | Implemented | Reports known/applied/pending status for current known migration set. |
 | Packaged build validation | Implemented locally | Local Win64 Development BuildCookRun validation passed with UE 5.7 preferred MSVC toolchain. |
@@ -95,7 +95,7 @@ This is still not a default production persistence policy. Implementing the user
 | Runtime database management policy | `-UseLayoutRepositoryDatabaseManagementProbe` | Covered | Verifies non-SQLite no-op status/reset, SQLite empty-path behavior, status before/after save, reset/idempotent reset, sidecar removal, relative path resolution, and cleanup. |
 | Persistence status surface | `-UsePersistenceStatusSurfaceProbe` | Covered | Verifies default `InMemory` status, inactive provider/repository state without forced init, read-only SQLite DB/schema status, sidecar detection, and cleanup. |
 | Persistence status display rows | `-UsePersistenceStatusDisplayRowsProbe` | Covered | Verifies UI-friendly rows for default and SQLite snapshots, sidecar reporting, read-only formatting, and cleanup. |
-| Persistence status sample surface | `-UsePersistenceStatusSampleSurfaceProbe` | Covered | Verifies the optional SQLUISamples presenter consumes display rows, formats lines, refreshes explicitly and deterministically, handles missing SQLite DB state gracefully, preserves sidecars during refresh, and cleans up. |
+| Persistence status sample surface / Blueprint hook | `-UsePersistenceStatusSampleSurfaceProbe` | Covered | Verifies the optional SQLUISamples presenter exposes Blueprint-callable refresh hooks, consumes display rows, formats lines, refreshes explicitly and deterministically, handles missing SQLite DB state gracefully, preserves sidecars during refresh, and cleans up. |
 | SQLite migration runner | `-UseSQLiteMigrationProbe` | Covered | Smoke-only migration runner proof. |
 | Layout schema migration | `-UseSQLiteLayoutSchemaMigrationProbe` | Covered | Applies and verifies `001_initial_layout_schema`. |
 | SQLite layout read probe | `-UseSQLiteLayoutReadProbe` | Covered | Seeds one layout and verifies list/load mapping. |
