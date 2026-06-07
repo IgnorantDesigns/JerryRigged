@@ -138,7 +138,8 @@ Parameters:
       Run the optional SQLUICore read-only persistence status display-row probe.
 
   -UsePersistenceStatusSampleSurfaceProbe
-      Run the optional SQLUISamples read-only persistence status sample surface probe.
+      Run the optional SQLUISamples read-only persistence status sample surface and
+      Blueprint-facing presenter hook probe.
 
   -UseSQLiteMigrationProbe
       Run the optional SQLUICore SQLite migration-runner probe.
