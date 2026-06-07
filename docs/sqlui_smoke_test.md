@@ -34,9 +34,9 @@ The optional persistence status surface probe exercises the read-only SQLUICore 
 
 The optional persistence status display rows probe exercises the first UI-friendly adapter above that status snapshot. It verifies default and SQLite snapshots are converted into label/value/state/detail rows, verifies sidecar reporting, verifies the row adapter does not mutate the observed database, and cleans up under `Saved\SQLUI\SmokeTests\PersistenceStatusDisplayRows`.
 
-The optional persistence status sample surface probe exercises the first SQLUISamples sample/dev presenter above those display rows. It documents and validates the existing presenter Blueprint-callable refresh hooks and reflected refresh result, verifies the presenter can explicitly refresh rows and expose formatted lines under default `InMemory` config without initializing a provider or repository, verifies repeated refresh is deterministic and does not create a database, verifies a missing SQLite database path is presented gracefully without creating files, verifies refresh does not delete a smoke-owned sidecar, and cleans up under `Saved\SQLUI\SmokeTests\PersistenceStatusSampleSurface`.
+The optional persistence status sample surface probe exercises the first SQLUISamples sample/dev presenter and the tiny read-only panel adapter above those display rows. It documents and validates the existing presenter and adapter Blueprint-callable refresh hooks plus the reflected refresh result, verifies the presenter and adapter can explicitly refresh rows and expose formatted lines under default `InMemory` config without initializing a provider or repository, verifies the adapter rows match the presenter path, verifies repeated refresh is deterministic and does not create a database, verifies a missing SQLite database path is presented gracefully without creating files, verifies refresh does not delete a smoke-owned sidecar, and cleans up under `Saved\SQLUI\SmokeTests\PersistenceStatusSampleSurface`.
 
-That existing sample-surface probe is also the validation path for the read-only persistence status panel contract described in `docs/sqlui_persistence_settings_ux_design.md`. The contract adds no new smoke flag, code path, widget, or startup behavior; it only records how future Blueprint/UMG UI should consume the already-validated presenter/display rows safely.
+That existing sample-surface probe is also the validation path for the read-only persistence status panel adapter and contract described in `docs/sqlui_persistence_settings_ux_design.md`. This path adds no new smoke flag, widget blueprint asset, map, startup behavior, polling, ticking, provider auto-init, settings editing, reset/delete action, migration, seed copy, database creation, or file deletion; it only validates how future Blueprint/UMG UI can consume the already-validated adapter/presenter/display rows safely.
 
 The optional SQLite migration probe opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe`, creates the smoke-only migration tracking table, applies and records one probe migration, verifies the migration row, closes the database, and removes the probe database file. This is not the planned SQLUI layout schema migration and does not add a SQLite layout repository.
 
@@ -833,11 +833,17 @@ For the persistence status sample surface probe, also look for:
 ```text
 SQLUI persistence status sample surface probe selected: true
 SQLUI persistence status sample surface probe presenter created: true
+SQLUI persistence status sample surface probe panel adapter created: true
 SQLUI persistence status sample surface probe Blueprint refresh function callable: true
 SQLUI persistence status sample surface probe Blueprint runtime config refresh function callable: true
+SQLUI persistence status sample surface probe panel adapter Blueprint refresh function callable: true
+SQLUI persistence status sample surface probe panel adapter Blueprint runtime config refresh function callable: true
 SQLUI persistence status sample surface probe Blueprint refresh result reflected: true
 SQLUI persistence status sample surface probe default rows presented: true
 SQLUI persistence status sample surface probe explicit refresh result succeeded: true
+SQLUI persistence status sample surface probe panel adapter refresh succeeded: true
+SQLUI persistence status sample surface probe panel adapter rows matched presenter: true
+SQLUI persistence status sample surface probe panel adapter did not create DB: true
 SQLUI persistence status sample surface probe default formatted lines generated: true
 SQLUI persistence status sample surface probe default backend line found: true
 SQLUI persistence status sample surface probe default provider line found: true
@@ -847,6 +853,8 @@ SQLUI persistence status sample surface probe default surface did not create DB:
 SQLUI persistence status sample surface probe repeated refresh succeeded: true
 SQLUI persistence status sample surface probe repeated refresh deterministic: true
 SQLUI persistence status sample surface probe repeated refresh did not create DB: true
+SQLUI persistence status sample surface probe panel adapter repeated refresh succeeded: true
+SQLUI persistence status sample surface probe panel adapter repeated refresh deterministic: true
 SQLUI persistence status sample surface probe missing SQLite rows presented: true
 SQLUI persistence status sample surface probe missing SQLite path line found: true
 SQLUI persistence status sample surface probe missing SQLite database absent line found: true

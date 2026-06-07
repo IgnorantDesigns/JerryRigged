@@ -1254,10 +1254,19 @@ struct SQLUISAMPLES_API FSQLUISamplePersistenceStatusSampleSurfaceProbeResult
 	bool bPresenterCreated = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelAdapterCreated = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bBlueprintRefreshFunctionCallable = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bBlueprintRuntimeConfigRefreshFunctionCallable = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelAdapterBlueprintRefreshFunctionCallable = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelAdapterBlueprintRuntimeConfigRefreshFunctionCallable = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bBlueprintRefreshResultReflected = false;
@@ -1267,6 +1276,15 @@ struct SQLUISAMPLES_API FSQLUISamplePersistenceStatusSampleSurfaceProbeResult
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bExplicitRefreshResultSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelAdapterRefreshSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelAdapterRowsMatchedPresenter = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelAdapterDidNotCreateDb = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bDefaultFormattedLinesGenerated = false;
@@ -1294,6 +1312,12 @@ struct SQLUISAMPLES_API FSQLUISamplePersistenceStatusSampleSurfaceProbeResult
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bRepeatedRefreshDidNotCreateDb = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelAdapterRepeatedRefreshSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelAdapterRepeatedRefreshDeterministic = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bMissingSQLiteRowsPresented = false;

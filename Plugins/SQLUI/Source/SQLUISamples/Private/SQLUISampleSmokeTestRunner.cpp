@@ -1,5 +1,6 @@
 #include "SQLUISampleSmokeTestRunner.h"
 
+#include "SQLUISamplePersistenceStatusPanelAdapter.h"
 #include "SQLUISamplePersistenceStatusPresenter.h"
 #include "Database/SQLUIDatabaseAsyncQueue.h"
 #include "Database/SQLUIDatabaseAsyncRunner.h"
@@ -8136,6 +8137,15 @@ bool IsSQLUISamplePersistenceStatusPresenterFunctionBlueprintCallable(
 	return Function && Function->HasAnyFunctionFlags(FUNC_BlueprintCallable);
 }
 
+bool IsSQLUISamplePersistenceStatusPanelAdapterFunctionBlueprintCallable(
+	const UClass* AdapterClass,
+	const FName FunctionName)
+{
+	const UFunction* Function =
+		AdapterClass ? AdapterClass->FindFunctionByName(FunctionName) : nullptr;
+	return Function && Function->HasAnyFunctionFlags(FUNC_BlueprintCallable);
+}
+
 bool IsSQLUISamplePersistenceStatusRefreshResultReflected()
 {
 	const UScriptStruct* RefreshResultStruct =
@@ -8193,6 +8203,16 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 		return Result;
 	}
 
+	USQLUISamplePersistenceStatusPanelAdapter* PanelAdapter =
+		NewObject<USQLUISamplePersistenceStatusPanelAdapter>(Outer);
+	Result.bPanelAdapterCreated = IsValid(PanelAdapter);
+	if (!Result.bPanelAdapterCreated)
+	{
+		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
+			Result,
+			TEXT("SQLUI persistence status sample surface probe failed: panel adapter was not created."));
+	}
+
 	const UClass* PresenterClass = Presenter->GetClass();
 	Result.bBlueprintRefreshFunctionCallable =
 		IsSQLUISamplePersistenceStatusPresenterFunctionBlueprintCallable(
@@ -8208,14 +8228,30 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 				RefreshPersistenceStatusFromRuntimeConfig));
 	Result.bBlueprintRefreshResultReflected =
 		IsSQLUISamplePersistenceStatusRefreshResultReflected();
+	const UClass* PanelAdapterClass =
+		PanelAdapter ? PanelAdapter->GetClass() : nullptr;
+	Result.bPanelAdapterBlueprintRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelAdapterFunctionBlueprintCallable(
+			PanelAdapterClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPanelAdapter,
+				RefreshPersistenceStatusPanel));
+	Result.bPanelAdapterBlueprintRuntimeConfigRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelAdapterFunctionBlueprintCallable(
+			PanelAdapterClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPanelAdapter,
+				RefreshPersistenceStatusPanelFromRuntimeConfig));
 
 	if (!Result.bBlueprintRefreshFunctionCallable
 		|| !Result.bBlueprintRuntimeConfigRefreshFunctionCallable
+		|| !Result.bPanelAdapterBlueprintRefreshFunctionCallable
+		|| !Result.bPanelAdapterBlueprintRuntimeConfigRefreshFunctionCallable
 		|| !Result.bBlueprintRefreshResultReflected)
 	{
 		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
 			Result,
-			TEXT("SQLUI persistence status sample surface probe failed: presenter refresh hook was not Blueprint-callable/reflected."));
+			TEXT("SQLUI persistence status sample surface probe failed: presenter or panel adapter refresh hook was not Blueprint-callable/reflected."));
 	}
 
 	const FSQLUILayoutRepositoryRuntimeConfig DefaultConfig =
@@ -8230,6 +8266,35 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 		&& DefaultRefresh.Rows.Num() == DefaultRows.Num()
 		&& DefaultRefresh.FormattedLines.Num() == DefaultLines.Num()
 		&& DefaultRefresh.SummaryText.Contains(TEXT("Refreshed"));
+	const FSQLUISamplePersistenceStatusRefreshResult PanelAdapterRefresh =
+		PanelAdapter
+			? PanelAdapter->RefreshPersistenceStatusPanelFromRuntimeConfig(
+				Outer,
+				DefaultConfig)
+			: FSQLUISamplePersistenceStatusRefreshResult();
+	const TArray<FSQLUIPersistenceStatusDisplayRow> PanelAdapterRows =
+		PanelAdapter ? PanelAdapter->GetRows() : TArray<FSQLUIPersistenceStatusDisplayRow>();
+	const TArray<FString> PanelAdapterLines =
+		PanelAdapter ? PanelAdapter->GetFormattedLines() : TArray<FString>();
+	const FSQLUISamplePersistenceStatusRefreshResult PanelAdapterLastRefresh =
+		PanelAdapter
+			? PanelAdapter->GetLastRefreshResult()
+			: FSQLUISamplePersistenceStatusRefreshResult();
+	Result.bPanelAdapterRefreshSucceeded =
+		PanelAdapter
+		&& PanelAdapterRefresh.bSucceeded
+		&& PanelAdapterRefresh.Rows.Num() == PanelAdapterRows.Num()
+		&& PanelAdapterRefresh.FormattedLines.Num() == PanelAdapterLines.Num()
+		&& PanelAdapterLastRefresh.Rows.Num() == PanelAdapterRows.Num()
+		&& PanelAdapterLastRefresh.FormattedLines.Num() == PanelAdapterLines.Num()
+		&& PanelAdapter->GetSummaryText() == PanelAdapterRefresh.SummaryText
+		&& PanelAdapterRefresh.SummaryText.Contains(TEXT("Refreshed"));
+	Result.bPanelAdapterRowsMatchedPresenter =
+		AreSQLUISamplePersistenceStatusSampleSurfaceLinesEqual(
+			DefaultLines,
+			PanelAdapterLines);
+	Result.bPanelAdapterDidNotCreateDb =
+		!DoesAnySQLUISamplePersistenceStatusSampleSurfaceFileExist(Result);
 	Result.bDefaultRowsPresented = DefaultRows.Num() >= 8;
 	Result.bDefaultFormattedLinesGenerated =
 		DefaultLines.Num() == DefaultRows.Num()
@@ -8275,9 +8340,28 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 			RepeatedLines);
 	Result.bRepeatedRefreshDidNotCreateDb =
 		!DoesAnySQLUISamplePersistenceStatusSampleSurfaceFileExist(Result);
+	const FSQLUISamplePersistenceStatusRefreshResult PanelAdapterRepeatedRefresh =
+		PanelAdapter
+			? PanelAdapter->RefreshPersistenceStatusPanelFromRuntimeConfig(
+				Outer,
+				DefaultConfig)
+			: FSQLUISamplePersistenceStatusRefreshResult();
+	const TArray<FString> PanelAdapterRepeatedLines =
+		PanelAdapter ? PanelAdapter->GetFormattedLines() : TArray<FString>();
+	Result.bPanelAdapterRepeatedRefreshSucceeded =
+		PanelAdapterRepeatedRefresh.bSucceeded
+		&& PanelAdapterRepeatedRefresh.Rows.Num() == PanelAdapterRows.Num()
+		&& PanelAdapterRepeatedRefresh.FormattedLines.Num() == PanelAdapterLines.Num();
+	Result.bPanelAdapterRepeatedRefreshDeterministic =
+		AreSQLUISamplePersistenceStatusSampleSurfaceLinesEqual(
+			PanelAdapterLines,
+			PanelAdapterRepeatedLines);
 
 	if (!Result.bDefaultRowsPresented
 		|| !Result.bExplicitRefreshResultSucceeded
+		|| !Result.bPanelAdapterRefreshSucceeded
+		|| !Result.bPanelAdapterRowsMatchedPresenter
+		|| !Result.bPanelAdapterDidNotCreateDb
 		|| !Result.bDefaultFormattedLinesGenerated
 		|| !Result.bDefaultBackendLineFound
 		|| !Result.bDefaultProviderLineFound
@@ -8286,11 +8370,13 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 		|| !Result.bDefaultSurfaceDidNotCreateDb
 		|| !Result.bRepeatedRefreshSucceeded
 		|| !Result.bRepeatedRefreshDeterministic
-		|| !Result.bRepeatedRefreshDidNotCreateDb)
+		|| !Result.bRepeatedRefreshDidNotCreateDb
+		|| !Result.bPanelAdapterRepeatedRefreshSucceeded
+		|| !Result.bPanelAdapterRepeatedRefreshDeterministic)
 	{
 		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
 			Result,
-			TEXT("SQLUI persistence status sample surface probe failed: default presenter refresh rows were not safe/read-only."));
+			TEXT("SQLUI persistence status sample surface probe failed: default presenter or panel adapter refresh rows were not safe/read-only."));
 	}
 
 	const FSQLUILayoutRepositoryRuntimeConfig MissingSQLiteConfig =
@@ -8354,11 +8440,17 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 
 	Result.bSucceeded =
 		Result.bPresenterCreated
+		&& Result.bPanelAdapterCreated
 		&& Result.bBlueprintRefreshFunctionCallable
 		&& Result.bBlueprintRuntimeConfigRefreshFunctionCallable
+		&& Result.bPanelAdapterBlueprintRefreshFunctionCallable
+		&& Result.bPanelAdapterBlueprintRuntimeConfigRefreshFunctionCallable
 		&& Result.bBlueprintRefreshResultReflected
 		&& Result.bDefaultRowsPresented
 		&& Result.bExplicitRefreshResultSucceeded
+		&& Result.bPanelAdapterRefreshSucceeded
+		&& Result.bPanelAdapterRowsMatchedPresenter
+		&& Result.bPanelAdapterDidNotCreateDb
 		&& Result.bDefaultFormattedLinesGenerated
 		&& Result.bDefaultBackendLineFound
 		&& Result.bDefaultProviderLineFound
@@ -8368,6 +8460,8 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 		&& Result.bRepeatedRefreshSucceeded
 		&& Result.bRepeatedRefreshDeterministic
 		&& Result.bRepeatedRefreshDidNotCreateDb
+		&& Result.bPanelAdapterRepeatedRefreshSucceeded
+		&& Result.bPanelAdapterRepeatedRefreshDeterministic
 		&& Result.bMissingSQLiteRowsPresented
 		&& Result.bMissingSQLitePathLineFound
 		&& Result.bMissingSQLiteDatabaseAbsentLineFound
