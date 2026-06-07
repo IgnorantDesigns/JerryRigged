@@ -2,7 +2,7 @@
 
 This document defines the intended user-facing settings surface for SQLUI layout persistence before any product widget, menu, or settings UI implementation is added.
 
-The backend and policy pieces now exist for a safe first UI. A tiny optional SQLUISamples sample/dev presenter now exposes a Blueprint-callable, explicitly refreshed read-only display-row hook for validation and Blueprint/sample consumption, but the full product settings UI is still future work. This design keeps SQLite explicit, keeps `InMemory` as the safe default, and routes database status/reset behavior through SQLUICore helpers instead of widget-owned storage logic.
+The backend and policy pieces now exist for a safe first UI. A tiny optional SQLUISamples sample/dev presenter already provides a Blueprint-callable, explicitly refreshed read-only display-row hook for validation and Blueprint/sample consumption, but the full product settings UI is still future work. This design keeps SQLite explicit, keeps `InMemory` as the safe default, and routes database status/reset behavior through SQLUICore helpers instead of widget-owned storage logic.
 
 Related docs:
 
