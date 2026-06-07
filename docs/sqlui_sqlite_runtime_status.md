@@ -98,6 +98,8 @@ The resolver can also map explicit seed-copy options into `FSQLUISQLiteSeedDatab
 
 `USQLUISamplePersistenceStatusPresenter` is the first optional SQLUISamples sample/dev and Blueprint-facing surface over those display rows. Its Blueprint-callable, caller-invoked refresh functions re-query rows from SQLUICore, store stable formatted strings for simple sample UI, Blueprint, or commandlet presentation, and return a small refresh result for sample/dev consumers. It is not a full settings screen, is not wired into default startup, maps, config, timers, tick, or polling, and does not add settings editing, reset/delete actions, provider/repository initialization, database creation, migrations, seed copy, or file deletion.
 
+The read-only persistence status panel contract in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) is the current Blueprint/UMG usage recipe for that presenter/display-row path. A future panel should show row labels and values, optionally use row state/detail text for presentation, and expose refresh only as a caller-invoked action that re-queries current status rows. The contract is docs-only: no widget, widget blueprint, map, startup wiring, polling, ticking, provider initialization, repository initialization, migrations, seed copy, settings editing, or reset/delete behavior has been added.
+
 The packaged runtime provider startup smoke proves this holder can be intentionally created from packaged startup/runtime code and initialized from command-line repository settings. That proof runs only with `-SQLUIRuntimeProviderStartupSmoke`; normal startup still does not auto-initialize a provider or SQLite.
 
 The packaged runtime provider subsystem smoke proves the app-level subsystem holder path. It runs only with `-SQLUIRuntimeProviderSubsystemSmoke` plus explicit `-SQLUILayoutRepositoryProviderAutoInit` and repository settings. When the flags are absent, the subsystem remains passive and normal startup still does not initialize SQLite.
@@ -264,7 +266,7 @@ Remaining work includes:
 - Production async database service design beyond the current per-repository callback queue.
 - Cancellation, shutdown draining beyond stale-callback suppression, and async coverage for all repository operations.
 - Actual future schema migrations, upgrade-specific data transforms, and version-specific compatibility policy beyond the current version/status framework.
-- Implementing the user-facing persistence settings UI described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md). The first read-only SQLUICore status snapshot exists; settings editing, reset UI, and product startup policy remain future work.
+- Implementing the user-facing persistence settings UI described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md). The first read-only SQLUICore status snapshot, display rows, sample presenter, and panel contract exist; actual widgets, settings editing, reset UI, and product startup policy remain future work.
 - Product seed database asset/package/version policy, if seed DBs are added.
 - Optional lifecycle features such as history APIs, checkpoints, previews, restore flows, and richer search.
 
