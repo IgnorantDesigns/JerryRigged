@@ -34,9 +34,9 @@ The optional persistence status surface probe exercises the read-only SQLUICore 
 
 The optional persistence status display rows probe exercises the first UI-friendly adapter above that status snapshot. It verifies default and SQLite snapshots are converted into label/value/state/detail rows, verifies sidecar reporting, verifies the row adapter does not mutate the observed database, and cleans up under `Saved\SQLUI\SmokeTests\PersistenceStatusDisplayRows`.
 
-The optional persistence status sample surface probe exercises the first SQLUISamples sample/dev presenter and the tiny read-only panel adapter above those display rows. It documents and validates the existing presenter and adapter Blueprint-callable refresh hooks plus the reflected refresh result, verifies the presenter and adapter can explicitly refresh rows and expose formatted lines under default `InMemory` config without initializing a provider or repository, verifies the adapter rows match the presenter path, verifies repeated refresh is deterministic and does not create a database, verifies a missing SQLite database path is presented gracefully without creating files, verifies refresh does not delete a smoke-owned sidecar, and cleans up under `Saved\SQLUI\SmokeTests\PersistenceStatusSampleSurface`.
+The optional persistence status sample surface probe exercises the first SQLUISamples sample/dev presenter, tiny read-only panel adapter, and optional C++ UMG widget shell above those display rows. It documents and validates the existing presenter, adapter, and widget-shell Blueprint-callable refresh hooks plus the reflected refresh result, verifies the widget shell derives from `UUserWidget` and exposes cached rows/result/summary for Blueprint binding, verifies the presenter and adapter can explicitly refresh rows and expose formatted lines under default `InMemory` config without initializing a provider or repository, verifies the adapter rows match the presenter path, verifies repeated refresh is deterministic and does not create a database, verifies a missing SQLite database path is presented gracefully without creating files, verifies refresh does not delete a smoke-owned sidecar, and cleans up under `Saved\SQLUI\SmokeTests\PersistenceStatusSampleSurface`.
 
-That existing sample-surface probe is also the validation path for the read-only persistence status panel adapter and contract described in `docs/sqlui_persistence_settings_ux_design.md`. This path adds no new smoke flag, widget blueprint asset, map, startup behavior, polling, ticking, provider auto-init, settings editing, reset/delete action, migration, seed copy, database creation, or file deletion; it only validates how future Blueprint/UMG UI can consume the already-validated adapter/presenter/display rows safely.
+That existing sample-surface probe is also the validation path for the read-only persistence status panel adapter, widget shell, and contract described in `docs/sqlui_persistence_settings_ux_design.md`. This path adds no new smoke flag, widget blueprint asset, map, startup behavior, polling, ticking, provider auto-init, settings editing, reset/delete action, migration, seed copy, database creation, or file deletion; it only validates how future Blueprint/UMG UI can consume the already-validated widget-shell/adapter/presenter/display rows safely.
 
 The optional SQLite migration probe opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe`, creates the smoke-only migration tracking table, applies and records one probe migration, verifies the migration row, closes the database, and removes the probe database file. This is not the planned SQLUI layout schema migration and does not add a SQLite layout repository.
 
@@ -282,7 +282,7 @@ This path proves the first UI-row adapter only. It does not add a widget, add se
 
 ## Run The Persistence Status Sample Surface Probe
 
-The persistence status sample surface probe keeps the same transient commandlet flow, exercises `USQLUISamplePersistenceStatusPresenter`, verifies the existing presenter refresh functions and refresh result are reflected for Blueprint use, verifies explicit caller-invoked refresh returns the default `InMemory` status rows and formatted lines without initializing a provider or repository, verifies repeated refresh is deterministic and does not create a database, verifies an explicit missing SQLite path is displayed without creating a database, verifies refresh does not delete a smoke-owned SQLite sidecar, removes all probe database files, and then runs the same default runtime widget pipeline:
+The persistence status sample surface probe keeps the same transient commandlet flow, exercises `USQLUISamplePersistenceStatusPresenter` and `USQLUISamplePersistenceStatusPanelAdapter`, validates `USQLUISamplePersistenceStatusPanelWidget` by reflection without a widget blueprint, map, or viewport instance, verifies the existing presenter/adapter/widget-shell refresh functions and refresh result are reflected for Blueprint use, verifies explicit caller-invoked refresh returns the default `InMemory` status rows and formatted lines without initializing a provider or repository, verifies repeated refresh is deterministic and does not create a database, verifies an explicit missing SQLite path is displayed without creating a database, verifies refresh does not delete a smoke-owned SQLite sidecar, removes all probe database files, and then runs the same default runtime widget pipeline:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UsePersistenceStatusSampleSurfaceProbe
@@ -290,7 +290,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-PersistenceStatusSampleSurfaceProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
-This path proves the first optional SQLUISamples sample/dev and Blueprint-facing presenter only. Refresh means re-querying the existing SQLUICore status/display surfaces on explicit caller request. It is not a full settings screen. It does not add UMG widgets, widget blueprints, polling, ticking, startup refresh, settings editing, reset/delete controls, startup/maps/config wiring, SQLite as the default backend, provider auto-init, database creation from default config, migrations from the presenter, seed database copy, file deletion from presenter code, Content or map edits, or persistent database files.
+This path proves the first optional SQLUISamples sample/dev presenter, panel adapter, and C++ UMG widget shell. Refresh means re-querying the existing SQLUICore status/display surfaces on explicit caller request. It is not a full settings screen. It does not add widget blueprint assets, visual layout, viewport attachment, polling, ticking, startup refresh, settings editing, reset/delete controls, startup/maps/config wiring, SQLite as the default backend, provider auto-init, database creation from default config, migrations from presenter/adapter/widget code, seed database copy, file deletion from presenter/adapter/widget code, Content or map edits, or persistent database files.
 
 ## Run The SQLite Migration Probe
 
@@ -834,10 +834,16 @@ For the persistence status sample surface probe, also look for:
 SQLUI persistence status sample surface probe selected: true
 SQLUI persistence status sample surface probe presenter created: true
 SQLUI persistence status sample surface probe panel adapter created: true
+SQLUI persistence status sample surface probe panel widget class derived from UUserWidget: true
 SQLUI persistence status sample surface probe Blueprint refresh function callable: true
 SQLUI persistence status sample surface probe Blueprint runtime config refresh function callable: true
 SQLUI persistence status sample surface probe panel adapter Blueprint refresh function callable: true
 SQLUI persistence status sample surface probe panel adapter Blueprint runtime config refresh function callable: true
+SQLUI persistence status sample surface probe panel widget Blueprint refresh function callable: true
+SQLUI persistence status sample surface probe panel widget Blueprint runtime config refresh function callable: true
+SQLUI persistence status sample surface probe panel widget rows property Blueprint visible: true
+SQLUI persistence status sample surface probe panel widget refresh result property Blueprint visible: true
+SQLUI persistence status sample surface probe panel widget summary text property Blueprint visible: true
 SQLUI persistence status sample surface probe Blueprint refresh result reflected: true
 SQLUI persistence status sample surface probe default rows presented: true
 SQLUI persistence status sample surface probe explicit refresh result succeeded: true

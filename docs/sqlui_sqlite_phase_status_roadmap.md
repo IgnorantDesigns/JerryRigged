@@ -31,6 +31,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - A SQLUICore read-only persistence status display-row adapter now converts that snapshot into label/value/state/detail rows for future UI binding without adding a widget or settings editing.
 - An optional SQLUISamples sample/dev presenter now consumes those display rows, exposes stable formatted lines, and supports explicit caller-invoked refresh without wiring into startup or adding settings editing/reset behavior.
 - An optional SQLUISamples read-only persistence status panel adapter now delegates to the existing presenter/display-row path and stores latest rows/results for future Blueprint/UMG binding without owning persistence internals.
+- An optional SQLUISamples C++ UMG widget shell now delegates to the panel adapter and exposes cached rows/results for future Blueprint subclassing or binding without adding widget blueprint assets, maps, viewport attachment, startup wiring, or settings controls.
 - A docs-only read-only persistence status panel contract records how future Blueprint/UMG UI should consume the adapter/presenter/display-row path safely.
 - Schema initialization and database creation are repository-owned and opt-in.
 - The current known production migration set is only `001_initial_layout_schema`.
@@ -74,7 +75,8 @@ This is still not a default production persistence policy. Implementing the user
 | Read-only persistence status display rows | Implemented | Blueprint-callable SQLUICore adapter formats the status snapshot into UI-friendly rows without probing files directly or mutating state. |
 | Persistence status sample surface / Blueprint hook | Implemented | Optional SQLUISamples presenter already provides Blueprint-callable display-row refresh/formatted lines without startup wiring, settings editing, or destructive actions. |
 | Persistence status panel adapter | Implemented | Optional SQLUISamples UObject delegates to the presenter and stores latest rows/result for future Blueprint/UMG binding; no widget asset, startup wiring, editing controls, reset/delete actions, or runtime behavior. |
-| Persistence status panel contract | Documented | Blueprint/UMG usage recipe for the read-only adapter/presenter path; no widget, startup wiring, editing controls, reset/delete actions, or runtime behavior. |
+| Persistence status UMG widget shell | Implemented | Optional SQLUISamples C++ UUserWidget shell delegates to the panel adapter and exposes cached rows/result; no widget blueprint asset, map, viewport attachment, startup wiring, editing controls, reset/delete actions, or runtime behavior. |
+| Persistence status panel contract | Documented | Blueprint/UMG usage recipe for the read-only widget-shell/adapter/presenter path; no startup wiring, editing controls, reset/delete actions, or runtime behavior. |
 | Seed database copy policy | Implemented | Explicit pre-repository closed-file copy helper; not factory-owned. |
 | Migration version/status framework | Implemented | Reports known/applied/pending status for current known migration set. |
 | Packaged build validation | Implemented locally | Local Win64 Development BuildCookRun validation passed with UE 5.7 preferred MSVC toolchain. |
@@ -99,7 +101,7 @@ This is still not a default production persistence policy. Implementing the user
 | Runtime database management policy | `-UseLayoutRepositoryDatabaseManagementProbe` | Covered | Verifies non-SQLite no-op status/reset, SQLite empty-path behavior, status before/after save, reset/idempotent reset, sidecar removal, relative path resolution, and cleanup. |
 | Persistence status surface | `-UsePersistenceStatusSurfaceProbe` | Covered | Verifies default `InMemory` status, inactive provider/repository state without forced init, read-only SQLite DB/schema status, sidecar detection, and cleanup. |
 | Persistence status display rows | `-UsePersistenceStatusDisplayRowsProbe` | Covered | Verifies UI-friendly rows for default and SQLite snapshots, sidecar reporting, read-only formatting, and cleanup. |
-| Persistence status sample surface / Blueprint hook | `-UsePersistenceStatusSampleSurfaceProbe` | Covered | Documents and validates the optional SQLUISamples presenter and panel adapter Blueprint-callable refresh hooks, display-row consumption, formatted lines, explicit deterministic refresh, graceful missing SQLite DB state, sidecar preservation during refresh, and cleanup. |
+| Persistence status sample surface / Blueprint hook | `-UsePersistenceStatusSampleSurfaceProbe` | Covered | Documents and validates the optional SQLUISamples presenter, panel adapter, and C++ UMG widget shell Blueprint-callable refresh hooks, display-row consumption, formatted lines, explicit deterministic refresh, graceful missing SQLite DB state, sidecar preservation during refresh, and cleanup. |
 | SQLite migration runner | `-UseSQLiteMigrationProbe` | Covered | Smoke-only migration runner proof. |
 | Layout schema migration | `-UseSQLiteLayoutSchemaMigrationProbe` | Covered | Applies and verifies `001_initial_layout_schema`. |
 | SQLite layout read probe | `-UseSQLiteLayoutReadProbe` | Covered | Seeds one layout and verifies list/load mapping. |
@@ -190,7 +192,7 @@ The safe default remains non-SQLite.
 
 Prioritized remaining work:
 
-1. Implement the production/user-facing runtime settings UI described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), following the read-only panel contract and building from the existing status display rows, optional sample presenter, or optional panel adapter.
+1. Implement the production/user-facing runtime settings UI described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), following the read-only panel contract and building from the existing status display rows, optional sample presenter, optional panel adapter, or optional C++ widget shell.
 2. Product startup policy that intentionally configures the passive runtime provider subsystem outside packaged smoke flags.
 3. Actual future schema migrations and data transforms beyond `001_initial_layout_schema`.
 4. Production async database service design beyond the current per-repository callback queue.
@@ -206,7 +208,7 @@ Prioritized remaining work:
 Suggested next PRs, in priority order:
 
 1. First actual persistence settings widget/panel slice from [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md).
-   Follow the documented read-only panel contract, bind to the read-only status display rows or optional SQLUISamples adapter/presenter shape, keep refresh caller-invoked, keep SQLite opt-in, keep `InMemory` as the safe default, and keep reset/settings editing out until confirmation and provider-shutdown policy are defined.
+   Follow the documented read-only panel contract, bind to the read-only status display rows or optional SQLUISamples widget-shell/adapter/presenter shape, keep refresh caller-invoked, keep SQLite opt-in, keep `InMemory` as the safe default, and keep reset/settings editing out until confirmation and provider-shutdown policy are defined.
 2. Production async service design doc or small scaffold.
    Decide whether the current per-repository callback queue is enough or whether SQLUI needs a longer-lived DB service for production runtime use.
 3. SQLite history/checkpoint/previews API planning.
