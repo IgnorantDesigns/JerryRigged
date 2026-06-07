@@ -183,6 +183,51 @@ The current UI-facing row adapter is `USQLUIPersistenceStatusDisplayLibrary`. It
 
 The current sample/dev-facing presenter is `USQLUISamplePersistenceStatusPresenter` in SQLUISamples. It consumes the row adapter and turns rows into formatted strings for optional Blueprint/sample surfaces or commandlet logs. It is a passive presenter only: Blueprint-callable, caller-invoked refresh re-queries the current SQLUICore status/display surfaces and regenerates rows, but does not poll, tick, auto-refresh, create DBs, run migrations, copy seeds, initialize providers/repositories, delete files, attach widgets, or change startup behavior.
 
+## Read-Only Panel Contract / Blueprint Usage Recipe
+
+This contract is the intended first Blueprint/UMG consumption shape for a future persistence settings/status panel. It is documentation only; it does not add a widget, widget blueprint, map, startup binding, settings editor, reset button, or backend selector.
+
+Use the existing SQLUISamples presenter hook validated by the sample-surface smoke probe:
+
+- Create or reference a `USQLUISamplePersistenceStatusPresenter` from the future panel/view model.
+- Call `RefreshPersistenceStatus` for current runtime settings, or `RefreshPersistenceStatusFromRuntimeConfig` when the panel is previewing an explicit runtime config.
+- Read `FSQLUISamplePersistenceStatusRefreshResult.Rows` or call `GetRows()` for structured display.
+- Use `GetFormattedLines()` only for simple sample text/log presentation. Product UI should prefer rows.
+
+Display each `FSQLUIPersistenceStatusDisplayRow` without reinterpreting storage details:
+
+- Show `Label`.
+- Show `Value`.
+- Optionally map `State` to a visual treatment such as normal, good, warning, or unavailable.
+- Optionally expose `DetailText` as a tooltip/help line.
+- Present default `InMemory` rows as normal and safe.
+- Treat missing SQLite path or database rows as normal/not-applicable when SQLite is not the configured backend.
+
+Refresh behavior must stay explicit and read-only:
+
+- A future Refresh button/action may call the presenter refresh function.
+- Refresh means re-query current SQLUICore status/display rows only.
+- Refresh must not run from startup, construction, timers, tick, polling loops, latent refresh loops, or automatic runtime initialization unless a later PR intentionally adds a safe optional UI path.
+- Refresh must not initialize a provider, create a repository, create directories, create databases, apply schema, run migrations, copy seed databases, reset databases, delete files, save settings, or switch backends.
+
+Controls that are out of scope for this first panel contract:
+
+- Backend selector.
+- SQLite path editor.
+- Provider auto-init toggle.
+- Schema initialization or create-database toggle.
+- Seed-copy controls.
+- Settings save/apply flow.
+- Reset/delete button.
+- Migration execution controls.
+
+Ownership boundaries:
+
+- UI/widgets consume SQLUICore status/display rows; they do not own persistence internals.
+- UI/widgets do not know SQL strings, schema tables, migration ids, seed-copy policy, sidecar naming, SQLite file-size checks, or deletion rules.
+- UI/widgets do not perform direct file existence, file size, sidecar, or schema checks.
+- Future reset/delete UI must call SQLUICore database management helper/policy surfaces and must not delete files directly.
+
 Suggested status fields:
 
 - Backend
@@ -317,6 +362,8 @@ Start with a read-only status panel:
 - Current schema/migration status if available.
 
 The first proof slice implements this as a SQLUICore status snapshot plus a display-row adapter and smoke coverage, not a widget. The next UI PR can bind a small panel to those rows without adding settings editing or destructive actions.
+
+The read-only panel contract above is now the recipe for that next UI PR. It should bind rows from `USQLUISamplePersistenceStatusPresenter` or directly from `USQLUIPersistenceStatusDisplayLibrary`, keep refresh caller-invoked only, and avoid backend selection, path editing, settings save/apply, reset/delete, and startup wiring.
 
 Then add opt-in persistence selection:
 
