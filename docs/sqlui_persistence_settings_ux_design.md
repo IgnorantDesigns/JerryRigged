@@ -2,7 +2,7 @@
 
 This document defines the intended user-facing settings surface for SQLUI layout persistence before any product widget, menu, or settings UI implementation is added.
 
-The backend and policy pieces now exist for a safe first UI. A tiny optional SQLUISamples sample/dev presenter already provides a Blueprint-callable, explicitly refreshed read-only display-row hook for validation and Blueprint/sample consumption, but the full product settings UI is still future work. This design keeps SQLite explicit, keeps `InMemory` as the safe default, and routes database status/reset behavior through SQLUICore helpers instead of widget-owned storage logic.
+The backend and policy pieces now exist for a safe first UI. Tiny optional SQLUISamples sample/dev presenter and panel-adapter objects already provide Blueprint-callable, explicitly refreshed read-only display-row hooks for validation and Blueprint/sample consumption, but the full product settings UI is still future work. This design keeps SQLite explicit, keeps `InMemory` as the safe default, and routes database status/reset behavior through SQLUICore helpers instead of widget-owned storage logic.
 
 Related docs:
 
@@ -49,6 +49,8 @@ The first implementation slice for this design now exists as `USQLUIPersistenceS
 The first UI-consumption slice also exists as `USQLUIPersistenceStatusDisplayLibrary` and `FSQLUIPersistenceStatusDisplayRow`. It converts the read-only status snapshot into label/value/state/detail rows that a future settings panel can bind to directly. The display library does not perform its own file checks, initialize providers, create repositories, create databases, run migrations, copy seeds, reset databases, or delete files.
 
 `USQLUISamplePersistenceStatusPresenter` is the first optional SQLUISamples sample/dev surface over those rows. It stores the display rows plus stable formatted strings for simple sample UI, Blueprint, or commandlet presentation and exposes Blueprint-callable, caller-invoked refresh functions for re-querying those same rows. It is not a full settings screen, is not wired into startup, maps, or default config, and it does not add settings editing, reset/delete actions, provider initialization, repository initialization, migrations, seed copy, database creation, or file deletion.
+
+`USQLUISamplePersistenceStatusPanelAdapter` is the first tiny panel-named adapter for future Blueprint/UMG binding. It is a plain optional SQLUISamples `UObject`, not a `UUserWidget`, and it delegates refresh to `USQLUISamplePersistenceStatusPresenter` instead of duplicating persistence status logic. It stores the latest rows, formatted lines, summary text, and refresh result in memory only. It adds no widget blueprint asset, map, startup binding, polling/tick/timer behavior, settings editing, backend selector, SQLite path editor, reset/delete action, provider/repository initialization, migration, seed copy, database creation, or file deletion.
 
 ## UX Goals
 
@@ -183,15 +185,17 @@ The current UI-facing row adapter is `USQLUIPersistenceStatusDisplayLibrary`. It
 
 The current sample/dev-facing presenter is `USQLUISamplePersistenceStatusPresenter` in SQLUISamples. It consumes the row adapter and turns rows into formatted strings for optional Blueprint/sample surfaces or commandlet logs. It is a passive presenter only: Blueprint-callable, caller-invoked refresh re-queries the current SQLUICore status/display surfaces and regenerates rows, but does not poll, tick, auto-refresh, create DBs, run migrations, copy seeds, initialize providers/repositories, delete files, attach widgets, or change startup behavior.
 
+The current panel-named adapter is `USQLUISamplePersistenceStatusPanelAdapter` in SQLUISamples. It exists for future Blueprint/UMG panels that want a binding-friendly object name and cached latest rows/result. It delegates to the presenter, remains caller-invoked only, and is not an implemented widget or settings screen.
+
 ## Read-Only Panel Contract / Blueprint Usage Recipe
 
 This contract is the intended first Blueprint/UMG consumption shape for a future persistence settings/status panel. It is documentation only; it does not add a widget, widget blueprint, map, startup binding, settings editor, reset button, or backend selector.
 
-Use the existing SQLUISamples presenter hook validated by the sample-surface smoke probe:
+Use the existing SQLUISamples panel adapter, which delegates to the presenter hook validated by the sample-surface smoke probe:
 
-- Create or reference a `USQLUISamplePersistenceStatusPresenter` from the future panel/view model.
-- Call `RefreshPersistenceStatus` for current runtime settings, or `RefreshPersistenceStatusFromRuntimeConfig` when the panel is previewing an explicit runtime config.
-- Read `FSQLUISamplePersistenceStatusRefreshResult.Rows` or call `GetRows()` for structured display.
+- Create or reference a `USQLUISamplePersistenceStatusPanelAdapter` from the future panel/view model.
+- Call `RefreshPersistenceStatusPanel` for current runtime settings, or `RefreshPersistenceStatusPanelFromRuntimeConfig` when the panel is previewing an explicit runtime config.
+- Read `FSQLUISamplePersistenceStatusRefreshResult.Rows`, call `GetRows()`, or read the adapter's cached last refresh result for structured display.
 - Use `GetFormattedLines()` only for simple sample text/log presentation. Product UI should prefer rows.
 
 Display each `FSQLUIPersistenceStatusDisplayRow` without reinterpreting storage details:

@@ -2954,6 +2954,7 @@ void LogSQLUISampleSmokeTestPersistenceStatusSampleSurfaceProbeResult(
 		};
 
 	LogPersistenceStatusSampleSurfaceBool(TEXT("presenter created"), ProbeResult.bPresenterCreated);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("panel adapter created"), ProbeResult.bPanelAdapterCreated);
 	LogPersistenceStatusSampleSurfaceBool(
 		TEXT("Blueprint refresh function callable"),
 		ProbeResult.bBlueprintRefreshFunctionCallable);
@@ -2961,10 +2962,19 @@ void LogSQLUISampleSmokeTestPersistenceStatusSampleSurfaceProbeResult(
 		TEXT("Blueprint runtime config refresh function callable"),
 		ProbeResult.bBlueprintRuntimeConfigRefreshFunctionCallable);
 	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("panel adapter Blueprint refresh function callable"),
+		ProbeResult.bPanelAdapterBlueprintRefreshFunctionCallable);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("panel adapter Blueprint runtime config refresh function callable"),
+		ProbeResult.bPanelAdapterBlueprintRuntimeConfigRefreshFunctionCallable);
+	LogPersistenceStatusSampleSurfaceBool(
 		TEXT("Blueprint refresh result reflected"),
 		ProbeResult.bBlueprintRefreshResultReflected);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("default rows presented"), ProbeResult.bDefaultRowsPresented);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("explicit refresh result succeeded"), ProbeResult.bExplicitRefreshResultSucceeded);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("panel adapter refresh succeeded"), ProbeResult.bPanelAdapterRefreshSucceeded);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("panel adapter rows matched presenter"), ProbeResult.bPanelAdapterRowsMatchedPresenter);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("panel adapter did not create DB"), ProbeResult.bPanelAdapterDidNotCreateDb);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("default formatted lines generated"), ProbeResult.bDefaultFormattedLinesGenerated);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("default backend line found"), ProbeResult.bDefaultBackendLineFound);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("default provider line found"), ProbeResult.bDefaultProviderLineFound);
@@ -2974,6 +2984,8 @@ void LogSQLUISampleSmokeTestPersistenceStatusSampleSurfaceProbeResult(
 	LogPersistenceStatusSampleSurfaceBool(TEXT("repeated refresh succeeded"), ProbeResult.bRepeatedRefreshSucceeded);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("repeated refresh deterministic"), ProbeResult.bRepeatedRefreshDeterministic);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("repeated refresh did not create DB"), ProbeResult.bRepeatedRefreshDidNotCreateDb);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("panel adapter repeated refresh succeeded"), ProbeResult.bPanelAdapterRepeatedRefreshSucceeded);
+	LogPersistenceStatusSampleSurfaceBool(TEXT("panel adapter repeated refresh deterministic"), ProbeResult.bPanelAdapterRepeatedRefreshDeterministic);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("missing SQLite rows presented"), ProbeResult.bMissingSQLiteRowsPresented);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("missing SQLite path line found"), ProbeResult.bMissingSQLitePathLineFound);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("missing SQLite database absent line found"), ProbeResult.bMissingSQLiteDatabaseAbsentLineFound);
