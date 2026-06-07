@@ -9,6 +9,7 @@ For deeper reference, see:
 - [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md) for schema details.
 - [`sqlui_sqlite_async_backend_plan.md`](sqlui_sqlite_async_backend_plan.md) for async and shutdown policy.
 - [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) for the future user-facing persistence/settings UX policy.
+- [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) for the focused read-only UMG binding recipe.
 - [`sqlui_smoke_test.md`](sqlui_smoke_test.md) for local editor smoke commands.
 - [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) for packaged build and packaged runtime smoke validation.
 
@@ -33,6 +34,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - An optional SQLUISamples read-only persistence status panel adapter now delegates to the existing presenter/display-row path and stores latest rows/results for future Blueprint/UMG binding without owning persistence internals.
 - An optional SQLUISamples C++ UMG widget shell now delegates to the panel adapter and exposes cached rows/results for future Blueprint subclassing or binding without adding widget blueprint assets, maps, viewport attachment, startup wiring, or settings controls.
 - A docs-only read-only persistence status panel contract records how future Blueprint/UMG UI should consume the adapter/presenter/display-row path safely.
+- A focused read-only UMG usage guide now records the safe future widget blueprint subclass/binding recipe, refresh boundaries, display semantics, and manual local checklist.
 - Schema initialization and database creation are repository-owned and opt-in.
 - The current known production migration set is only `001_initial_layout_schema`.
 - `LoadLayout` and `SaveLayout` callback APIs can opt into serialized async execution with shutdown/stale-callback suppression.
@@ -77,6 +79,7 @@ This is still not a default production persistence policy. Implementing the user
 | Persistence status panel adapter | Implemented | Optional SQLUISamples UObject delegates to the presenter and stores latest rows/result for future Blueprint/UMG binding; no widget asset, startup wiring, editing controls, reset/delete actions, or runtime behavior. |
 | Persistence status UMG widget shell | Implemented | Optional SQLUISamples C++ UUserWidget shell delegates to the panel adapter and exposes cached rows/result; no widget blueprint asset, map, viewport attachment, startup wiring, editing controls, reset/delete actions, or runtime behavior. |
 | Persistence status panel contract | Documented | Blueprint/UMG usage recipe for the read-only widget-shell/adapter/presenter path; no startup wiring, editing controls, reset/delete actions, or runtime behavior. |
+| Persistence status UMG usage guide | Documented | Focused binding recipe and local/manual checklist for future widget blueprint subclasses; no asset, map, startup wiring, polling, editing controls, reset/delete actions, or runtime behavior. |
 | Seed database copy policy | Implemented | Explicit pre-repository closed-file copy helper; not factory-owned. |
 | Migration version/status framework | Implemented | Reports known/applied/pending status for current known migration set. |
 | Packaged build validation | Implemented locally | Local Win64 Development BuildCookRun validation passed with UE 5.7 preferred MSVC toolchain. |
@@ -192,7 +195,7 @@ The safe default remains non-SQLite.
 
 Prioritized remaining work:
 
-1. Implement the production/user-facing runtime settings UI described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), following the read-only panel contract and building from the existing status display rows, optional sample presenter, optional panel adapter, or optional C++ widget shell.
+1. Implement the production/user-facing runtime settings UI described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) and [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md), following the read-only panel contract and binding recipe while keeping SQLite opt-in and `InMemory` as the safe default.
 2. Product startup policy that intentionally configures the passive runtime provider subsystem outside packaged smoke flags.
 3. Actual future schema migrations and data transforms beyond `001_initial_layout_schema`.
 4. Production async database service design beyond the current per-repository callback queue.

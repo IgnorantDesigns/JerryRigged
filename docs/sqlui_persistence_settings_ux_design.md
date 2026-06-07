@@ -9,6 +9,7 @@ Related docs:
 - [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md) summarizes the implemented SQLite runtime state.
 - [`sqlui_repository_architecture.md`](sqlui_repository_architecture.md) describes repository boundaries and backend selection.
 - [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md) tracks current phase status and next slices.
+- [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) documents the focused read-only UMG binding recipe for the optional widget shell.
 - [`sqlui_smoke_test.md`](sqlui_smoke_test.md) lists editor smoke-test commands.
 - [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) documents local packaged validation and packaged runtime smoke paths.
 
@@ -203,6 +204,8 @@ Use the existing SQLUISamples panel adapter, which delegates to the presenter ho
 - Use `GetFormattedLines()` only for simple sample text/log presentation. Product UI should prefer rows.
 
 Future Blueprint/UMG work may alternatively subclass or bind to `USQLUISamplePersistenceStatusPanelWidget`. Its refresh methods call the same adapter path, and its row/result/summary properties are only cached in-memory values. The shell should not be treated as a completed settings screen.
+
+For the focused widget-shell binding recipe and manual local checklist, see [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md).
 
 Display each `FSQLUIPersistenceStatusDisplayRow` without reinterpreting storage details:
 
