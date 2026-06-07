@@ -139,7 +139,7 @@ Parameters:
 
   -UsePersistenceStatusSampleSurfaceProbe
       Run the optional SQLUISamples read-only persistence status sample surface and
-      Blueprint-facing presenter/panel adapter hook probe.
+      Blueprint-facing presenter/panel adapter/widget shell hook probe.
 
   -UseSQLiteMigrationProbe
       Run the optional SQLUICore SQLite migration-runner probe.

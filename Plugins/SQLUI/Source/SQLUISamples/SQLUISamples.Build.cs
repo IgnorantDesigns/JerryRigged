@@ -11,13 +11,9 @@ public class SQLUISamples : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
+			"UMG",
 			"SQLUICore",
 			"SQLUIWidgets"
-		});
-
-		PrivateDependencyModuleNames.AddRange(new string[]
-		{
-			"UMG"
 		});
 	}
 }

@@ -2956,6 +2956,9 @@ void LogSQLUISampleSmokeTestPersistenceStatusSampleSurfaceProbeResult(
 	LogPersistenceStatusSampleSurfaceBool(TEXT("presenter created"), ProbeResult.bPresenterCreated);
 	LogPersistenceStatusSampleSurfaceBool(TEXT("panel adapter created"), ProbeResult.bPanelAdapterCreated);
 	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("panel widget class derived from UUserWidget"),
+		ProbeResult.bPanelWidgetClassDerivedFromUserWidget);
+	LogPersistenceStatusSampleSurfaceBool(
 		TEXT("Blueprint refresh function callable"),
 		ProbeResult.bBlueprintRefreshFunctionCallable);
 	LogPersistenceStatusSampleSurfaceBool(
@@ -2967,6 +2970,21 @@ void LogSQLUISampleSmokeTestPersistenceStatusSampleSurfaceProbeResult(
 	LogPersistenceStatusSampleSurfaceBool(
 		TEXT("panel adapter Blueprint runtime config refresh function callable"),
 		ProbeResult.bPanelAdapterBlueprintRuntimeConfigRefreshFunctionCallable);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("panel widget Blueprint refresh function callable"),
+		ProbeResult.bPanelWidgetBlueprintRefreshFunctionCallable);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("panel widget Blueprint runtime config refresh function callable"),
+		ProbeResult.bPanelWidgetBlueprintRuntimeConfigRefreshFunctionCallable);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("panel widget rows property Blueprint visible"),
+		ProbeResult.bPanelWidgetRowsPropertyBlueprintVisible);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("panel widget refresh result property Blueprint visible"),
+		ProbeResult.bPanelWidgetRefreshResultPropertyBlueprintVisible);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("panel widget summary text property Blueprint visible"),
+		ProbeResult.bPanelWidgetSummaryTextPropertyBlueprintVisible);
 	LogPersistenceStatusSampleSurfaceBool(
 		TEXT("Blueprint refresh result reflected"),
 		ProbeResult.bBlueprintRefreshResultReflected);

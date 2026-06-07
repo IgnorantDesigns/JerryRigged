@@ -1,6 +1,7 @@
 #include "SQLUISampleSmokeTestRunner.h"
 
 #include "SQLUISamplePersistenceStatusPanelAdapter.h"
+#include "SQLUISamplePersistenceStatusPanelWidget.h"
 #include "SQLUISamplePersistenceStatusPresenter.h"
 #include "Database/SQLUIDatabaseAsyncQueue.h"
 #include "Database/SQLUIDatabaseAsyncRunner.h"
@@ -8146,6 +8147,24 @@ bool IsSQLUISamplePersistenceStatusPanelAdapterFunctionBlueprintCallable(
 	return Function && Function->HasAnyFunctionFlags(FUNC_BlueprintCallable);
 }
 
+bool IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+	const UClass* WidgetClass,
+	const FName FunctionName)
+{
+	const UFunction* Function =
+		WidgetClass ? WidgetClass->FindFunctionByName(FunctionName) : nullptr;
+	return Function && Function->HasAnyFunctionFlags(FUNC_BlueprintCallable);
+}
+
+bool IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+	const UClass* WidgetClass,
+	const FName PropertyName)
+{
+	const FProperty* Property =
+		WidgetClass ? WidgetClass->FindPropertyByName(PropertyName) : nullptr;
+	return Property && Property->HasAnyPropertyFlags(CPF_BlueprintVisible);
+}
+
 bool IsSQLUISamplePersistenceStatusRefreshResultReflected()
 {
 	const UScriptStruct* RefreshResultStruct =
@@ -8214,6 +8233,10 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 	}
 
 	const UClass* PresenterClass = Presenter->GetClass();
+	const UClass* PanelWidgetClass =
+		USQLUISamplePersistenceStatusPanelWidget::StaticClass();
+	Result.bPanelWidgetClassDerivedFromUserWidget =
+		PanelWidgetClass && PanelWidgetClass->IsChildOf(UUserWidget::StaticClass());
 	Result.bBlueprintRefreshFunctionCallable =
 		IsSQLUISamplePersistenceStatusPresenterFunctionBlueprintCallable(
 			PresenterClass,
@@ -8242,16 +8265,46 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 			GET_FUNCTION_NAME_CHECKED(
 				USQLUISamplePersistenceStatusPanelAdapter,
 				RefreshPersistenceStatusPanelFromRuntimeConfig));
+	Result.bPanelWidgetBlueprintRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			PanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPanelWidget,
+				RefreshPersistenceStatusPanel));
+	Result.bPanelWidgetBlueprintRuntimeConfigRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			PanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPanelWidget,
+				RefreshPersistenceStatusPanelFromRuntimeConfig));
+	Result.bPanelWidgetRowsPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			PanelWidgetClass,
+			TEXT("Rows"));
+	Result.bPanelWidgetRefreshResultPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			PanelWidgetClass,
+			TEXT("LastRefreshResult"));
+	Result.bPanelWidgetSummaryTextPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			PanelWidgetClass,
+			TEXT("SummaryText"));
 
 	if (!Result.bBlueprintRefreshFunctionCallable
 		|| !Result.bBlueprintRuntimeConfigRefreshFunctionCallable
 		|| !Result.bPanelAdapterBlueprintRefreshFunctionCallable
 		|| !Result.bPanelAdapterBlueprintRuntimeConfigRefreshFunctionCallable
+		|| !Result.bPanelWidgetClassDerivedFromUserWidget
+		|| !Result.bPanelWidgetBlueprintRefreshFunctionCallable
+		|| !Result.bPanelWidgetBlueprintRuntimeConfigRefreshFunctionCallable
+		|| !Result.bPanelWidgetRowsPropertyBlueprintVisible
+		|| !Result.bPanelWidgetRefreshResultPropertyBlueprintVisible
+		|| !Result.bPanelWidgetSummaryTextPropertyBlueprintVisible
 		|| !Result.bBlueprintRefreshResultReflected)
 	{
 		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
 			Result,
-			TEXT("SQLUI persistence status sample surface probe failed: presenter or panel adapter refresh hook was not Blueprint-callable/reflected."));
+			TEXT("SQLUI persistence status sample surface probe failed: presenter, panel adapter, or panel widget shell was not Blueprint-callable/reflected."));
 	}
 
 	const FSQLUILayoutRepositoryRuntimeConfig DefaultConfig =
@@ -8441,10 +8494,16 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 	Result.bSucceeded =
 		Result.bPresenterCreated
 		&& Result.bPanelAdapterCreated
+		&& Result.bPanelWidgetClassDerivedFromUserWidget
 		&& Result.bBlueprintRefreshFunctionCallable
 		&& Result.bBlueprintRuntimeConfigRefreshFunctionCallable
 		&& Result.bPanelAdapterBlueprintRefreshFunctionCallable
 		&& Result.bPanelAdapterBlueprintRuntimeConfigRefreshFunctionCallable
+		&& Result.bPanelWidgetBlueprintRefreshFunctionCallable
+		&& Result.bPanelWidgetBlueprintRuntimeConfigRefreshFunctionCallable
+		&& Result.bPanelWidgetRowsPropertyBlueprintVisible
+		&& Result.bPanelWidgetRefreshResultPropertyBlueprintVisible
+		&& Result.bPanelWidgetSummaryTextPropertyBlueprintVisible
 		&& Result.bBlueprintRefreshResultReflected
 		&& Result.bDefaultRowsPresented
 		&& Result.bExplicitRefreshResultSucceeded
