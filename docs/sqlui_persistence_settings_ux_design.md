@@ -55,6 +55,34 @@ The first UI-consumption slice also exists as `USQLUIPersistenceStatusDisplayLib
 
 `USQLUISamplePersistenceStatusPanelWidget` is the first tiny optional C++ UMG shell over that adapter. It creates no visual layout, includes no widget blueprint asset, is not added to the viewport, and is not wired into maps, startup, or config. Its refresh functions remain caller-invoked only and delegate to the panel adapter. It is still not a full settings screen and does not add polling/tick/timer behavior, settings editing, backend selector, SQLite path editor, reset/delete action, provider/repository initialization, migration, seed copy, database creation, or file deletion.
 
+## Read-Only Foundation Checkpoint
+
+The read-only persistence status foundation is complete enough for future settings UI to build on without inventing new storage probing in widgets. The completed chain is:
+
+- SQLUICore read-only status snapshot/surface.
+- SQLUICore UI-safe display rows/view model.
+- Optional SQLUISamples presenter.
+- Explicit caller-invoked refresh path.
+- Documented and validated Blueprint-facing presenter hook.
+- Read-only panel contract and UMG binding recipe.
+- Optional SQLUISamples panel adapter.
+- Optional SQLUISamples C++ UMG widget shell.
+- Non-asset smoke coverage for presenter, Blueprint hook, adapter, and widget-shell reflection/binding contract.
+
+This checkpoint is not a settings screen and not a startup path. It adds no widget blueprint asset, visual layout, map wiring, viewport attachment, polling, ticking, timer, auto-refresh, backend selector, SQLite path editor, provider auto-init toggle, settings save/apply flow, reset/delete behavior, migration control, seed-copy behavior, provider initialization, repository initialization, or database creation.
+
+Future settings-editing and reset work must preserve these prerequisites:
+
+- Use SQLUICore helper/policy surfaces for repository selection, status, path resolution, schema/migration status, seed-copy policy, and database management.
+- Keep widgets ignorant of SQL, schema tables, migration ids, seed-copy policy, SQLite sidecar internals, and direct file deletion.
+- Keep runtime database writes under `Saved/SQLUI/...`.
+- Route user-facing reset/delete behavior through SQLUICore database management helper/policy surfaces, not widget-owned file deletion.
+- Keep SQLite non-default unless a separate explicitly scoped policy PR changes that default.
+- Keep provider auto-init default-off unless a separate explicitly scoped policy PR changes that policy.
+- Add pending/apply semantics for editable settings instead of mutating live persistence from widget bindings.
+- Include smoke coverage for any settings-editing, apply, reset, or destructive action path.
+- Include packaged validation when startup behavior, default maps, config wiring, or packaged runtime lifecycle behavior changes.
+
 ## UX Goals
 
 - Make the safe default obvious: layout persistence can be off or in-memory without durable database writes.

@@ -35,6 +35,14 @@ The shell exposes cached data through Blueprint-readable properties and pure get
 - `LastRefreshResult` / `GetLastRefreshResult()`
 - `SummaryText` / `GetSummaryText()`
 
+## Foundation Checkpoint
+
+The read-only SQLUI persistence status UMG foundation is complete as a binding scaffold. It includes the SQLUICore status snapshot, SQLUICore display rows, optional SQLUISamples presenter, explicit caller-invoked refresh path, Blueprint-facing presenter hook, documented panel contract, optional panel adapter, optional C++ UMG widget shell, this UMG usage guide, and non-asset smoke coverage for the presenter/adapter/widget-shell contract.
+
+This remains sample/dev-facing and read-only. It is not a full settings screen and does not add settings editing, backend selector controls, SQLite path editing, provider auto-init controls, reset/delete actions, migration controls, seed-copy controls, provider/repository initialization, database creation, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, or auto-refresh.
+
+Future editable settings or reset/delete UX should build on SQLUICore policy helpers. Widgets should keep using status/display rows and must not know SQL, schema, migration ids, seed-copy policy, sidecar internals, direct file deletion, or live repository mutation rules.
+
 ## Future Blueprint Recipe
 
 A future Blueprint/UMG PR can use the shell like this:
