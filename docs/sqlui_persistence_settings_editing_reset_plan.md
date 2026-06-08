@@ -1,6 +1,6 @@
 # SQLUI Persistence Settings Editing And Reset Plan
 
-This document plans the next SQLUI persistence settings UX phase after the completed read-only status foundation. PR #105 is a docs-only design and sequencing PR. It does not implement settings editing, backend selection, SQLite path editing, provider auto-init controls, reset/delete behavior, settings save/apply behavior, startup wiring, widget assets, smoke flags, scripts, config, Build.cs changes, plugin descriptor changes, maps, Content assets, packaged outputs, or runtime code.
+This document plans the next SQLUI persistence settings UX phase after the completed read-only status foundation. PR #105 was a docs-only design and sequencing PR. The first implementation slice now adds a non-mutating SQLUICore draft/pending settings model plus validation-only behavior; it still does not implement settings editing UI controls, backend selector controls, SQLite path editor controls, provider auto-init toggle controls, reset/delete behavior, settings save/apply behavior, startup wiring, widget assets, config, Build.cs changes, plugin descriptor changes, maps, Content assets, packaged outputs, or packaged runtime behavior.
 
 Related docs:
 
@@ -99,6 +99,8 @@ Editable settings should have an explicit pending state:
 
 The first implementation should prefer a non-mutating pending model and validation helper before any UI control can change live runtime persistence.
 
+That first implementation slice now exists as `FSQLUIPersistenceSettingsDraft`, `FSQLUIPersistenceSettingsValidationResult`, and `USQLUIPersistenceSettingsDraftLibrary`. It can create a draft from current/default runtime settings, reset a draft value back to current values, and validate pending backend/path/provider-auto-init policy without applying anything. It does not write config, initialize providers/repositories, create SQLite database files, run migrations, copy seed databases, delete files, add UI controls, or change startup behavior.
+
 ## Backend Selection Design
 
 The backend selector should show the current configured backend and allow only supported values:
@@ -193,7 +195,7 @@ Those actions should have distinct labels, explanations, and confirmations.
 
 Future mutating settings/reset PRs should add focused smoke coverage as behavior appears:
 
-- Pending settings model can change values without mutating live runtime state.
+- Pending settings model can change values without mutating live runtime state. The first validation-only smoke path is `-UsePersistenceSettingsDraftProbe`.
 - Cancel discards pending values.
 - Validation rejects empty or unsafe SQLite paths without creating files.
 - Backend selection requires Apply.
@@ -214,8 +216,8 @@ Packaged validation should be included when a PR changes startup behavior, defau
 Recommended future sequence:
 
 1. Add this docs-only plan.
-2. Add a non-mutating pending settings model or view-model.
-3. Add validation-only SQLUICore policy helpers for editable settings.
+2. Add a non-mutating pending settings model or view-model. Complete as the SQLUICore persistence settings draft model.
+3. Add validation-only SQLUICore policy helpers for editable settings. Complete for the first backend/path/provider-auto-init draft checks.
 4. Add Apply/Cancel helper APIs without widget controls.
 5. Add a backend selector UI shell that edits pending state only.
 6. Add SQLite path display/edit validation that does not create files.
@@ -226,7 +228,7 @@ Each implementation PR should keep the blast radius narrow and should not combin
 
 ## Packaged Validation Policy
 
-This docs-only plan does not require full packaged validation because it does not touch runtime code, scripts, maps, config, startup behavior, package behavior, or packaged lifecycle flow.
+The validation-only draft model does not require full packaged validation because it does not touch maps, config, startup behavior, package behavior, viewport attachment, provider lifecycle, or packaged lifecycle flow. It adds runtime code and editor commandlet smoke coverage only for non-mutating validation.
 
 Future PRs that wire settings UI into startup, default maps, config-backed provider lifecycle, viewport attachment, or packaged runtime persistence should run packaged validation appropriate to that behavior.
 
@@ -234,10 +236,8 @@ The earlier unresolved `__std_*` packaged linker issue was resolved locally by i
 
 ## Remaining Work
 
-This plan leaves all implementation work future-scoped:
+This plan still leaves the mutating UI and lifecycle work future-scoped:
 
-- Editable settings model.
-- Settings validation helper.
 - Apply/cancel behavior.
 - Backend selector UI.
 - SQLite path editing UI.

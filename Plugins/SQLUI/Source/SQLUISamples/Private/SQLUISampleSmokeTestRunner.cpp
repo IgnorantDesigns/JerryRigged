@@ -20,6 +20,7 @@
 #include "Layout/ISQLUILayoutRepository.h"
 #include "Layout/SQLUIInMemoryLayoutRepository.h"
 #include "Layout/SQLUIJsonFileLayoutRepository.h"
+#include "Layout/SQLUIPersistenceSettingsDraft.h"
 #include "Layout/SQLUIPersistenceStatus.h"
 #include "Layout/SQLUIPersistenceStatusDisplay.h"
 #include "Layout/SQLUILayoutJson.h"
@@ -8689,6 +8690,363 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 	return Result;
 }
 
+void AppendSQLUISamplePersistenceSettingsDraftProbeError(
+	FSQLUISamplePersistenceSettingsDraftProbeResult& Result,
+	const FString& ErrorMessage)
+{
+	if (ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	if (!Result.ErrorMessage.IsEmpty())
+	{
+		Result.ErrorMessage += TEXT(" ");
+	}
+
+	Result.ErrorMessage += ErrorMessage;
+}
+
+FString MakeSQLUISamplePersistenceSettingsDraftPath(
+	const TCHAR* DatabaseFileName)
+{
+	FString DatabasePath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("PersistenceSettingsDraft"),
+		DatabaseFileName);
+	FPaths::NormalizeFilename(DatabasePath);
+	return FPaths::ConvertRelativePathToFull(DatabasePath);
+}
+
+TArray<FString> MakeSQLUISamplePersistenceSettingsDraftFiles(
+	const FString& DatabasePath)
+{
+	return {
+		DatabasePath,
+		DatabasePath + TEXT("-journal"),
+		DatabasePath + TEXT("-wal"),
+		DatabasePath + TEXT("-shm")
+	};
+}
+
+bool DoesSQLUISamplePersistenceSettingsDraftFileExist(
+	const FString& DatabasePath)
+{
+	for (const FString& Path : MakeSQLUISamplePersistenceSettingsDraftFiles(DatabasePath))
+	{
+		if (FPaths::FileExists(Path))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DeleteSQLUISamplePersistenceSettingsDraftFiles(
+	const FString& DatabasePath,
+	FSQLUISamplePersistenceSettingsDraftProbeResult& Result)
+{
+	bool bRemoved = true;
+	for (const FString& Path : MakeSQLUISamplePersistenceSettingsDraftFiles(DatabasePath))
+	{
+		if (FPaths::FileExists(Path)
+			&& !IFileManager::Get().Delete(*Path, false, true, true))
+		{
+			AppendSQLUISamplePersistenceSettingsDraftProbeError(
+				Result,
+				FString::Printf(
+					TEXT("SQLUI persistence settings draft probe failed: could not remove '%s'."),
+					*Path));
+			bRemoved = false;
+		}
+	}
+
+	return bRemoved;
+}
+
+bool DeleteSQLUISamplePersistenceSettingsDraftFiles(
+	FSQLUISamplePersistenceSettingsDraftProbeResult& Result)
+{
+	return DeleteSQLUISamplePersistenceSettingsDraftFiles(Result.DatabasePath, Result)
+		&& DeleteSQLUISamplePersistenceSettingsDraftFiles(Result.SidecarDatabasePath, Result);
+}
+
+bool DoesAnySQLUISamplePersistenceSettingsDraftFileExist(
+	const FSQLUISamplePersistenceSettingsDraftProbeResult& Result)
+{
+	return DoesSQLUISamplePersistenceSettingsDraftFileExist(Result.DatabasePath)
+		|| DoesSQLUISamplePersistenceSettingsDraftFileExist(Result.SidecarDatabasePath);
+}
+
+bool WriteSQLUISamplePersistenceSettingsDraftSidecar(
+	const FString& Path,
+	FSQLUISamplePersistenceSettingsDraftProbeResult& Result)
+{
+	const FString Directory = FPaths::GetPath(Path);
+	if (!IFileManager::Get().MakeDirectory(*Directory, true))
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI persistence settings draft probe failed: could not create directory '%s'."),
+				*Directory));
+		return false;
+	}
+
+	if (!FFileHelper::SaveStringToFile(TEXT("SQLUI persistence settings draft sidecar probe"), *Path))
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI persistence settings draft probe failed: could not create sidecar '%s'."),
+				*Path));
+		return false;
+	}
+
+	return true;
+}
+
+bool DoesSQLUIPersistenceSettingsValidationHaveSeverity(
+	const FSQLUIPersistenceSettingsValidationResult& Validation,
+	const ESQLUIPersistenceSettingsValidationMessageSeverity Severity)
+{
+	for (const FSQLUIPersistenceSettingsValidationMessage& Message : Validation.Messages)
+	{
+		if (Message.Severity == Severity)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool AreSQLUIPersistenceSettingsValidationResultsEquivalent(
+	const FSQLUIPersistenceSettingsValidationResult& First,
+	const FSQLUIPersistenceSettingsValidationResult& Second)
+{
+	return First.bIsValid == Second.bIsValid
+		&& First.bWouldChangeBackend == Second.bWouldChangeBackend
+		&& First.bWouldChangeSQLitePath == Second.bWouldChangeSQLitePath
+		&& First.bWouldChangeProviderAutoInitialize == Second.bWouldChangeProviderAutoInitialize
+		&& First.bRequiresRestartOrReinitialize == Second.bRequiresRestartOrReinitialize
+		&& First.bSQLitePathResolved == Second.bSQLitePathResolved
+		&& First.ResolvedSQLiteDatabasePath == Second.ResolvedSQLiteDatabasePath
+		&& First.Messages.Num() == Second.Messages.Num()
+		&& First.SummaryText == Second.SummaryText;
+}
+
+FSQLUISamplePersistenceSettingsDraftProbeResult
+RunSQLUISamplePersistenceSettingsDraftProbe()
+{
+	FSQLUISamplePersistenceSettingsDraftProbeResult Result;
+	Result.DatabasePath =
+		MakeSQLUISamplePersistenceSettingsDraftPath(TEXT("PersistenceSettingsDraft.db"));
+	Result.SidecarDatabasePath =
+		MakeSQLUISamplePersistenceSettingsDraftPath(TEXT("PersistenceSettingsDraftSidecarOnly.db"));
+
+	DeleteSQLUISamplePersistenceSettingsDraftFiles(Result);
+
+	const USQLUILayoutRepositoryRuntimeSettings* DefaultSettings =
+		GetDefault<USQLUILayoutRepositoryRuntimeSettings>();
+	const bool bAutoInitBefore =
+		FSQLUILayoutRepositoryRuntimeSettingsPolicy::ShouldAutoInitializeProvider(
+			DefaultSettings,
+			TEXT(""));
+
+	const FSQLUIPersistenceSettingsDraft DefaultDraft =
+		USQLUIPersistenceSettingsDraftLibrary::MakeDefaultPersistenceSettingsDraft();
+	Result.bDefaultDraftCreated =
+		DefaultDraft.CurrentRuntimeConfig.Backend == ESQLUILayoutRepositoryBackend::InMemory
+		&& DefaultDraft.PendingRuntimeConfig.Backend == ESQLUILayoutRepositoryBackend::InMemory
+		&& !DefaultDraft.bCurrentProviderAutoInitialize
+		&& !DefaultDraft.bPendingProviderAutoInitialize;
+
+	const FSQLUIPersistenceSettingsValidationResult DefaultValidation =
+		USQLUIPersistenceSettingsDraftLibrary::ValidatePersistenceSettingsDraft(DefaultDraft);
+	Result.bDefaultDraftValidated = DefaultValidation.bIsValid;
+	Result.bDefaultInMemorySafe =
+		DefaultValidation.bIsValid
+		&& !DefaultValidation.bWouldChangeBackend
+		&& !DefaultValidation.bWouldChangeSQLitePath
+		&& !DefaultValidation.bWouldChangeProviderAutoInitialize
+		&& !DefaultValidation.bRequiresRestartOrReinitialize
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	if (!Result.bDefaultDraftCreated
+		|| !Result.bDefaultDraftValidated
+		|| !Result.bDefaultInMemorySafe)
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: default InMemory draft was not safe and valid."));
+	}
+
+	const FSQLUIPersistenceSettingsDraft CurrentDraft =
+		USQLUIPersistenceSettingsDraftLibrary::MakeCurrentPersistenceSettingsDraft();
+	const FSQLUIPersistenceSettingsValidationResult CurrentValidation =
+		USQLUIPersistenceSettingsDraftLibrary::ValidatePersistenceSettingsDraft(CurrentDraft);
+	Result.bCurrentDraftValidated =
+		CurrentValidation.bIsValid
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	if (!Result.bCurrentDraftValidated)
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: current settings draft validation was not safe."));
+	}
+
+	FSQLUIPersistenceSettingsDraft UnknownBackendDraft = DefaultDraft;
+	UnknownBackendDraft.PendingRuntimeConfig.Backend =
+		static_cast<ESQLUILayoutRepositoryBackend>(255);
+	UnknownBackendDraft.bHasBackendOverride = true;
+	const FSQLUIPersistenceSettingsValidationResult UnknownBackendValidation =
+		USQLUIPersistenceSettingsDraftLibrary::ValidatePersistenceSettingsDraft(
+			UnknownBackendDraft);
+	Result.bUnknownBackendRejected =
+		!UnknownBackendValidation.bIsValid
+		&& DoesSQLUIPersistenceSettingsValidationHaveSeverity(
+			UnknownBackendValidation,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error)
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	if (!Result.bUnknownBackendRejected)
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: unknown backend was not rejected without mutation."));
+	}
+
+	FSQLUIPersistenceSettingsDraft SQLiteDraft = DefaultDraft;
+	SQLiteDraft.PendingRuntimeConfig.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	SQLiteDraft.PendingRuntimeConfig.SQLiteDatabasePath = Result.DatabasePath;
+	SQLiteDraft.bHasBackendOverride = true;
+	SQLiteDraft.bHasSQLiteDatabasePathOverride = true;
+	const FSQLUIPersistenceSettingsValidationResult SQLiteValidation =
+		USQLUIPersistenceSettingsDraftLibrary::ValidatePersistenceSettingsDraft(SQLiteDraft);
+	Result.bSQLiteDraftRepresented =
+		SQLiteValidation.bIsValid
+		&& SQLiteValidation.bWouldChangeBackend
+		&& SQLiteValidation.bWouldChangeSQLitePath
+		&& SQLiteValidation.bRequiresRestartOrReinitialize
+		&& SQLiteValidation.bSQLitePathResolved
+		&& SQLiteValidation.ResolvedSQLiteDatabasePath == Result.DatabasePath;
+	Result.bSQLiteDraftDidNotCreateDb =
+		!DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	if (!Result.bSQLiteDraftRepresented
+		|| !Result.bSQLiteDraftDidNotCreateDb)
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: SQLite draft representation was not validation-only."));
+	}
+
+	FSQLUIPersistenceSettingsDraft EmptySQLitePathDraft = DefaultDraft;
+	EmptySQLitePathDraft.PendingRuntimeConfig.Backend = ESQLUILayoutRepositoryBackend::SQLite;
+	EmptySQLitePathDraft.PendingRuntimeConfig.SQLiteDatabasePath.Empty();
+	EmptySQLitePathDraft.bHasBackendOverride = true;
+	EmptySQLitePathDraft.bHasSQLiteDatabasePathOverride = true;
+	const FSQLUIPersistenceSettingsValidationResult EmptySQLitePathValidation =
+		USQLUIPersistenceSettingsDraftLibrary::ValidatePersistenceSettingsDraft(
+			EmptySQLitePathDraft);
+	Result.bSQLiteEmptyPathRejected =
+		!EmptySQLitePathValidation.bIsValid
+		&& DoesSQLUIPersistenceSettingsValidationHaveSeverity(
+			EmptySQLitePathValidation,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error)
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	if (!Result.bSQLiteEmptyPathRejected)
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: empty SQLite path was not rejected safely."));
+	}
+
+	FSQLUIPersistenceSettingsDraft ProviderAutoInitDraft = DefaultDraft;
+	ProviderAutoInitDraft.bPendingProviderAutoInitialize = true;
+	ProviderAutoInitDraft.bHasProviderAutoInitializeOverride = true;
+	const FSQLUIPersistenceSettingsValidationResult ProviderAutoInitValidation =
+		USQLUIPersistenceSettingsDraftLibrary::ValidatePersistenceSettingsDraft(
+			ProviderAutoInitDraft);
+	const bool bAutoInitAfter =
+		FSQLUILayoutRepositoryRuntimeSettingsPolicy::ShouldAutoInitializeProvider(
+			DefaultSettings,
+			TEXT(""));
+	Result.bProviderAutoInitPendingValidated =
+		ProviderAutoInitValidation.bIsValid
+		&& ProviderAutoInitValidation.bWouldChangeProviderAutoInitialize
+		&& ProviderAutoInitValidation.bRequiresRestartOrReinitialize
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bProviderAutoInitPolicyUnchanged =
+		!bAutoInitBefore
+		&& !bAutoInitAfter;
+	if (!Result.bProviderAutoInitPendingValidated
+		|| !Result.bProviderAutoInitPolicyUnchanged)
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: provider auto-init draft changed policy or failed validation."));
+	}
+
+	const FSQLUIPersistenceSettingsValidationResult RepeatedSQLiteValidation =
+		USQLUIPersistenceSettingsDraftLibrary::ValidatePersistenceSettingsDraft(SQLiteDraft);
+	Result.bRepeatedValidationDeterministic =
+		AreSQLUIPersistenceSettingsValidationResultsEquivalent(
+			SQLiteValidation,
+			RepeatedSQLiteValidation)
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	if (!Result.bRepeatedValidationDeterministic)
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: repeated validation was not deterministic."));
+	}
+
+	const FString SidecarPath = Result.SidecarDatabasePath + TEXT("-wal");
+	const bool bSidecarCreated =
+		WriteSQLUISamplePersistenceSettingsDraftSidecar(SidecarPath, Result);
+	FSQLUIPersistenceSettingsDraft SidecarDraft = SQLiteDraft;
+	SidecarDraft.PendingRuntimeConfig.SQLiteDatabasePath = Result.SidecarDatabasePath;
+	USQLUIPersistenceSettingsDraftLibrary::ValidatePersistenceSettingsDraft(SidecarDraft);
+	Result.bSidecarPreservedDuringValidation =
+		bSidecarCreated
+		&& FPaths::FileExists(SidecarPath);
+	if (!Result.bSidecarPreservedDuringValidation)
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: validation deleted a smoke-owned sidecar file."));
+	}
+
+	Result.bDatabaseFilesRemoved =
+		DeleteSQLUISamplePersistenceSettingsDraftFiles(Result)
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	if (!Result.bDatabaseFilesRemoved)
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: probe database files were not removed."));
+	}
+
+	Result.bSucceeded =
+		Result.bDefaultDraftCreated
+		&& Result.bDefaultDraftValidated
+		&& Result.bDefaultInMemorySafe
+		&& Result.bCurrentDraftValidated
+		&& Result.bUnknownBackendRejected
+		&& Result.bSQLiteDraftRepresented
+		&& Result.bSQLiteDraftDidNotCreateDb
+		&& Result.bSQLiteEmptyPathRejected
+		&& Result.bProviderAutoInitPendingValidated
+		&& Result.bProviderAutoInitPolicyUnchanged
+		&& Result.bRepeatedValidationDeterministic
+		&& Result.bSidecarPreservedDuringValidation
+		&& Result.bDatabaseFilesRemoved;
+
+	return Result;
+}
+
 void AppendSQLUISampleSQLiteSeedDatabaseCopyPolicyError(
 	FSQLUISampleSQLiteSeedDatabaseCopyPolicyProbeResult& Result,
 	const FString& ErrorMessage)
@@ -11187,6 +11545,22 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 				Result.PersistenceStatusSampleSurfaceProbe.ErrorMessage.IsEmpty()
 					? TEXT("SQLUI persistence status sample surface probe failed.")
 					: Result.PersistenceStatusSampleSurfaceProbe.ErrorMessage);
+		}
+	}
+
+	if (Request.bUsePersistenceSettingsDraftProbe)
+	{
+		Result.bUsedPersistenceSettingsDraftProbe = true;
+		Result.PersistenceSettingsDraftProbe =
+			RunSQLUISamplePersistenceSettingsDraftProbe();
+		if (!Result.PersistenceSettingsDraftProbe.bSucceeded)
+		{
+			Result.bSucceeded = false;
+			AddSQLUISampleSmokeTestError(
+				Result,
+				Result.PersistenceSettingsDraftProbe.ErrorMessage.IsEmpty()
+					? TEXT("SQLUI persistence settings draft probe failed.")
+					: Result.PersistenceSettingsDraftProbe.ErrorMessage);
 		}
 	}
 

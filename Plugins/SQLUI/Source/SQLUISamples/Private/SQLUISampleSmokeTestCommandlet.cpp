@@ -3046,6 +3046,62 @@ void LogSQLUISampleSmokeTestPersistenceStatusSampleSurfaceProbeResult(
 	}
 }
 
+void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
+	const FSQLUISampleSmokeTestResult& Result)
+{
+	if (!Result.bUsedPersistenceSettingsDraftProbe)
+	{
+		return;
+	}
+
+	const FSQLUISamplePersistenceSettingsDraftProbeResult& ProbeResult =
+		Result.PersistenceSettingsDraftProbe;
+
+	const auto LogPersistenceSettingsDraftBool =
+		[](const TCHAR* Label, const bool bValue)
+		{
+			UE_LOG(
+				LogSQLUISamples,
+				Log,
+				TEXT("SQLUI persistence settings draft probe %s: %s"),
+				Label,
+				bValue ? TEXT("true") : TEXT("false"));
+		};
+
+	UE_LOG(
+		LogSQLUISamples,
+		Log,
+		TEXT("SQLUI persistence settings draft probe database path: '%s'"),
+		*ProbeResult.DatabasePath);
+
+	LogPersistenceSettingsDraftBool(TEXT("default draft created"), ProbeResult.bDefaultDraftCreated);
+	LogPersistenceSettingsDraftBool(TEXT("default draft validated"), ProbeResult.bDefaultDraftValidated);
+	LogPersistenceSettingsDraftBool(TEXT("default InMemory safe"), ProbeResult.bDefaultInMemorySafe);
+	LogPersistenceSettingsDraftBool(TEXT("current draft validated"), ProbeResult.bCurrentDraftValidated);
+	LogPersistenceSettingsDraftBool(TEXT("unknown backend rejected"), ProbeResult.bUnknownBackendRejected);
+	LogPersistenceSettingsDraftBool(TEXT("SQLite draft represented"), ProbeResult.bSQLiteDraftRepresented);
+	LogPersistenceSettingsDraftBool(TEXT("SQLite draft did not create DB"), ProbeResult.bSQLiteDraftDidNotCreateDb);
+	LogPersistenceSettingsDraftBool(TEXT("SQLite empty path rejected"), ProbeResult.bSQLiteEmptyPathRejected);
+	LogPersistenceSettingsDraftBool(TEXT("provider auto-init pending validated"), ProbeResult.bProviderAutoInitPendingValidated);
+	LogPersistenceSettingsDraftBool(TEXT("provider auto-init policy unchanged"), ProbeResult.bProviderAutoInitPolicyUnchanged);
+	LogPersistenceSettingsDraftBool(TEXT("repeated validation deterministic"), ProbeResult.bRepeatedValidationDeterministic);
+	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during validation"), ProbeResult.bSidecarPreservedDuringValidation);
+	LogPersistenceSettingsDraftBool(TEXT("database files removed"), ProbeResult.bDatabaseFilesRemoved);
+
+	if (ProbeResult.bSucceeded)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI persistence settings draft probe succeeded."));
+	}
+	else
+	{
+		UE_LOG(
+			LogSQLUISamples,
+			Error,
+			TEXT("SQLUI persistence settings draft probe failed: %s"),
+			*ProbeResult.ErrorMessage);
+	}
+}
+
 void LogSQLUISampleSmokeTestSQLiteSeedDatabaseCopyPolicyProbeResult(
 	const FSQLUISampleSmokeTestResult& Result)
 {
@@ -3300,6 +3356,7 @@ void LogSQLUISampleSmokeTestResult(const FSQLUISampleSmokeTestResult& Result)
 	LogSQLUISampleSmokeTestPersistenceStatusSurfaceProbeResult(Result);
 	LogSQLUISampleSmokeTestPersistenceStatusDisplayRowsProbeResult(Result);
 	LogSQLUISampleSmokeTestPersistenceStatusSampleSurfaceProbeResult(Result);
+	LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutSchemaMigrationProbeResult(Result);
 	LogSQLUISampleSmokeTestSQLiteLayoutReadProbeResult(Result);
@@ -3420,6 +3477,9 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 	const bool bUsePersistenceStatusSampleSurfaceProbe =
 		FParse::Param(*Params, TEXT("UsePersistenceStatusSampleSurfaceProbe"))
 		|| FParse::Param(*Params, TEXT("PersistenceStatusSampleSurfaceProbe"));
+	const bool bUsePersistenceSettingsDraftProbe =
+		FParse::Param(*Params, TEXT("UsePersistenceSettingsDraftProbe"))
+		|| FParse::Param(*Params, TEXT("PersistenceSettingsDraftProbe"));
 	const bool bUseSQLiteMigrationProbe =
 		FParse::Param(*Params, TEXT("UseSQLiteMigrationProbe"))
 		|| FParse::Param(*Params, TEXT("SQLiteMigrationProbe"));
@@ -3549,6 +3609,11 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI persistence status sample surface probe selected: true"));
 	}
 
+	if (bUsePersistenceSettingsDraftProbe)
+	{
+		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI persistence settings draft probe selected: true"));
+	}
+
 	if (bUseSQLiteMigrationProbe)
 	{
 		UE_LOG(LogSQLUISamples, Log, TEXT("SQLUI SQLite migration probe selected: true"));
@@ -3652,6 +3717,7 @@ int32 USQLUISampleSmokeTestCommandlet::Main(const FString& Params)
 		Request.bUsePersistenceStatusSurfaceProbe = bUsePersistenceStatusSurfaceProbe;
 		Request.bUsePersistenceStatusDisplayRowsProbe = bUsePersistenceStatusDisplayRowsProbe;
 		Request.bUsePersistenceStatusSampleSurfaceProbe = bUsePersistenceStatusSampleSurfaceProbe;
+		Request.bUsePersistenceSettingsDraftProbe = bUsePersistenceSettingsDraftProbe;
 		Request.bUseSQLiteMigrationProbe = bUseSQLiteMigrationProbe;
 		Request.bUseSQLiteLayoutSchemaMigrationProbe = bUseSQLiteLayoutSchemaMigrationProbe;
 		Request.bUseSQLiteLayoutReadProbe = bUseSQLiteLayoutReadProbe;
