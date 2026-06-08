@@ -41,6 +41,8 @@ This scaffold does not:
 - Add maps, Content assets, packaged outputs, database files, or generated files to source control.
 - Change normal game startup behavior unless an explicit packaged smoke flag such as `-SQLUIPackagedRuntimeSQLiteSmoke`, `-SQLUIRuntimeProviderStartupSmoke`, `-SQLUIRuntimeProviderSubsystemSmoke`, or `-SQLUIRuntimePersistenceWorkflowSmoke` is present.
 
+The read-only persistence status UMG foundation does not add packaged startup behavior. Docs-only checkpoint PRs for that foundation do not require a full packaged build when they do not touch runtime code, maps, config, startup wiring, or packaged lifecycle behavior. Future PRs that wire persistence status UI into startup, default maps, config, viewport attachment, provider lifecycle, or packaged runtime flows should include packaged validation appropriate to that behavior.
+
 Run this validation before treating SQLite as packaged-runtime-ready, but do not treat a successful package alone as proof of packaged SQLite lifecycle behavior. Use `-RunPackagedSQLiteSmoke` for the packaged runtime SQLite repository lifecycle proof, `-RunPackagedProviderStartupSmoke` for the direct provider startup proof, `-RunPackagedProviderSubsystemSmoke` for the passive subsystem startup proof, and `-RunPackagedPersistenceWorkflowSmoke` for the first packaged persistence-across-launches workflow proof.
 
 ## Output Location
@@ -449,6 +451,8 @@ The same UBT log showed:
 - The first unresolved references coming from Unreal/engine or engine-plugin objects such as `Module.LiveCoding.cpp.obj`, `Module.TraceAnalysis.cpp.obj`, `Module.GeometryAlgorithms.*.cpp.obj`, `reverb_onset_compensator.cc.obj`, and `reverb_node.cc.obj`.
 
 That evidence indicated a local Visual Studio/MSVC toolchain or runtime-library mismatch in that run, not a SQLUI SQLite repository runtime failure. Installing the UE 5.7-preferred Visual Studio 2022 MSVC `14.44.x` toolchain resolved the local failure, and the latest local packaged validation passed with UAT exit code `0`.
+
+If a later local run selects MSVC `14.38.x` or a Visual Studio 2026 Preview toolchain and fails with the same unresolved `__std_*` symbols, treat that as a local toolchain selection issue unless the UBT log points to SQLUI or SQLiteCore objects.
 
 These troubleshooting notes remain useful for future toolchain mismatch cases. Do not treat this symbol pattern as a SQLUI or SQLiteCore bug unless the UBT log points to SQLUI or SQLiteCore objects.
 

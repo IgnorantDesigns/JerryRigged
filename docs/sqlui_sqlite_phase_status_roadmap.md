@@ -47,6 +47,55 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 
 This is still not a default production persistence policy. Implementing the user-facing settings UI, choosing product startup policy, broader platform validation, production async service hardening, and actual future schema upgrades remain future work.
 
+## Read-Only Persistence Status UMG Foundation Checkpoint
+
+The read-only SQLUI persistence status UMG foundation is complete as a documented and smoke-validated base for future settings UI work.
+
+This #104 checkpoint records the completed read-only foundation sequence:
+
+- #94: read-only persistence status snapshot/surface.
+- #95: UI-safe display rows/view model.
+- #96: optional SQLUISamples presenter/sample surface.
+- #97: explicit caller-invoked refresh path.
+- #98: documented and validated Blueprint-facing presenter hook.
+- #99: read-only panel contract and Blueprint usage recipe.
+- #100: optional SQLUISamples panel adapter.
+- #101: optional C++ UMG widget shell.
+- #102: read-only UMG usage and binding guide.
+- #103: non-asset smoke hardening for presenter, Blueprint hook, panel adapter, and UMG shell contract.
+- #104: final read-only foundation checkpoint.
+
+That foundation now includes:
+
+- A read-only SQLUICore persistence status snapshot/surface.
+- UI-safe SQLUICore display rows and view-model formatting.
+- An optional SQLUISamples sample/dev presenter.
+- An explicit caller-invoked refresh path.
+- A Blueprint-facing presenter hook that is documented and smoke-validated.
+- A read-only panel contract and usage recipe.
+- An optional SQLUISamples panel adapter.
+- An optional SQLUISamples C++ UMG widget shell.
+- A focused UMG usage and binding guide.
+- Non-asset smoke coverage for the presenter, Blueprint hook, panel adapter, and C++ UMG widget shell contract.
+
+This checkpoint is still not a settings screen. It adds no widget blueprint asset, map, default startup wiring, viewport attachment, polling, ticking, auto-refresh, settings editing, backend selector, SQLite path editor, provider auto-init control, reset/delete behavior, migration control, seed-copy behavior, or provider/repository lifecycle behavior.
+
+The safety boundaries remain unchanged:
+
+- SQLite is still opt-in and non-default.
+- `InMemory` remains the safe default backend.
+- Provider auto-init remains off by default.
+- No default config creates SQLite database files.
+- No startup/default behavior changed.
+- SQLUICore remains free of UMG, Slate, SlateCore, editor-only, and widget dependencies.
+- SQLUISamples contains the optional UMG shell only as sample/dev-facing infrastructure.
+- No widget blueprint assets or maps are committed.
+- No startup wiring, viewport attachment, timers, tick, polling, or auto-refresh exist.
+- Refresh remains caller-invoked only.
+- Status/display/refresh/widget-shell paths remain read-only.
+
+Future settings-editing or reset work should build on this foundation and must keep widgets ignorant of SQL, schema, migrations, seed-copy policy, SQLite sidecar internals, direct file deletion, and concrete repository lifecycle details. Writable runtime database state should remain under `Saved/SQLUI/...`. User-facing reset/delete behavior should route through SQLUICore database management helper/policy surfaces, not widget-owned deletion. Editable settings should use pending/apply semantics instead of directly mutating live persistence from widgets. Any future PR that adds settings editing, reset/delete behavior, startup/default map/config wiring, or packaged runtime lifecycle changes should include matching smoke coverage and packaged validation where appropriate.
+
 ## Implemented Capabilities
 
 | Capability | Current status | Notes |
@@ -211,7 +260,7 @@ Prioritized remaining work:
 Suggested next PRs, in priority order:
 
 1. First actual persistence settings widget/panel slice from [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md).
-   Follow the documented read-only panel contract, bind to the read-only status display rows or optional SQLUISamples widget-shell/adapter/presenter shape, keep refresh caller-invoked, keep SQLite opt-in, keep `InMemory` as the safe default, and keep reset/settings editing out until confirmation and provider-shutdown policy are defined.
+   Build on the completed read-only foundation, bind to the read-only status display rows or optional SQLUISamples widget-shell/adapter/presenter shape, keep refresh caller-invoked, keep SQLite opt-in, keep `InMemory` as the safe default, and keep reset/settings editing out until pending/apply semantics, confirmation, and provider-shutdown policy are defined.
 2. Production async service design doc or small scaffold.
    Decide whether the current per-repository callback queue is enough or whether SQLUI needs a longer-lived DB service for production runtime use.
 3. SQLite history/checkpoint/previews API planning.

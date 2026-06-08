@@ -105,6 +105,23 @@ The resolver can also map explicit seed-copy options into `FSQLUISQLiteSeedDatab
 
 The read-only persistence status panel contract in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) and the focused UMG binding recipe in [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) are the current Blueprint/UMG usage references for that widget-shell/adapter/presenter/display-row path. A future panel should show row labels and values, optionally use row state/detail text for presentation, and expose refresh only as a caller-invoked action that re-queries current status rows. The contract, guide, adapter, and widget shell add no widget blueprint, map, startup wiring, polling, ticking, provider initialization, repository initialization, migrations, seed copy, settings editing, or reset/delete behavior.
 
+## Read-Only Persistence Status UMG Foundation
+
+The read-only persistence status UMG foundation is now complete as a sample/dev-facing base for future UI work. The implemented chain is:
+
+- `USQLUIPersistenceStatusLibrary` for read-only persistence snapshots.
+- `USQLUIPersistenceStatusDisplayLibrary` for UI-safe display rows.
+- `USQLUISamplePersistenceStatusPresenter` for optional SQLUISamples presentation and formatted lines.
+- Explicit caller-invoked refresh methods, including the Blueprint-facing presenter hook.
+- The documented read-only panel contract and UMG binding recipe.
+- `USQLUISamplePersistenceStatusPanelAdapter` for panel-friendly cached rows/results.
+- `USQLUISamplePersistenceStatusPanelWidget` as an optional C++ `UUserWidget` shell.
+- `-UsePersistenceStatusSampleSurfaceProbe` smoke coverage for the presenter, Blueprint hook, adapter, and widget-shell contract without assets, maps, viewport attachment, startup wiring, polling, ticking, or auto-refresh.
+
+This foundation remains read-only. It does not create databases, run migrations, copy seed databases, initialize providers or repositories, save settings, switch backends, reset databases, delete files, add destructive actions, or change normal startup. SQLUICore continues to own status, display-row, path, repository, schema, seed-copy, and database-management policy; SQLUISamples only provides optional sample/dev-facing presenter, adapter, and UMG-shell infrastructure.
+
+Future settings-editing/reset work should keep widgets ignorant of SQL, schema, migration ids, seed-copy policy, sidecar internals, and direct file deletion. Settings edits should use a pending/apply model instead of mutating live persistence from widget bindings. Reset/delete UX should call SQLUICore database management helper/policy surfaces and must not let widgets delete files directly. SQLite should not become the default, and provider auto-init should not become default, without separate explicitly scoped policy PRs.
+
 The packaged runtime provider startup smoke proves this holder can be intentionally created from packaged startup/runtime code and initialized from command-line repository settings. That proof runs only with `-SQLUIRuntimeProviderStartupSmoke`; normal startup still does not auto-initialize a provider or SQLite.
 
 The packaged runtime provider subsystem smoke proves the app-level subsystem holder path. It runs only with `-SQLUIRuntimeProviderSubsystemSmoke` plus explicit `-SQLUILayoutRepositoryProviderAutoInit` and repository settings. When the flags are absent, the subsystem remains passive and normal startup still does not initialize SQLite.
