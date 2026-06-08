@@ -8138,6 +8138,15 @@ bool IsSQLUISamplePersistenceStatusPresenterFunctionBlueprintCallable(
 	return Function && Function->HasAnyFunctionFlags(FUNC_BlueprintCallable);
 }
 
+bool IsSQLUISamplePersistenceStatusPresenterFunctionNotBlueprintPure(
+	const UClass* PresenterClass,
+	const FName FunctionName)
+{
+	const UFunction* Function =
+		PresenterClass ? PresenterClass->FindFunctionByName(FunctionName) : nullptr;
+	return Function && !Function->HasAnyFunctionFlags(FUNC_BlueprintPure);
+}
+
 bool IsSQLUISamplePersistenceStatusPanelAdapterFunctionBlueprintCallable(
 	const UClass* AdapterClass,
 	const FName FunctionName)
@@ -8147,6 +8156,15 @@ bool IsSQLUISamplePersistenceStatusPanelAdapterFunctionBlueprintCallable(
 	return Function && Function->HasAnyFunctionFlags(FUNC_BlueprintCallable);
 }
 
+bool IsSQLUISamplePersistenceStatusPanelAdapterFunctionNotBlueprintPure(
+	const UClass* AdapterClass,
+	const FName FunctionName)
+{
+	const UFunction* Function =
+		AdapterClass ? AdapterClass->FindFunctionByName(FunctionName) : nullptr;
+	return Function && !Function->HasAnyFunctionFlags(FUNC_BlueprintPure);
+}
+
 bool IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
 	const UClass* WidgetClass,
 	const FName FunctionName)
@@ -8154,6 +8172,24 @@ bool IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
 	const UFunction* Function =
 		WidgetClass ? WidgetClass->FindFunctionByName(FunctionName) : nullptr;
 	return Function && Function->HasAnyFunctionFlags(FUNC_BlueprintCallable);
+}
+
+bool IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+	const UClass* WidgetClass,
+	const FName FunctionName)
+{
+	const UFunction* Function =
+		WidgetClass ? WidgetClass->FindFunctionByName(FunctionName) : nullptr;
+	return Function && !Function->HasAnyFunctionFlags(FUNC_BlueprintPure);
+}
+
+bool IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+	const UClass* WidgetClass,
+	const FName FunctionName)
+{
+	const UFunction* Function =
+		WidgetClass ? WidgetClass->FindFunctionByName(FunctionName) : nullptr;
+	return Function && Function->HasAnyFunctionFlags(FUNC_BlueprintPure);
 }
 
 bool IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
@@ -8249,6 +8285,17 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 			GET_FUNCTION_NAME_CHECKED(
 				USQLUISamplePersistenceStatusPresenter,
 				RefreshPersistenceStatusFromRuntimeConfig));
+	Result.bPresenterRefreshFunctionsNotBlueprintPure =
+		IsSQLUISamplePersistenceStatusPresenterFunctionNotBlueprintPure(
+			PresenterClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPresenter,
+				RefreshPersistenceStatus))
+		&& IsSQLUISamplePersistenceStatusPresenterFunctionNotBlueprintPure(
+			PresenterClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPresenter,
+				RefreshPersistenceStatusFromRuntimeConfig));
 	Result.bBlueprintRefreshResultReflected =
 		IsSQLUISamplePersistenceStatusRefreshResultReflected();
 	const UClass* PanelAdapterClass =
@@ -8265,6 +8312,17 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 			GET_FUNCTION_NAME_CHECKED(
 				USQLUISamplePersistenceStatusPanelAdapter,
 				RefreshPersistenceStatusPanelFromRuntimeConfig));
+	Result.bPanelAdapterRefreshFunctionsNotBlueprintPure =
+		IsSQLUISamplePersistenceStatusPanelAdapterFunctionNotBlueprintPure(
+			PanelAdapterClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPanelAdapter,
+				RefreshPersistenceStatusPanel))
+		&& IsSQLUISamplePersistenceStatusPanelAdapterFunctionNotBlueprintPure(
+			PanelAdapterClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPanelAdapter,
+				RefreshPersistenceStatusPanelFromRuntimeConfig));
 	Result.bPanelWidgetBlueprintRefreshFunctionCallable =
 		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
 			PanelWidgetClass,
@@ -8277,10 +8335,46 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 			GET_FUNCTION_NAME_CHECKED(
 				USQLUISamplePersistenceStatusPanelWidget,
 				RefreshPersistenceStatusPanelFromRuntimeConfig));
+	Result.bPanelWidgetRefreshFunctionsNotBlueprintPure =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			PanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPanelWidget,
+				RefreshPersistenceStatusPanel))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			PanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPanelWidget,
+				RefreshPersistenceStatusPanelFromRuntimeConfig));
+	Result.bPanelWidgetCachedGetterFunctionsBlueprintPure =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			PanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPanelWidget,
+				GetRows))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			PanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPanelWidget,
+				GetFormattedLines))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			PanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPanelWidget,
+				GetLastRefreshResult))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			PanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceStatusPanelWidget,
+				GetSummaryText));
 	Result.bPanelWidgetRowsPropertyBlueprintVisible =
 		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
 			PanelWidgetClass,
 			TEXT("Rows"));
+	Result.bPanelWidgetFormattedLinesPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			PanelWidgetClass,
+			TEXT("FormattedLines"));
 	Result.bPanelWidgetRefreshResultPropertyBlueprintVisible =
 		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
 			PanelWidgetClass,
@@ -8289,23 +8383,81 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
 			PanelWidgetClass,
 			TEXT("SummaryText"));
+	// Reflection keeps the commandlet proof independent from widget blueprint
+	// assets, maps, viewport attachment, and startup wiring.
+	Result.bPanelWidgetContractValidatedWithoutAssetOrViewport =
+		PanelWidgetClass
+		&& Result.bPanelWidgetClassDerivedFromUserWidget
+		&& Result.bPanelWidgetBlueprintRefreshFunctionCallable
+		&& Result.bPanelWidgetBlueprintRuntimeConfigRefreshFunctionCallable
+		&& Result.bPanelWidgetRefreshFunctionsNotBlueprintPure
+		&& Result.bPanelWidgetCachedGetterFunctionsBlueprintPure
+		&& Result.bPanelWidgetRowsPropertyBlueprintVisible
+		&& Result.bPanelWidgetFormattedLinesPropertyBlueprintVisible
+		&& Result.bPanelWidgetRefreshResultPropertyBlueprintVisible
+		&& Result.bPanelWidgetSummaryTextPropertyBlueprintVisible;
 
-	if (!Result.bBlueprintRefreshFunctionCallable
-		|| !Result.bBlueprintRuntimeConfigRefreshFunctionCallable
-		|| !Result.bPanelAdapterBlueprintRefreshFunctionCallable
-		|| !Result.bPanelAdapterBlueprintRuntimeConfigRefreshFunctionCallable
-		|| !Result.bPanelWidgetClassDerivedFromUserWidget
-		|| !Result.bPanelWidgetBlueprintRefreshFunctionCallable
-		|| !Result.bPanelWidgetBlueprintRuntimeConfigRefreshFunctionCallable
-		|| !Result.bPanelWidgetRowsPropertyBlueprintVisible
-		|| !Result.bPanelWidgetRefreshResultPropertyBlueprintVisible
-		|| !Result.bPanelWidgetSummaryTextPropertyBlueprintVisible
-		|| !Result.bBlueprintRefreshResultReflected)
-	{
-		AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
-			Result,
-			TEXT("SQLUI persistence status sample surface probe failed: presenter, panel adapter, or panel widget shell was not Blueprint-callable/reflected."));
-	}
+	const auto AppendReflectionFailure =
+		[&Result](const bool bPassed, const TCHAR* FailureMessage)
+		{
+			if (!bPassed)
+			{
+				AppendSQLUISamplePersistenceStatusSampleSurfaceProbeError(
+					Result,
+					FailureMessage);
+			}
+		};
+	AppendReflectionFailure(
+		Result.bBlueprintRefreshFunctionCallable,
+		TEXT("SQLUI persistence status sample surface probe failed: presenter RefreshPersistenceStatus was not BlueprintCallable."));
+	AppendReflectionFailure(
+		Result.bBlueprintRuntimeConfigRefreshFunctionCallable,
+		TEXT("SQLUI persistence status sample surface probe failed: presenter RefreshPersistenceStatusFromRuntimeConfig was not BlueprintCallable."));
+	AppendReflectionFailure(
+		Result.bPresenterRefreshFunctionsNotBlueprintPure,
+		TEXT("SQLUI persistence status sample surface probe failed: presenter refresh functions were unexpectedly BlueprintPure."));
+	AppendReflectionFailure(
+		Result.bPanelAdapterBlueprintRefreshFunctionCallable,
+		TEXT("SQLUI persistence status sample surface probe failed: panel adapter RefreshPersistenceStatusPanel was not BlueprintCallable."));
+	AppendReflectionFailure(
+		Result.bPanelAdapterBlueprintRuntimeConfigRefreshFunctionCallable,
+		TEXT("SQLUI persistence status sample surface probe failed: panel adapter RefreshPersistenceStatusPanelFromRuntimeConfig was not BlueprintCallable."));
+	AppendReflectionFailure(
+		Result.bPanelAdapterRefreshFunctionsNotBlueprintPure,
+		TEXT("SQLUI persistence status sample surface probe failed: panel adapter refresh functions were unexpectedly BlueprintPure."));
+	AppendReflectionFailure(
+		Result.bPanelWidgetClassDerivedFromUserWidget,
+		TEXT("SQLUI persistence status sample surface probe failed: panel widget shell did not derive from UUserWidget."));
+	AppendReflectionFailure(
+		Result.bPanelWidgetBlueprintRefreshFunctionCallable,
+		TEXT("SQLUI persistence status sample surface probe failed: panel widget RefreshPersistenceStatusPanel was not BlueprintCallable."));
+	AppendReflectionFailure(
+		Result.bPanelWidgetBlueprintRuntimeConfigRefreshFunctionCallable,
+		TEXT("SQLUI persistence status sample surface probe failed: panel widget RefreshPersistenceStatusPanelFromRuntimeConfig was not BlueprintCallable."));
+	AppendReflectionFailure(
+		Result.bPanelWidgetRefreshFunctionsNotBlueprintPure,
+		TEXT("SQLUI persistence status sample surface probe failed: panel widget refresh functions were unexpectedly BlueprintPure."));
+	AppendReflectionFailure(
+		Result.bPanelWidgetCachedGetterFunctionsBlueprintPure,
+		TEXT("SQLUI persistence status sample surface probe failed: panel widget cached getter functions were not BlueprintPure."));
+	AppendReflectionFailure(
+		Result.bPanelWidgetRowsPropertyBlueprintVisible,
+		TEXT("SQLUI persistence status sample surface probe failed: panel widget Rows property was not Blueprint-visible."));
+	AppendReflectionFailure(
+		Result.bPanelWidgetFormattedLinesPropertyBlueprintVisible,
+		TEXT("SQLUI persistence status sample surface probe failed: panel widget FormattedLines property was not Blueprint-visible."));
+	AppendReflectionFailure(
+		Result.bPanelWidgetRefreshResultPropertyBlueprintVisible,
+		TEXT("SQLUI persistence status sample surface probe failed: panel widget LastRefreshResult property was not Blueprint-visible."));
+	AppendReflectionFailure(
+		Result.bPanelWidgetSummaryTextPropertyBlueprintVisible,
+		TEXT("SQLUI persistence status sample surface probe failed: panel widget SummaryText property was not Blueprint-visible."));
+	AppendReflectionFailure(
+		Result.bPanelWidgetContractValidatedWithoutAssetOrViewport,
+		TEXT("SQLUI persistence status sample surface probe failed: panel widget shell contract could not be validated by reflection without an asset or viewport."));
+	AppendReflectionFailure(
+		Result.bBlueprintRefreshResultReflected,
+		TEXT("SQLUI persistence status sample surface probe failed: refresh result struct was not reflected as expected."));
 
 	const FSQLUILayoutRepositoryRuntimeConfig DefaultConfig =
 		FSQLUILayoutRepositoryRuntimeConfigResolver::MakeDefault();
@@ -8497,13 +8649,19 @@ RunSQLUISamplePersistenceStatusSampleSurfaceProbe(UObject* Outer)
 		&& Result.bPanelWidgetClassDerivedFromUserWidget
 		&& Result.bBlueprintRefreshFunctionCallable
 		&& Result.bBlueprintRuntimeConfigRefreshFunctionCallable
+		&& Result.bPresenterRefreshFunctionsNotBlueprintPure
 		&& Result.bPanelAdapterBlueprintRefreshFunctionCallable
 		&& Result.bPanelAdapterBlueprintRuntimeConfigRefreshFunctionCallable
+		&& Result.bPanelAdapterRefreshFunctionsNotBlueprintPure
 		&& Result.bPanelWidgetBlueprintRefreshFunctionCallable
 		&& Result.bPanelWidgetBlueprintRuntimeConfigRefreshFunctionCallable
+		&& Result.bPanelWidgetRefreshFunctionsNotBlueprintPure
+		&& Result.bPanelWidgetCachedGetterFunctionsBlueprintPure
 		&& Result.bPanelWidgetRowsPropertyBlueprintVisible
+		&& Result.bPanelWidgetFormattedLinesPropertyBlueprintVisible
 		&& Result.bPanelWidgetRefreshResultPropertyBlueprintVisible
 		&& Result.bPanelWidgetSummaryTextPropertyBlueprintVisible
+		&& Result.bPanelWidgetContractValidatedWithoutAssetOrViewport
 		&& Result.bBlueprintRefreshResultReflected
 		&& Result.bDefaultRowsPresented
 		&& Result.bExplicitRefreshResultSucceeded

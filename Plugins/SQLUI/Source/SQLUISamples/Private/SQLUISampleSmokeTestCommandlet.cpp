@@ -2977,14 +2977,32 @@ void LogSQLUISampleSmokeTestPersistenceStatusSampleSurfaceProbeResult(
 		TEXT("panel widget Blueprint runtime config refresh function callable"),
 		ProbeResult.bPanelWidgetBlueprintRuntimeConfigRefreshFunctionCallable);
 	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("presenter refresh functions not BlueprintPure"),
+		ProbeResult.bPresenterRefreshFunctionsNotBlueprintPure);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("panel adapter refresh functions not BlueprintPure"),
+		ProbeResult.bPanelAdapterRefreshFunctionsNotBlueprintPure);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("panel widget refresh functions not BlueprintPure"),
+		ProbeResult.bPanelWidgetRefreshFunctionsNotBlueprintPure);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("panel widget cached getter functions BlueprintPure"),
+		ProbeResult.bPanelWidgetCachedGetterFunctionsBlueprintPure);
+	LogPersistenceStatusSampleSurfaceBool(
 		TEXT("panel widget rows property Blueprint visible"),
 		ProbeResult.bPanelWidgetRowsPropertyBlueprintVisible);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("panel widget formatted lines property Blueprint visible"),
+		ProbeResult.bPanelWidgetFormattedLinesPropertyBlueprintVisible);
 	LogPersistenceStatusSampleSurfaceBool(
 		TEXT("panel widget refresh result property Blueprint visible"),
 		ProbeResult.bPanelWidgetRefreshResultPropertyBlueprintVisible);
 	LogPersistenceStatusSampleSurfaceBool(
 		TEXT("panel widget summary text property Blueprint visible"),
 		ProbeResult.bPanelWidgetSummaryTextPropertyBlueprintVisible);
+	LogPersistenceStatusSampleSurfaceBool(
+		TEXT("panel widget contract validated without asset or viewport"),
+		ProbeResult.bPanelWidgetContractValidatedWithoutAssetOrViewport);
 	LogPersistenceStatusSampleSurfaceBool(
 		TEXT("Blueprint refresh result reflected"),
 		ProbeResult.bBlueprintRefreshResultReflected);
