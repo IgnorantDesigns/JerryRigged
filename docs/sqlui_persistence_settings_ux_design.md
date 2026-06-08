@@ -50,7 +50,7 @@ The first implementation slice for this design now exists as `USQLUIPersistenceS
 
 The first UI-consumption slice also exists as `USQLUIPersistenceStatusDisplayLibrary` and `FSQLUIPersistenceStatusDisplayRow`. It converts the read-only status snapshot into label/value/state/detail rows that a future settings panel can bind to directly. The display library does not perform its own file checks, initialize providers, create repositories, create databases, run migrations, copy seeds, reset databases, or delete files.
 
-The first settings-editing foundation slice now exists as `FSQLUIPersistenceSettingsDraft`, `FSQLUIPersistenceSettingsValidationResult`, and `USQLUIPersistenceSettingsDraftLibrary`. It is still non-mutating: callers can represent current and pending runtime settings, validate backend/path/provider-auto-init choices, and reset the in-memory draft value back to current values, but no settings are applied or saved. Draft validation does not create database files, run migrations, copy seed databases, initialize providers/repositories, delete files, add UI controls, or change startup behavior.
+The first settings-editing foundation slice now exists as `FSQLUIPersistenceSettingsDraft`, `FSQLUIPersistenceSettingsValidationResult`, and `USQLUIPersistenceSettingsDraftLibrary`. It is still non-mutating: callers can represent current and pending runtime settings, validate backend/path/provider-auto-init choices, and reset the in-memory draft value back to current values, but no settings are applied or saved. Draft validation does not create database files, run migrations, copy seed databases, initialize providers/repositories, delete files, add UI controls, or change startup behavior. `USQLUIPersistenceSettingsDraftDisplayLibrary` now adds a UI-safe summary/row formatter for those validation results so a future sample or settings panel can show pending backend/path/provider-auto-init status without owning apply, save, or lifecycle behavior.
 
 `USQLUISamplePersistenceStatusPresenter` is the first optional SQLUISamples sample/dev surface over those rows. It stores the display rows plus stable formatted strings for simple sample UI, Blueprint, or commandlet presentation and exposes Blueprint-callable, caller-invoked refresh functions for re-querying those same rows. It is not a full settings screen, is not wired into startup, maps, or default config, and it does not add settings editing, reset/delete actions, provider initialization, repository initialization, migrations, seed copy, database creation, or file deletion.
 
@@ -74,7 +74,7 @@ The read-only persistence status foundation is complete enough for future settin
 
 This checkpoint is not a settings screen and not a startup path. It adds no widget blueprint asset, visual layout, map wiring, viewport attachment, polling, ticking, timer, auto-refresh, backend selector, SQLite path editor, provider auto-init toggle, settings save/apply flow, reset/delete behavior, migration control, seed-copy behavior, provider initialization, repository initialization, or database creation.
 
-The dedicated next-phase plan for mutating settings and reset UX lives in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). PR #105 recorded that plan only; the first follow-up implements only the non-mutating draft/validation model. Backend selector UI, SQLite path editor UI, provider auto-init controls, settings apply/save, reset/delete behavior, and product startup policy remain future work.
+The dedicated next-phase plan for mutating settings and reset UX lives in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). PR #105 recorded that plan only; the first follow-ups implement only the non-mutating draft/validation model plus validation display rows. Backend selector UI, SQLite path editor UI, provider auto-init controls, settings apply/save, reset/delete behavior, and product startup policy remain future work.
 
 Future settings-editing and reset work must preserve these prerequisites:
 
@@ -267,7 +267,7 @@ Controls that are out of scope for this first panel contract:
 - Reset/delete button.
 - Migration execution controls.
 
-The draft settings model may be used by future controls, but adding the model does not add those controls. UI surfaces should keep treating draft validation as a dry-run/pending-state step until a later PR adds explicit Apply/Cancel behavior.
+The draft settings model and validation display rows may be used by future controls, but adding them does not add those controls. UI surfaces should keep treating draft validation as a dry-run/pending-state step until a later PR adds explicit Apply/Cancel behavior.
 
 Ownership boundaries:
 
