@@ -135,7 +135,9 @@ For a future local/manual Blueprint exploration, keep the asset local unless a l
 
 ## Smoke Coverage
 
-The existing `-UsePersistenceStatusSampleSurfaceProbe` smoke path validates the presenter, panel adapter, and C++ widget shell contract by reflection. It checks that the widget shell derives from `UUserWidget`, that its refresh functions are Blueprint-callable, and that cached row/result/summary properties are Blueprint-visible.
+The existing `-UsePersistenceStatusSampleSurfaceProbe` smoke path validates the presenter, panel adapter, and C++ widget shell contract by reflection. It checks that the widget shell derives from `UUserWidget`, that refresh-style functions are Blueprint-callable and not `BlueprintPure`, that cached widget-shell getters are `BlueprintPure`, and that cached row/formatted-lines/result/summary properties are Blueprint-visible.
+
+The smoke path validates that contract without requiring committed widget blueprint assets, maps, startup wiring, or viewport attachment. It also keeps refresh caller-invoked and confirms default `InMemory` status display does not initialize providers/repositories or create SQLite database files.
 
 This guide adds no new smoke flag. Cleanup expectations remain unchanged: the probe removes only smoke-owned database and sidecar files under `Saved/SQLUI/SmokeTests/PersistenceStatusSampleSurface`.
 
