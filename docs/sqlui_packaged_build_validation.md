@@ -2,7 +2,7 @@
 
 This document describes the local packaged-build validation scaffold for JerryRigged and SQLUI SQLite readiness checks.
 
-For the concise SQLite phase status and roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md). For the future persistence/settings UX policy that should sit above the packaged persistence workflow, see [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md). For the focused read-only UMG binding recipe, see [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md).
+For the concise SQLite phase status and roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md). For the future persistence/settings UX policy that should sit above the packaged persistence workflow, see [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md). For the planned mutating settings editing/reset phase, see [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). For the focused read-only UMG binding recipe, see [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md).
 
 ## Purpose
 
@@ -41,7 +41,7 @@ This scaffold does not:
 - Add maps, Content assets, packaged outputs, database files, or generated files to source control.
 - Change normal game startup behavior unless an explicit packaged smoke flag such as `-SQLUIPackagedRuntimeSQLiteSmoke`, `-SQLUIRuntimeProviderStartupSmoke`, `-SQLUIRuntimeProviderSubsystemSmoke`, or `-SQLUIRuntimePersistenceWorkflowSmoke` is present.
 
-The read-only persistence status UMG foundation does not add packaged startup behavior. Docs-only checkpoint PRs for that foundation do not require a full packaged build when they do not touch runtime code, maps, config, startup wiring, or packaged lifecycle behavior. Future PRs that wire persistence status UI into startup, default maps, config, viewport attachment, provider lifecycle, or packaged runtime flows should include packaged validation appropriate to that behavior.
+The read-only persistence status UMG foundation and docs-only settings editing/reset planning do not add packaged startup behavior. Docs-only checkpoint or planning PRs do not require a full packaged build when they do not touch runtime code, maps, config, startup wiring, or packaged lifecycle behavior. Future PRs that wire persistence status UI or mutating settings/reset UI into startup, default maps, config, viewport attachment, provider lifecycle, or packaged runtime flows should include packaged validation appropriate to that behavior.
 
 Run this validation before treating SQLite as packaged-runtime-ready, but do not treat a successful package alone as proof of packaged SQLite lifecycle behavior. Use `-RunPackagedSQLiteSmoke` for the packaged runtime SQLite repository lifecycle proof, `-RunPackagedProviderStartupSmoke` for the direct provider startup proof, `-RunPackagedProviderSubsystemSmoke` for the passive subsystem startup proof, and `-RunPackagedPersistenceWorkflowSmoke` for the first packaged persistence-across-launches workflow proof.
 
@@ -473,6 +473,6 @@ Future work still includes:
 - CI automation if Unreal-capable build agents become available.
 - Broader packaged runtime database path coverage beyond the first `Saved/SQLUI/PackagedRuntimeSmoke` lifecycle proof.
 - More packaged persistence-across-launches scenarios beyond the first explicit workflow smoke.
-- Implementing the user-facing persistence settings/DB path UX documented in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), plus product startup policy beyond the safe config-backed settings object, passive provider subsystem, and explicit packaged smoke flags.
+- Implementing the user-facing persistence settings/DB path UX documented in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) and planned in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), plus product startup policy beyond the safe config-backed settings object, passive provider subsystem, and explicit packaged smoke flags.
 - Production async database service, queue, cancellation, and shutdown hardening.
 - Migration upgrade/versioning validation beyond the initial schema.
