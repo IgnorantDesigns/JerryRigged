@@ -2,7 +2,7 @@
 
 This document describes the local packaged-build validation scaffold for JerryRigged and SQLUI SQLite readiness checks.
 
-For the concise SQLite phase status and roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md). For the future persistence/settings UX policy that should sit above the packaged persistence workflow, see [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md).
+For the concise SQLite phase status and roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md). For the future persistence/settings UX policy that should sit above the packaged persistence workflow, see [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md). For the focused read-only UMG binding recipe, see [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md).
 
 ## Purpose
 

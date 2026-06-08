@@ -10,6 +10,7 @@ Related docs:
 - [`sqlui_sqlite_async_backend_plan.md`](sqlui_sqlite_async_backend_plan.md) describes the async/threading direction.
 - [`sqlui_sqlite_backend_evaluation.md`](sqlui_sqlite_backend_evaluation.md) describes why engine `SQLiteCore` is the active backend candidate.
 - [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) describes the future user-facing persistence/settings UX policy.
+- [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) documents the focused read-only UMG binding recipe for the optional widget shell.
 - [`sqlui_smoke_test.md`](sqlui_smoke_test.md) is the command reference for local smoke paths.
 - [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) describes the local packaged-build validation scaffold.
 
@@ -102,7 +103,7 @@ The resolver can also map explicit seed-copy options into `FSQLUISQLiteSeedDatab
 
 `USQLUISamplePersistenceStatusPanelWidget` is the first tiny optional C++ UMG shell over that adapter. It lives only in SQLUISamples, creates no visual layout, includes no widget blueprint asset, is not added to the viewport, and is not wired into default startup, maps, config, timers, tick, or polling. It only exposes caller-invoked refresh plus cached rows/result for future Blueprint subclassing or binding, and does not add settings editing, reset/delete actions, provider/repository initialization, database creation, migrations, seed copy, or file deletion.
 
-The read-only persistence status panel contract in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) is the current Blueprint/UMG usage recipe for that widget-shell/adapter/presenter/display-row path. A future panel should show row labels and values, optionally use row state/detail text for presentation, and expose refresh only as a caller-invoked action that re-queries current status rows. The contract, adapter, and widget shell add no widget blueprint, map, startup wiring, polling, ticking, provider initialization, repository initialization, migrations, seed copy, settings editing, or reset/delete behavior.
+The read-only persistence status panel contract in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) and the focused UMG binding recipe in [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) are the current Blueprint/UMG usage references for that widget-shell/adapter/presenter/display-row path. A future panel should show row labels and values, optionally use row state/detail text for presentation, and expose refresh only as a caller-invoked action that re-queries current status rows. The contract, guide, adapter, and widget shell add no widget blueprint, map, startup wiring, polling, ticking, provider initialization, repository initialization, migrations, seed copy, settings editing, or reset/delete behavior.
 
 The packaged runtime provider startup smoke proves this holder can be intentionally created from packaged startup/runtime code and initialized from command-line repository settings. That proof runs only with `-SQLUIRuntimeProviderStartupSmoke`; normal startup still does not auto-initialize a provider or SQLite.
 
@@ -270,7 +271,7 @@ Remaining work includes:
 - Production async database service design beyond the current per-repository callback queue.
 - Cancellation, shutdown draining beyond stale-callback suppression, and async coverage for all repository operations.
 - Actual future schema migrations, upgrade-specific data transforms, and version-specific compatibility policy beyond the current version/status framework.
-- Implementing the user-facing persistence settings UI described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md). The first read-only SQLUICore status snapshot, display rows, sample presenter, panel adapter, C++ widget shell, and panel contract exist; widget blueprint assets, visual layout, settings editing, reset UI, and product startup policy remain future work.
+- Implementing the user-facing persistence settings UI described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) and [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md). The first read-only SQLUICore status snapshot, display rows, sample presenter, panel adapter, C++ widget shell, panel contract, and focused binding guide exist; widget blueprint assets, visual layout, settings editing, reset UI, and product startup policy remain future work.
 - Product seed database asset/package/version policy, if seed DBs are added.
 - Optional lifecycle features such as history APIs, checkpoints, previews, restore flows, and richer search.
 
