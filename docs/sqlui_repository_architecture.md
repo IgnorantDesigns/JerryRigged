@@ -4,7 +4,7 @@ SQLUI layout persistence sits behind repository interfaces. Runtime widget code 
 
 This boundary keeps `SQLUI.Widgets` focused on building and updating UMG widgets, keeps `SQLUI.Core` responsible for data access contracts, and lets the project swap storage implementations without rewriting widget or runtime pipeline code.
 
-For the consolidated SQLite phase roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md). For the deeper current runtime state, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md). For the future user-facing persistence/settings UX policy, see [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md). For the focused read-only widget-shell binding recipe, see [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md).
+For the consolidated SQLite phase roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md). For the deeper current runtime state, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md). For the future user-facing persistence/settings UX policy, see [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md). For the planned mutating settings editing/reset phase, see [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). For the focused read-only widget-shell binding recipe, see [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md).
 
 ## Repository Boundary
 
@@ -49,7 +49,7 @@ Runtime-facing code can choose a repository backend through `FSQLUILayoutReposit
 
 The read-only persistence status panel contract is documented in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), with the focused UMG binding recipe in [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md). Together they define how future Blueprint/UMG UI should consume the existing widget-shell/adapter/presenter/display-row path: show row labels/values, optionally map row state/detail text to UI affordances, keep refresh caller-invoked only, and keep widgets away from provider lifecycle, direct file checks, migrations, seed-copy policy, and reset/delete behavior. They are a usage recipe plus optional sample shell, not a finished settings screen.
 
-That read-only persistence status UMG foundation is complete as a sample/dev-facing binding base. It does not change repository selection, default startup, default maps/config, provider auto-init policy, SQLite defaults, or packaged runtime behavior. Future settings-editing, backend-selection, SQLite-path editing, migration/seed-copy controls, and reset/delete UI must remain above SQLUICore helper/policy surfaces and should use pending/apply semantics rather than widget-owned persistence mutation.
+That read-only persistence status UMG foundation is complete as a sample/dev-facing binding base. It does not change repository selection, default startup, default maps/config, provider auto-init policy, SQLite defaults, or packaged runtime behavior. Future settings-editing, backend-selection, SQLite-path editing, migration/seed-copy controls, and reset/delete UI must remain above SQLUICore helper/policy surfaces, follow [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), and use pending/apply semantics rather than widget-owned persistence mutation.
 
 The packaged runtime provider startup smoke proves the intended startup integration shape without changing normal startup. When `-SQLUIRuntimeProviderStartupSmoke` is present, SQLUISamples creates the provider after engine-loop initialization, initializes it from command-line repository settings, uses the active repository through the repository contract for save/load, verifies SQLite list readback in smoke-only code, resets the provider, removes the smoke database, and exits. When the flag is absent, SQLUISamples does not auto-initialize the provider.
 
@@ -193,7 +193,7 @@ Saved/SQLUI/SmokeTests/Layouts
 
 Future seed data may live in source-controlled project or plugin locations, but writable runtime copies should still be made under `Saved` before mutation.
 
-Future user-facing database status/reset controls should follow [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) and call the SQLUICore database management helper instead of deleting files directly. That keeps path resolution and SQLite sidecar naming in SQLUICore while preserving the repository boundary for widgets and runtime UI.
+Future user-facing database status/reset controls should follow [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) and [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), and call the SQLUICore database management helper instead of deleting files directly. That keeps path resolution and SQLite sidecar naming in SQLUICore while preserving the repository boundary for widgets and runtime UI.
 
 ## Current Smoke-Test Paths
 
@@ -261,6 +261,6 @@ Near-term implementation work can stay small and repository-focused:
 1. Run and expand packaged-build validation for the `SQLiteCore` path on target platforms.
 2. Extend the async database boundary beyond callback-style `LoadLayout` and `SaveLayout` before using SQLite for normal runtime persistence.
 3. Keep SQLite factory selection explicitly configured and unavailable when required settings are missing.
-4. Implement the first persistence settings widget/panel slice from [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), following the read-only panel contract, binding to the existing widget-shell/adapter/presenter/display-row path, and using the database management helper for any later status/reset flows instead of widget-owned file deletion.
+4. Implement the first persistence settings widget/panel slice from [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) and [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), following the read-only panel contract, binding to the existing widget-shell/adapter/presenter/display-row path, and using the database management helper for any later status/reset flows instead of widget-owned file deletion.
 5. Define product seed database asset/package/version rules before shipping source-controlled seed DBs.
 6. Extend lifecycle features through repository contracts instead of exposing storage details to widgets.

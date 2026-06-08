@@ -7,6 +7,7 @@ It documents how future UI work can subclass or bind to `USQLUISamplePersistence
 Related docs:
 
 - [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) defines the broader future persistence settings UX.
+- [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md) plans the future mutating settings editing, apply/cancel, backend selection, SQLite path, provider auto-init, and reset/delete UX phase.
 - [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md) summarizes current SQLite runtime status and safety boundaries.
 - [`sqlui_repository_architecture.md`](sqlui_repository_architecture.md) describes repository and UI/storage ownership boundaries.
 - [`sqlui_smoke_test.md`](sqlui_smoke_test.md) lists the local smoke command that validates the presenter, adapter, and widget shell.
@@ -41,7 +42,7 @@ The read-only SQLUI persistence status UMG foundation is complete as a binding s
 
 This remains sample/dev-facing and read-only. It is not a full settings screen and does not add settings editing, backend selector controls, SQLite path editing, provider auto-init controls, reset/delete actions, migration controls, seed-copy controls, provider/repository initialization, database creation, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, or auto-refresh.
 
-Future editable settings or reset/delete UX should build on SQLUICore policy helpers. Widgets should keep using status/display rows and must not know SQL, schema, migration ids, seed-copy policy, sidecar internals, direct file deletion, or live repository mutation rules.
+Future editable settings or reset/delete UX should build on SQLUICore policy helpers and the dedicated plan in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). Widgets should keep using status/display rows and must not know SQL, schema, migration ids, seed-copy policy, sidecar internals, direct file deletion, or live repository mutation rules.
 
 ## Future Blueprint Recipe
 
@@ -105,7 +106,7 @@ This usage guide does not introduce:
 - Seed-copy controls.
 - Direct file browser/delete behavior.
 
-Future settings editing and reset/delete UX must be scoped separately. Future reset behavior must go through SQLUICore database management helper/policy surfaces instead of widget-owned file deletion.
+Future settings editing and reset/delete UX must be scoped separately and should follow [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). Future reset behavior must go through SQLUICore database management helper/policy surfaces instead of widget-owned file deletion.
 
 ## Ownership Boundaries
 
@@ -161,3 +162,5 @@ Still future work:
 - SQLite path editing UI.
 - Reset/delete UX.
 - Product startup policy.
+
+The next mutating settings/reset phase is planned in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), but no editing or reset behavior exists in the current read-only widget shell.

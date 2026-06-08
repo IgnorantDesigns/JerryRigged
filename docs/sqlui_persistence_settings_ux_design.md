@@ -9,6 +9,7 @@ Related docs:
 - [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md) summarizes the implemented SQLite runtime state.
 - [`sqlui_repository_architecture.md`](sqlui_repository_architecture.md) describes repository boundaries and backend selection.
 - [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md) tracks current phase status and next slices.
+- [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md) plans the next mutating settings editing, apply/cancel, backend selection, SQLite path, provider auto-init, and reset/delete UX phase.
 - [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) documents the focused read-only UMG binding recipe for the optional widget shell.
 - [`sqlui_smoke_test.md`](sqlui_smoke_test.md) lists editor smoke-test commands.
 - [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) documents local packaged validation and packaged runtime smoke paths.
@@ -70,6 +71,8 @@ The read-only persistence status foundation is complete enough for future settin
 - Non-asset smoke coverage for presenter, Blueprint hook, adapter, and widget-shell reflection/binding contract.
 
 This checkpoint is not a settings screen and not a startup path. It adds no widget blueprint asset, visual layout, map wiring, viewport attachment, polling, ticking, timer, auto-refresh, backend selector, SQLite path editor, provider auto-init toggle, settings save/apply flow, reset/delete behavior, migration control, seed-copy behavior, provider initialization, repository initialization, or database creation.
+
+The dedicated next-phase plan for mutating settings and reset UX lives in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). PR #105 records that plan only; it does not implement backend selector, SQLite path editor, provider auto-init policy controls, pending/apply/cancel behavior, or reset/delete behavior. That plan should be treated as the starting point for future implementation slices.
 
 Future settings-editing and reset work must preserve these prerequisites:
 
