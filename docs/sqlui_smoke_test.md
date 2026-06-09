@@ -38,7 +38,7 @@ The optional persistence status sample surface probe exercises the first SQLUISa
 
 That existing sample-surface probe is also the validation path for the read-only persistence status display rows, sample presenter, explicit refresh path, Blueprint-facing hook, panel adapter, C++ UMG widget shell contract, panel contract, and UMG binding recipe described in `docs/sqlui_persistence_settings_ux_design.md` and `docs/sqlui_persistence_status_umg_usage.md`. The probe does not require widget blueprint assets or maps, does not attach anything to the viewport, does not alter startup/config behavior, and keeps cleanup limited to smoke-owned files. Cleanup confirms no persistence status sample surface probe database or SQLite sidecar files remain. This path adds no new smoke flag, widget blueprint asset, map, startup behavior, polling, ticking, provider auto-init, settings editing, reset/delete action, migration, seed copy, database creation, or file deletion; it only validates how future Blueprint/UMG UI can consume the already-validated widget-shell/adapter/presenter/display rows safely.
 
-The mutating settings editing and reset phase is planned in `docs/sqlui_persistence_settings_editing_reset_plan.md`. The first implementation slices add `-UsePersistenceSettingsDraftProbe` for non-mutating draft/pending settings validation plus UI-safe validation display rows. Future implementation PRs that add apply behavior, backend selector UI, SQLite path editor UI, provider auto-init controls, or reset/delete actions should add focused smoke coverage for those behaviors while preserving the existing read-only status and draft-validation semantics.
+The mutating settings editing and reset phase is planned in `docs/sqlui_persistence_settings_editing_reset_plan.md`. The first implementation slices add `-UsePersistenceSettingsDraftProbe` for non-mutating draft/pending settings validation, UI-safe validation display rows, and an optional SQLUISamples sample/dev adapter that consumes those rows. Future implementation PRs that add apply behavior, backend selector UI, SQLite path editor UI, provider auto-init controls, or reset/delete actions should add focused smoke coverage for those behaviors while preserving the existing read-only status and draft-validation semantics.
 
 The optional SQLite migration probe opens a temporary SQLite database under `Saved\SQLUI\SmokeTests\SQLiteMigrationProbe`, creates the smoke-only migration tracking table, applies and records one probe migration, verifies the migration row, closes the database, and removes the probe database file. This is not the planned SQLUI layout schema migration and does not add a SQLite layout repository.
 
@@ -296,7 +296,7 @@ This path proves the first optional SQLUISamples sample/dev presenter, panel ada
 
 ## Run The Persistence Settings Draft Probe
 
-The persistence settings draft probe keeps the same transient commandlet flow, exercises `USQLUIPersistenceSettingsDraftLibrary` and `USQLUIPersistenceSettingsDraftDisplayLibrary`, verifies the default/current `InMemory` draft validates safely and produces safe display rows, verifies an unknown backend is rejected with validation messages and a user-readable error row, verifies a pending SQLite draft/path can be represented without applying it or creating a database, verifies an empty SQLite path is rejected safely and displayed as an error, verifies a pending provider auto-init value validates and displays as pending without changing provider auto-init policy, verifies repeated validation/display output is deterministic, verifies validation display generation does not delete a smoke-owned SQLite sidecar, removes all probe files, and then runs the same default runtime widget pipeline:
+The persistence settings draft probe keeps the same transient commandlet flow, exercises `USQLUIPersistenceSettingsDraftLibrary`, `USQLUIPersistenceSettingsDraftDisplayLibrary`, and the SQLUISamples draft validation sample adapter, verifies the default/current `InMemory` draft validates safely and produces safe display rows, verifies an unknown backend is rejected with validation messages and a user-readable error row, verifies a pending SQLite draft/path can be represented without applying it or creating a database, verifies an empty SQLite path is rejected safely and displayed as an error, verifies a pending provider auto-init value validates and displays as pending without changing provider auto-init policy, verifies repeated validation/display and adapter output is deterministic, verifies validation display generation does not delete a smoke-owned SQLite sidecar, removes all probe files, and then runs the same default runtime widget pipeline:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UsePersistenceSettingsDraftProbe
@@ -325,6 +325,14 @@ SQLUI persistence settings draft probe SQLite draft display generated: true
 SQLUI persistence settings draft probe SQLite display did not create DB: true
 SQLUI persistence settings draft probe SQLite empty path display shows error: true
 SQLUI persistence settings draft probe provider auto-init display pending: true
+SQLUI persistence settings draft probe sample adapter default display generated: true
+SQLUI persistence settings draft probe sample adapter default display safe: true
+SQLUI persistence settings draft probe sample adapter unknown backend display shows error: true
+SQLUI persistence settings draft probe sample adapter SQLite draft display generated: true
+SQLUI persistence settings draft probe sample adapter SQLite display did not create DB: true
+SQLUI persistence settings draft probe sample adapter SQLite empty path display shows error: true
+SQLUI persistence settings draft probe sample adapter provider auto-init display pending: true
+SQLUI persistence settings draft probe sample adapter repeated display deterministic: true
 SQLUI persistence settings draft probe repeated validation deterministic: true
 SQLUI persistence settings draft probe repeated display deterministic: true
 SQLUI persistence settings draft probe sidecar preserved during validation: true
@@ -332,7 +340,7 @@ SQLUI persistence settings draft probe database files removed: true
 SQLUI persistence settings draft probe succeeded.
 ```
 
-This path proves validation-only draft behavior and UI-safe validation display-row formatting. It does not apply settings, write config, add settings editing UI controls, add backend selector controls, add SQLite path editor controls, add provider auto-init toggle controls, add reset/delete behavior, initialize providers or repositories, create database files, run migrations, copy seed databases, delete files outside smoke-owned cleanup, change startup behavior, edit Content or maps, or leave persistent database files behind.
+This path proves validation-only draft behavior, UI-safe validation display-row formatting, and SQLUISamples sample adapter consumption of those rows. It does not apply settings, write config, add settings editing UI controls, add backend selector controls, add SQLite path editor controls, add provider auto-init toggle controls, add reset/delete behavior, initialize providers or repositories, create database files, create directories from adapter/display generation, open databases for writing, run migrations, copy seed databases, delete files outside smoke-owned cleanup, change startup behavior, edit Content or maps, or leave persistent database files behind. The only directory/file creation in this smoke path is the explicit smoke-owned sidecar fixture used to verify cleanup and non-deletion behavior.
 
 ## Run The SQLite Migration Probe
 

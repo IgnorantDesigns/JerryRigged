@@ -74,7 +74,7 @@ The read-only persistence status foundation is complete enough for future settin
 
 This checkpoint is not a settings screen and not a startup path. It adds no widget blueprint asset, visual layout, map wiring, viewport attachment, polling, ticking, timer, auto-refresh, backend selector, SQLite path editor, provider auto-init toggle, settings save/apply flow, reset/delete behavior, migration control, seed-copy behavior, provider initialization, repository initialization, or database creation.
 
-The dedicated next-phase plan for mutating settings and reset UX lives in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). PR #105 recorded that plan only; the first follow-ups implement only the non-mutating draft/validation model plus validation display rows. Backend selector UI, SQLite path editor UI, provider auto-init controls, settings apply/save, reset/delete behavior, and product startup policy remain future work.
+The dedicated next-phase plan for mutating settings and reset UX lives in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). PR #105 recorded that plan only; the first follow-ups implement only the non-mutating draft/validation model, validation display rows, and a SQLUISamples sample/dev adapter for those rows. Backend selector UI, SQLite path editor UI, provider auto-init controls, settings apply/save, reset/delete behavior, and product startup policy remain future work.
 
 Future settings-editing and reset work must preserve these prerequisites:
 
@@ -267,7 +267,7 @@ Controls that are out of scope for this first panel contract:
 - Reset/delete button.
 - Migration execution controls.
 
-The draft settings model and validation display rows may be used by future controls, but adding them does not add those controls. UI surfaces should keep treating draft validation as a dry-run/pending-state step until a later PR adds explicit Apply/Cancel behavior.
+The draft settings model, validation display rows, and sample adapter may be used by future controls, but adding them does not add those controls. UI surfaces should keep treating draft validation as a dry-run/pending-state step until a later PR adds explicit Apply/Cancel behavior.
 
 Ownership boundaries:
 
