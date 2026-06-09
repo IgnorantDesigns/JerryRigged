@@ -90,6 +90,51 @@ struct SQLUICORE_API FSQLUIPersistenceSettingsValidationResult
 	FString SummaryText;
 };
 
+USTRUCT(BlueprintType)
+struct SQLUICORE_API FSQLUIPersistenceSettingsApplyPreviewResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bCanApplyInFuture = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bIsValid = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bHasChanges = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bWouldChangeBackend = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bWouldChangeSQLitePath = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bWouldChangeSQLiteConfig = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bWouldChangeProviderAutoInitialize = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bRequiresRestartOrReinitialize = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bWouldNeedProviderReinitialize = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bWouldNeedRepositoryReopen = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	FSQLUIPersistenceSettingsValidationResult ValidationResult;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	TArray<FSQLUIPersistenceSettingsValidationMessage> Messages;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	FString SummaryText;
+};
+
 /**
  * Non-mutating draft/pending settings helper for future persistence UI.
  *
@@ -120,5 +165,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "SQLUI|Persistence Settings")
 	static FSQLUIPersistenceSettingsValidationResult ValidatePersistenceSettingsDraft(
+		const FSQLUIPersistenceSettingsDraft& Draft);
+
+	UFUNCTION(BlueprintCallable, Category = "SQLUI|Persistence Settings")
+	static FSQLUIPersistenceSettingsApplyPreviewResult PreviewPersistenceSettingsDraftApply(
 		const FSQLUIPersistenceSettingsDraft& Draft);
 };

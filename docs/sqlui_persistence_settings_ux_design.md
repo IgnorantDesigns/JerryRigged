@@ -2,7 +2,7 @@
 
 This document defines the intended user-facing settings surface for SQLUI layout persistence before any product widget, menu, or settings UI implementation is added.
 
-The backend and policy pieces now exist for a safe first UI. Tiny optional SQLUISamples sample/dev presenter, panel-adapter, and C++ UMG widget shell objects already provide Blueprint-callable, explicitly refreshed read-only display-row hooks for validation and Blueprint/sample consumption, but the full product settings UI is still future work. This design keeps SQLite explicit, keeps `InMemory` as the safe default, and routes database status/reset behavior through SQLUICore helpers instead of widget-owned storage logic.
+The backend and policy pieces now exist for a safe first UI. Tiny optional SQLUISamples sample/dev presenter, panel-adapter, and C++ UMG widget shell objects already provide Blueprint-callable, explicitly refreshed read-only display-row hooks for validation and Blueprint/sample consumption, and SQLUICore now has a dry-run apply-intent preview for drafts, but the full product settings UI is still future work. This design keeps SQLite explicit, keeps `InMemory` as the safe default, and routes database status/reset behavior through SQLUICore helpers instead of widget-owned storage logic.
 
 Related docs:
 
@@ -11,7 +11,7 @@ Related docs:
 - [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md) tracks current phase status and next slices.
 - [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md) plans the next mutating settings editing, apply/cancel, backend selection, SQLite path, provider auto-init, and reset/delete UX phase.
 - [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) documents the focused read-only UMG binding recipe for the optional widget shell.
-- [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) documents the validation-only draft settings UMG binding recipe for the optional widget shell.
+- [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) documents the validation/preview-only draft settings UMG binding recipe for the optional widget shell.
 - [`sqlui_smoke_test.md`](sqlui_smoke_test.md) lists editor smoke-test commands.
 - [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) documents local packaged validation and packaged runtime smoke paths.
 
@@ -51,7 +51,7 @@ The first implementation slice for this design now exists as `USQLUIPersistenceS
 
 The first UI-consumption slice also exists as `USQLUIPersistenceStatusDisplayLibrary` and `FSQLUIPersistenceStatusDisplayRow`. It converts the read-only status snapshot into label/value/state/detail rows that a future settings panel can bind to directly. The display library does not perform its own file checks, initialize providers, create repositories, create databases, run migrations, copy seeds, reset databases, or delete files.
 
-The first settings-editing foundation slice now exists as `FSQLUIPersistenceSettingsDraft`, `FSQLUIPersistenceSettingsValidationResult`, and `USQLUIPersistenceSettingsDraftLibrary`. It is still non-mutating: callers can represent current and pending runtime settings, validate backend/path/provider-auto-init choices, and reset the in-memory draft value back to current values, but no settings are applied or saved. Draft validation does not create database files, run migrations, copy seed databases, initialize providers/repositories, delete files, add UI controls, or change startup behavior. `USQLUIPersistenceSettingsDraftDisplayLibrary` now adds a UI-safe summary/row formatter for those validation results so a future sample or settings panel can show pending backend/path/provider-auto-init status without owning apply, save, or lifecycle behavior.
+The first settings-editing foundation slice now exists as `FSQLUIPersistenceSettingsDraft`, `FSQLUIPersistenceSettingsValidationResult`, `FSQLUIPersistenceSettingsApplyPreviewResult`, and `USQLUIPersistenceSettingsDraftLibrary`. It is still non-mutating: callers can represent current and pending runtime settings, validate backend/path/provider-auto-init choices, reset the in-memory draft value back to current values, and build a dry-run apply-intent preview, but no settings are applied or saved. Draft validation and apply-preview generation do not create database files or directories, open databases for writing, run migrations, copy seed databases, initialize providers/repositories, delete files, add UI controls, or change startup behavior. `USQLUIPersistenceSettingsDraftDisplayLibrary` now adds a UI-safe summary/row formatter for validation results so a future sample or settings panel can show pending backend/path/provider-auto-init status without owning apply, save, or lifecycle behavior.
 
 `USQLUISamplePersistenceSettingsDraftPresenter` and `USQLUISamplePersistenceSettingsDraftPanelWidget` are optional SQLUISamples sample/dev surfaces for those draft validation rows. The widget shell is a C++ `UUserWidget` subclass only: it creates no visual layout, adds no widget blueprint asset, is not added to the viewport, is not wired into maps/startup/config, and does not refresh from lifecycle hooks. Its caller-invoked refresh/build functions delegate to the presenter, cache rows/result/summary in memory, and remain validation/display-only. The focused usage recipe in [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) records how a future Blueprint subclass can bind to those rows without adding apply/save/reset behavior or persistence lifecycle side effects.
 
@@ -77,15 +77,17 @@ The read-only persistence status foundation is complete enough for future settin
 
 This checkpoint is not a settings screen and not a startup path. It adds no widget blueprint asset, visual layout, map wiring, viewport attachment, polling, ticking, timer, auto-refresh, backend selector, SQLite path editor, provider auto-init toggle, settings save/apply flow, reset/delete behavior, migration control, seed-copy behavior, provider initialization, repository initialization, or database creation.
 
-The dedicated next-phase plan for mutating settings and reset UX lives in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). PR #105 recorded that plan only; the first follow-ups implement only the non-mutating draft/validation model, validation display rows, a SQLUISamples sample/dev adapter for those rows, and an optional C++ UMG widget shell contract. Backend selector UI, SQLite path editor UI, provider auto-init controls, settings apply/save, reset/delete behavior, and product startup policy remain future work.
+The dedicated next-phase plan for mutating settings and reset UX lives in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). PR #105 recorded that plan only; the first follow-ups implement only the non-mutating draft/validation model, dry-run apply-intent preview, validation display rows, a SQLUISamples sample/dev adapter for those rows, and an optional C++ UMG widget shell contract. Backend selector UI, SQLite path editor UI, provider auto-init controls, actual settings apply/save, reset/delete behavior, and product startup policy remain future work.
 
 ## Draft Validation Foundation Checkpoint
 
-The non-mutating persistence settings draft validation UI foundation is complete as a safe base for future Apply/Cancel work. It includes the #105 editing/reset UX plan, #106 validation-only draft model, #107 validation display rows/summary, #108 optional SQLUISamples draft validation presenter/adapter, #109 optional C++ UMG widget shell, #110 safe UMG usage guide, #111 final checkpoint, and `-UsePersistenceSettingsDraftProbe` smoke coverage.
+The non-mutating persistence settings draft validation UI foundation is complete as a safe base for future Apply/Cancel work. It includes the #105 editing/reset UX plan, #106 validation-only draft model, #107 validation display rows/summary, #108 optional SQLUISamples draft validation presenter/adapter, #109 optional C++ UMG widget shell, #110 safe UMG usage guide, #111 final checkpoint, the SQLUICore dry-run apply-intent preview, and `-UsePersistenceSettingsDraftProbe` smoke coverage.
 
-This checkpoint still does not implement a product settings screen. It adds no settings controls, backend selector UI, SQLite path editor UI, provider auto-init controls, settings apply/save/config-write behavior, reset/delete actions, widget blueprint assets, maps, startup wiring, viewport attachment, polling, ticking, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, or default config changes. The draft validation and display paths remain caller-invoked, display-only, and non-mutating.
+This checkpoint still does not implement a product settings screen. It adds no settings controls, backend selector UI, SQLite path editor UI, provider auto-init controls, settings apply/save/config-write behavior, reset/delete actions, widget blueprint assets, maps, startup wiring, viewport attachment, polling, ticking, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, or default config changes. The draft validation, apply-preview, and display paths remain caller-invoked, display/report-only, and non-mutating.
 
-Future Apply/Cancel work should keep widgets ignorant of SQL, schema, migrations, seed-copy policy, sidecar internals, deletion behavior, and provider/repository lifecycle details. Widgets should not write config directly, initialize providers/repositories, or delete files. Apply should route through SQLUICore helper/policy surfaces, keep validation failures user-readable and non-destructive, avoid silently initializing providers/repositories, and show restart/reopen/reinitialize-required messaging when lifecycle work is needed.
+The dry-run apply-intent preview reports what a future Apply would do, including whether a draft is valid enough to apply, whether it has changes, whether backend/SQLite/provider-auto-init policy would change, and whether restart/reopen/reinitialize messaging should be shown. It uses "would change" and "not applied" semantics and does not write config, create directories or database files, open databases for writing, run migrations, copy seed databases, initialize providers/repositories, or delete files except smoke-owned cleanup in tests.
+
+Future actual Apply/Cancel work should keep widgets ignorant of SQL, schema, migrations, seed-copy policy, sidecar internals, deletion behavior, and provider/repository lifecycle details. Widgets should not write config directly, initialize providers/repositories, or delete files. Apply should route through SQLUICore helper/policy surfaces, keep validation failures user-readable and non-destructive, avoid silently initializing providers/repositories, and show restart/reopen/reinitialize-required messaging when lifecycle work is needed.
 
 Future settings-editing and reset work must preserve these prerequisites:
 
@@ -265,7 +267,7 @@ Refresh behavior must stay explicit and read-only:
 - A future Refresh button/action may call the presenter refresh function.
 - Refresh means re-query current SQLUICore status/display rows only.
 - Refresh must not run from startup, construction, timers, tick, polling loops, latent refresh loops, or automatic runtime initialization unless a later PR intentionally adds a safe optional UI path.
-- Refresh must not initialize a provider, create a repository, create directories, create databases, apply schema, run migrations, copy seed databases, reset databases, delete files, save settings, or switch backends.
+- Refresh, validation, and apply-preview generation must not initialize a provider, create a repository, create directories, create databases, apply schema, run migrations, copy seed databases, reset databases, delete files, save settings, or switch backends.
 
 Controls that are out of scope for this first panel contract:
 
@@ -278,7 +280,7 @@ Controls that are out of scope for this first panel contract:
 - Reset/delete button.
 - Migration execution controls.
 
-The draft settings model, validation display rows, sample adapter, and C++ widget shell may be used by future controls, but adding them does not add those controls. UI surfaces should keep treating draft validation as a dry-run/pending-state step until a later PR adds explicit Apply/Cancel behavior.
+The draft settings model, apply-intent preview, validation display rows, sample adapter, and C++ widget shell may be used by future controls, but adding them does not add those controls. UI surfaces should keep treating draft validation and apply preview as dry-run/pending-state steps until a later PR adds explicit Apply/Cancel behavior.
 
 Ownership boundaries:
 

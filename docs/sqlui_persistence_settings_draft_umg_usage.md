@@ -2,7 +2,7 @@
 
 This document is the focused Blueprint/UMG binding recipe for the optional SQLUISamples persistence settings draft validation widget shell.
 
-PR #110 is docs-only. It documents how future UI work can subclass or bind to the #109 `USQLUISamplePersistenceSettingsDraftPanelWidget` C++ shell without adding actual widget assets in this PR. It does not add maps, startup wiring, viewport attachment, polling, settings editing, apply/save behavior, reset/delete behavior, provider lifecycle behavior, migrations, seed-copy behavior, or database file creation.
+PR #110 was docs-only. It documents how future UI work can subclass or bind to the #109 `USQLUISamplePersistenceSettingsDraftPanelWidget` C++ shell without adding actual widget assets. A later SQLUICore dry-run apply-intent preview now reports what a future Apply would do, but the widget shell still does not add maps, startup wiring, viewport attachment, polling, settings editing, actual apply/save behavior, reset/delete behavior, provider lifecycle behavior, migrations, seed-copy behavior, or database file creation.
 
 Related docs:
 
@@ -11,13 +11,14 @@ Related docs:
 - [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) documents the read-only status-panel UMG binding recipe.
 - [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md) summarizes current SQLite runtime status and safety boundaries.
 - [`sqlui_repository_architecture.md`](sqlui_repository_architecture.md) describes repository and UI/storage ownership boundaries.
-- [`sqlui_smoke_test.md`](sqlui_smoke_test.md) lists the local smoke command that validates the draft model, display rows, presenter, and widget shell.
+- [`sqlui_smoke_test.md`](sqlui_smoke_test.md) lists the local smoke command that validates the draft model, apply preview, display rows, presenter, and widget shell.
 
 ## Existing Draft Validation Stack
 
-The current stack is intentionally validation-only:
+The current stack is intentionally validation/preview-only:
 
 - #106: `USQLUIPersistenceSettingsDraftLibrary` creates and validates non-mutating draft settings.
+- Dry-run apply-intent preview: `PreviewPersistenceSettingsDraftApply` reports what a future Apply would do without applying or saving settings.
 - #107: `USQLUIPersistenceSettingsDraftDisplayLibrary` converts validation results into `FSQLUIPersistenceSettingsValidationDisplayRow` values and a display summary.
 - #108: `USQLUISamplePersistenceSettingsDraftPresenter` is the SQLUISamples sample/dev adapter for those rows; it stores display rows, formatted lines, summary text, and validation flags for sample/dev and Blueprint-facing use.
 - #109: `USQLUISamplePersistenceSettingsDraftPanelWidget` is the optional C++ `UUserWidget` shell over the #108 presenter/adapter.
@@ -46,11 +47,13 @@ The shell exposes cached data through Blueprint-readable properties and pure get
 
 ## Foundation Checkpoint
 
-The persistence settings draft validation UMG foundation is complete as a binding scaffold. It includes the #105 settings editing/reset UX plan, the #106 SQLUICore draft model and validation result, the #107 SQLUICore display rows and summary, the #108 optional SQLUISamples presenter/adapter, the #109 optional C++ UMG widget shell, this #110 usage guide, the #111 final checkpoint, and `-UsePersistenceSettingsDraftProbe` non-asset smoke coverage for the draft model, display rows, presenter/adapter, and widget-shell contract.
+The persistence settings draft validation UMG foundation is complete as a binding scaffold. It includes the #105 settings editing/reset UX plan, the #106 SQLUICore draft model and validation result, the #107 SQLUICore display rows and summary, the #108 optional SQLUISamples presenter/adapter, the #109 optional C++ UMG widget shell, this #110 usage guide, the #111 final checkpoint, the SQLUICore dry-run apply-intent preview, and `-UsePersistenceSettingsDraftProbe` non-asset smoke coverage for the draft model, apply preview, display rows, presenter/adapter, and widget-shell contract.
 
-This remains sample/dev-facing and validation-only. It is not a full settings screen and does not add settings editing controls, backend selector controls, SQLite path editing controls, provider auto-init toggles, Apply/Cancel behavior, settings save behavior, config writes, reset/delete actions, migration controls, seed-copy controls, provider/repository initialization, database creation, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, or auto-refresh.
+This remains sample/dev-facing and validation/preview-only. It is not a full settings screen and does not add settings editing controls, backend selector controls, SQLite path editing controls, provider auto-init toggles, actual Apply/Cancel behavior, settings save behavior, config writes, reset/delete actions, migration controls, seed-copy controls, provider/repository initialization, database creation, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, or auto-refresh.
 
 A valid draft or successful display refresh means only that validation/display data was produced. It does not mean settings were applied, saved, written to config, or made active.
+
+The apply-intent preview is report data only. It may use "would change" and "not applied" messaging, but it does not save settings, write config, initialize providers/repositories, create directories or database files, open databases for writing, run migrations, copy seeds, reset databases, or delete files.
 
 Future editable settings or reset/delete UX should build on SQLUICore policy helpers and the dedicated plan in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). Widgets should keep using draft display rows and must not know SQL, schema, migration ids, seed-copy policy, sidecar internals, direct file deletion, live repository mutation rules, provider lifecycle rules, or config-write details.
 
@@ -75,7 +78,7 @@ Rows and summary data are display-only. They are not settings controls and shoul
 
 ## Refresh And Build Boundaries
 
-Refresh/build is validation-only draft display work. It is not any of the following:
+Refresh/build is validation-only draft display work. Apply-preview generation is dry-run report work. Neither is any of the following:
 
 - Polling.
 - Ticking.
@@ -92,6 +95,7 @@ Refresh/build is validation-only draft display work. It is not any of the follow
 - Settings apply.
 - Settings save.
 - Backend selection.
+- Treating apply-preview output as live applied state.
 
 Do not call refresh/build automatically from construction, `NativeConstruct`, `PreConstruct`, `Tick`, timers, startup, map load, config load, or a latent refresh loop unless a later PR explicitly scopes a safe optional UI path.
 
@@ -108,7 +112,7 @@ The UI should display the row model without reinterpreting storage internals:
 - Empty SQLite paths should be shown as validation errors only for pending SQLite selections.
 - Restart or reinitialize requirements should be shown as pending requirements, not performed by the widget.
 
-Use careful words such as `Draft`, `Pending`, `Would change`, `Validation only`, and `Not applied`. Do not imply that the widget has applied, saved, initialized, migrated, copied, reset, deleted, or changed live runtime state.
+Use careful words such as `Draft`, `Pending`, `Would change`, `Would require`, `Validation only`, `Preview only`, and `Not applied`. Do not imply that the widget has applied, saved, initialized, migrated, copied, reset, deleted, or changed live runtime state.
 
 ## Out-Of-Scope Controls
 
@@ -181,9 +185,9 @@ Still future work:
 - Backend selection UI.
 - SQLite path editing UI.
 - Provider auto-init controls.
-- Apply/Cancel behavior.
+- Actual Apply/Cancel behavior.
 - Settings save behavior.
 - Reset/delete UX.
 - Product startup policy.
 
-The next mutating settings/reset phase is planned in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), but no editing, apply/save, provider lifecycle, or reset/delete behavior exists in the current validation-only widget shell.
+The next mutating settings/reset phase is planned in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), but no editing, actual apply/save, provider lifecycle, or reset/delete behavior exists in the current validation/preview-only widget shell.

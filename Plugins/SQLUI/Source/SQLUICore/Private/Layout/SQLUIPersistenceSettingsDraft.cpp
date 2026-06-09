@@ -86,6 +86,19 @@ void AddSQLUIPersistenceSettingsValidationMessage(
 	}
 }
 
+void AddSQLUIPersistenceSettingsApplyPreviewMessage(
+	FSQLUIPersistenceSettingsApplyPreviewResult& Result,
+	const ESQLUIPersistenceSettingsValidationMessageSeverity Severity,
+	const FString& Message,
+	const FString& DetailText = FString())
+{
+	FSQLUIPersistenceSettingsValidationMessage PreviewMessage;
+	PreviewMessage.Severity = Severity;
+	PreviewMessage.Message = Message;
+	PreviewMessage.DetailText = DetailText;
+	Result.Messages.Add(MoveTemp(PreviewMessage));
+}
+
 bool DoesSQLUIPersistenceSettingsValidationHaveErrors(
 	const FSQLUIPersistenceSettingsValidationResult& Result)
 {
@@ -98,6 +111,66 @@ bool DoesSQLUIPersistenceSettingsValidationHaveErrors(
 	}
 
 	return false;
+}
+
+bool AreSQLUIPersistenceSettingsStringsEquivalent(
+	const FString& First,
+	const FString& Second)
+{
+	return TrimSQLUIPersistenceSettingsString(First)
+		.Equals(TrimSQLUIPersistenceSettingsString(Second), ESearchCase::CaseSensitive);
+}
+
+bool AreSQLUIPersistenceSettingsPathsEquivalent(
+	const FString& First,
+	const FString& Second)
+{
+	return NormalizeSQLUIPersistenceSettingsComparablePath(First)
+		.Equals(
+			NormalizeSQLUIPersistenceSettingsComparablePath(Second),
+			ESearchCase::CaseSensitive);
+}
+
+bool AreSQLUIPersistenceSettingsSeedPathsEquivalent(
+	const FString& First,
+	const FString& Second)
+{
+	return FSQLUILayoutRepositoryRuntimeConfigResolver::ResolveSQLiteSeedDatabasePath(First)
+		.Equals(
+			FSQLUILayoutRepositoryRuntimeConfigResolver::ResolveSQLiteSeedDatabasePath(Second),
+			ESearchCase::CaseSensitive);
+}
+
+bool WouldSQLUIPersistenceSettingsChangeJsonFileConfig(
+	const FSQLUILayoutRepositoryRuntimeConfig& Current,
+	const FSQLUILayoutRepositoryRuntimeConfig& Pending)
+{
+	return !AreSQLUIPersistenceSettingsStringsEquivalent(
+		Current.JsonFileBaseDirectory,
+		Pending.JsonFileBaseDirectory);
+}
+
+bool WouldSQLUIPersistenceSettingsChangeSQLiteConfig(
+	const FSQLUILayoutRepositoryRuntimeConfig& Current,
+	const FSQLUILayoutRepositoryRuntimeConfig& Pending)
+{
+	return !AreSQLUIPersistenceSettingsPathsEquivalent(
+			Current.SQLiteDatabasePath,
+			Pending.SQLiteDatabasePath)
+		|| !AreSQLUIPersistenceSettingsSeedPathsEquivalent(
+			Current.SQLiteSeedDatabasePath,
+			Pending.SQLiteSeedDatabasePath)
+		|| Current.bSQLiteReadOnly != Pending.bSQLiteReadOnly
+		|| Current.bSQLiteInitializeSchemaIfMissing
+			!= Pending.bSQLiteInitializeSchemaIfMissing
+		|| Current.bSQLiteCreateDatabaseIfMissing
+			!= Pending.bSQLiteCreateDatabaseIfMissing
+		|| Current.bSQLiteRunCallbackOperationsAsync
+			!= Pending.bSQLiteRunCallbackOperationsAsync
+		|| Current.bSQLiteCopySeedIfMissing
+			!= Pending.bSQLiteCopySeedIfMissing
+		|| Current.bSQLiteOverwriteDatabaseFromSeed
+			!= Pending.bSQLiteOverwriteDatabaseFromSeed;
 }
 
 void ValidateSQLUIPersistenceSettingsBackend(
@@ -369,6 +442,111 @@ USQLUIPersistenceSettingsDraftLibrary::ValidatePersistenceSettingsDraft(
 	{
 		Result.SummaryText =
 			TEXT("SQLUI persistence settings draft is valid and matches the current settings.");
+	}
+
+	return Result;
+}
+
+FSQLUIPersistenceSettingsApplyPreviewResult
+USQLUIPersistenceSettingsDraftLibrary::PreviewPersistenceSettingsDraftApply(
+	const FSQLUIPersistenceSettingsDraft& Draft)
+{
+	FSQLUIPersistenceSettingsApplyPreviewResult Result;
+	Result.ValidationResult = ValidatePersistenceSettingsDraft(Draft);
+	Result.bIsValid = Result.ValidationResult.bIsValid;
+	Result.bWouldChangeBackend =
+		Result.ValidationResult.bWouldChangeBackend;
+	Result.bWouldChangeSQLitePath =
+		Result.ValidationResult.bWouldChangeSQLitePath;
+	Result.bWouldChangeSQLiteConfig =
+		WouldSQLUIPersistenceSettingsChangeSQLiteConfig(
+			Draft.CurrentRuntimeConfig,
+			Draft.PendingRuntimeConfig);
+	Result.bWouldChangeProviderAutoInitialize =
+		Result.ValidationResult.bWouldChangeProviderAutoInitialize;
+
+	const bool bWouldChangeJsonFileConfig =
+		WouldSQLUIPersistenceSettingsChangeJsonFileConfig(
+			Draft.CurrentRuntimeConfig,
+			Draft.PendingRuntimeConfig);
+
+	Result.bWouldNeedRepositoryReopen =
+		Result.bWouldChangeBackend
+		|| bWouldChangeJsonFileConfig
+		|| Result.bWouldChangeSQLiteConfig;
+	Result.bWouldNeedProviderReinitialize =
+		Result.bWouldNeedRepositoryReopen
+		|| Result.bWouldChangeProviderAutoInitialize;
+	Result.bHasChanges =
+		Result.bWouldNeedRepositoryReopen
+		|| Result.bWouldChangeProviderAutoInitialize;
+	Result.bRequiresRestartOrReinitialize =
+		Result.bHasChanges
+		&& (Result.ValidationResult.bRequiresRestartOrReinitialize
+			|| Result.bWouldNeedRepositoryReopen
+			|| Result.bWouldNeedProviderReinitialize);
+	Result.bCanApplyInFuture =
+		Result.bIsValid
+		&& Result.bHasChanges;
+	Result.Messages = Result.ValidationResult.Messages;
+
+	if (!Result.bIsValid)
+	{
+		AddSQLUIPersistenceSettingsApplyPreviewMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error,
+			TEXT("Future Apply would be blocked by validation errors."),
+			TEXT("This is a dry-run preview only. No settings were applied or saved."));
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings apply preview found validation errors. Not applied.");
+	}
+	else if (!Result.bHasChanges)
+	{
+		AddSQLUIPersistenceSettingsApplyPreviewMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
+			TEXT("No changes to apply."),
+			TEXT("The pending draft matches the current settings. Not applied."));
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings apply preview found no changes to apply. Not applied.");
+	}
+	else
+	{
+		AddSQLUIPersistenceSettingsApplyPreviewMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Warning,
+			TEXT("Future Apply would change SQLUI persistence settings."),
+			TEXT("This preview does not write config, initialize providers, reopen repositories, create databases, or run migrations."));
+
+		if (Result.bWouldChangeBackend)
+		{
+			AddSQLUIPersistenceSettingsApplyPreviewMessage(
+				Result,
+				ESQLUIPersistenceSettingsValidationMessageSeverity::Warning,
+				TEXT("Future Apply would change the persistence backend."),
+				TEXT("A repository reopen or provider reinitialization would be required."));
+		}
+
+		if (Result.bWouldChangeSQLitePath || Result.bWouldChangeSQLiteConfig)
+		{
+			AddSQLUIPersistenceSettingsApplyPreviewMessage(
+				Result,
+				ESQLUIPersistenceSettingsValidationMessageSeverity::Warning,
+				TEXT("Future Apply would change SQLite path or policy settings."),
+				TEXT("The preview resolves text only and does not create directories, open databases for writing, copy seeds, or run migrations."));
+		}
+
+		if (Result.bWouldChangeProviderAutoInitialize)
+		{
+			AddSQLUIPersistenceSettingsApplyPreviewMessage(
+				Result,
+				ESQLUIPersistenceSettingsValidationMessageSeverity::Warning,
+				TEXT("Future Apply would change provider auto-init policy."),
+				TEXT("Startup behavior is unchanged by this preview."));
+		}
+
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings apply preview is valid and has pending changes. Not applied.");
 	}
 
 	return Result;

@@ -8842,6 +8842,76 @@ bool AreSQLUIPersistenceSettingsValidationResultsEquivalent(
 		&& First.SummaryText == Second.SummaryText;
 }
 
+bool AreSQLUIPersistenceSettingsValidationMessagesEquivalent(
+	const FSQLUIPersistenceSettingsValidationMessage& First,
+	const FSQLUIPersistenceSettingsValidationMessage& Second)
+{
+	return First.Severity == Second.Severity
+		&& First.Message == Second.Message
+		&& First.DetailText == Second.DetailText;
+}
+
+bool AreSQLUIPersistenceSettingsApplyPreviewsEquivalent(
+	const FSQLUIPersistenceSettingsApplyPreviewResult& First,
+	const FSQLUIPersistenceSettingsApplyPreviewResult& Second)
+{
+	if (First.bCanApplyInFuture != Second.bCanApplyInFuture
+		|| First.bIsValid != Second.bIsValid
+		|| First.bHasChanges != Second.bHasChanges
+		|| First.bWouldChangeBackend != Second.bWouldChangeBackend
+		|| First.bWouldChangeSQLitePath != Second.bWouldChangeSQLitePath
+		|| First.bWouldChangeSQLiteConfig != Second.bWouldChangeSQLiteConfig
+		|| First.bWouldChangeProviderAutoInitialize
+			!= Second.bWouldChangeProviderAutoInitialize
+		|| First.bRequiresRestartOrReinitialize
+			!= Second.bRequiresRestartOrReinitialize
+		|| First.bWouldNeedProviderReinitialize
+			!= Second.bWouldNeedProviderReinitialize
+		|| First.bWouldNeedRepositoryReopen
+			!= Second.bWouldNeedRepositoryReopen
+		|| First.Messages.Num() != Second.Messages.Num()
+		|| First.SummaryText != Second.SummaryText
+		|| !AreSQLUIPersistenceSettingsValidationResultsEquivalent(
+			First.ValidationResult,
+			Second.ValidationResult))
+	{
+		return false;
+	}
+
+	for (int32 Index = 0; Index < First.Messages.Num(); ++Index)
+	{
+		if (!AreSQLUIPersistenceSettingsValidationMessagesEquivalent(
+			First.Messages[Index],
+			Second.Messages[Index]))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool DoesSQLUIPersistenceSettingsApplyPreviewContainText(
+	const FSQLUIPersistenceSettingsApplyPreviewResult& Preview,
+	const FString& ExpectedText)
+{
+	if (Preview.SummaryText.Contains(ExpectedText))
+	{
+		return true;
+	}
+
+	for (const FSQLUIPersistenceSettingsValidationMessage& Message : Preview.Messages)
+	{
+		if (Message.Message.Contains(ExpectedText)
+			|| Message.DetailText.Contains(ExpectedText))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool DoesSQLUIPersistenceSettingsValidationDisplayContainField(
 	const FSQLUIPersistenceSettingsValidationDisplaySummary& Display,
 	const FName FieldKey)
@@ -8958,6 +9028,9 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 	const FSQLUIPersistenceSettingsValidationDisplaySummary DefaultDisplay =
 		USQLUIPersistenceSettingsDraftDisplayLibrary::
 			MakePersistenceSettingsValidationDisplay(DefaultDraft, DefaultValidation);
+	const FSQLUIPersistenceSettingsApplyPreviewResult DefaultApplyPreview =
+		USQLUIPersistenceSettingsDraftLibrary::PreviewPersistenceSettingsDraftApply(
+			DefaultDraft);
 	Result.bDefaultDraftValidated = DefaultValidation.bIsValid;
 	Result.bDefaultInMemorySafe =
 		DefaultValidation.bIsValid
@@ -8983,29 +9056,51 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			DefaultDisplay,
 			TEXT("InMemory"))
 		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bDefaultApplyPreviewSafe =
+		DefaultApplyPreview.bIsValid
+		&& !DefaultApplyPreview.bHasChanges
+		&& !DefaultApplyPreview.bCanApplyInFuture
+		&& !DefaultApplyPreview.bRequiresRestartOrReinitialize
+		&& DoesSQLUIPersistenceSettingsApplyPreviewContainText(
+			DefaultApplyPreview,
+			TEXT("No changes to apply"))
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
 	if (!Result.bDefaultDraftCreated
 		|| !Result.bDefaultDraftValidated
 		|| !Result.bDefaultInMemorySafe
 		|| !Result.bDefaultDisplayGenerated
-		|| !Result.bDefaultDisplaySafe)
+		|| !Result.bDefaultDisplaySafe
+		|| !Result.bDefaultApplyPreviewSafe)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
-			TEXT("SQLUI persistence settings draft probe failed: default InMemory draft/display was not safe and valid."));
+			TEXT("SQLUI persistence settings draft probe failed: default InMemory draft/display/preview was not safe and valid."));
 	}
 
 	const FSQLUIPersistenceSettingsDraft CurrentDraft =
 		USQLUIPersistenceSettingsDraftLibrary::MakeCurrentPersistenceSettingsDraft();
 	const FSQLUIPersistenceSettingsValidationResult CurrentValidation =
 		USQLUIPersistenceSettingsDraftLibrary::ValidatePersistenceSettingsDraft(CurrentDraft);
+	const FSQLUIPersistenceSettingsApplyPreviewResult CurrentApplyPreview =
+		USQLUIPersistenceSettingsDraftLibrary::PreviewPersistenceSettingsDraftApply(
+			CurrentDraft);
 	Result.bCurrentDraftValidated =
 		CurrentValidation.bIsValid
 		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
-	if (!Result.bCurrentDraftValidated)
+	Result.bCurrentApplyPreviewNoChanges =
+		CurrentApplyPreview.bIsValid
+		&& !CurrentApplyPreview.bHasChanges
+		&& !CurrentApplyPreview.bCanApplyInFuture
+		&& DoesSQLUIPersistenceSettingsApplyPreviewContainText(
+			CurrentApplyPreview,
+			TEXT("No changes to apply"))
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	if (!Result.bCurrentDraftValidated
+		|| !Result.bCurrentApplyPreviewNoChanges)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
-			TEXT("SQLUI persistence settings draft probe failed: current settings draft validation was not safe."));
+			TEXT("SQLUI persistence settings draft probe failed: current settings draft validation/preview was not safe."));
 	}
 
 	FSQLUIPersistenceSettingsDraft UnknownBackendDraft = DefaultDraft;
@@ -9020,6 +9115,9 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			MakePersistenceSettingsValidationDisplay(
 				UnknownBackendDraft,
 				UnknownBackendValidation);
+	const FSQLUIPersistenceSettingsApplyPreviewResult UnknownBackendApplyPreview =
+		USQLUIPersistenceSettingsDraftLibrary::PreviewPersistenceSettingsDraftApply(
+			UnknownBackendDraft);
 	Result.bUnknownBackendRejected =
 		!UnknownBackendValidation.bIsValid
 		&& DoesSQLUIPersistenceSettingsValidationHaveSeverity(
@@ -9035,6 +9133,13 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			UnknownBackendDisplay,
 			TEXT("not a selectable SQLUI persistence backend"))
 		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bUnknownBackendApplyPreviewRejected =
+		!UnknownBackendApplyPreview.bIsValid
+		&& !UnknownBackendApplyPreview.bCanApplyInFuture
+		&& DoesSQLUIPersistenceSettingsApplyPreviewContainText(
+			UnknownBackendApplyPreview,
+			TEXT("Future Apply would be blocked"))
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
 	if (!Result.bUnknownBackendRejected)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
@@ -9047,6 +9152,12 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			Result,
 			TEXT("SQLUI persistence settings draft probe failed: unknown backend display did not show a user-readable error."));
 	}
+	if (!Result.bUnknownBackendApplyPreviewRejected)
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: unknown backend apply preview did not reject safely."));
+	}
 
 	FSQLUIPersistenceSettingsDraft SQLiteDraft = DefaultDraft;
 	SQLiteDraft.PendingRuntimeConfig.Backend = ESQLUILayoutRepositoryBackend::SQLite;
@@ -9058,6 +9169,9 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 	const FSQLUIPersistenceSettingsValidationDisplaySummary SQLiteDisplay =
 		USQLUIPersistenceSettingsDraftDisplayLibrary::
 			MakePersistenceSettingsValidationDisplay(SQLiteDraft, SQLiteValidation);
+	const FSQLUIPersistenceSettingsApplyPreviewResult SQLiteApplyPreview =
+		USQLUIPersistenceSettingsDraftLibrary::PreviewPersistenceSettingsDraftApply(
+			SQLiteDraft);
 	Result.bSQLiteDraftRepresented =
 		SQLiteValidation.bIsValid
 		&& SQLiteValidation.bWouldChangeBackend
@@ -9078,14 +9192,34 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		!DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
 	Result.bSQLiteDisplayDidNotCreateDb =
 		!DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bBackendChangeApplyPreviewDetected =
+		SQLiteApplyPreview.bIsValid
+		&& SQLiteApplyPreview.bCanApplyInFuture
+		&& SQLiteApplyPreview.bHasChanges
+		&& SQLiteApplyPreview.bWouldChangeBackend
+		&& SQLiteApplyPreview.bWouldNeedRepositoryReopen
+		&& SQLiteApplyPreview.bWouldNeedProviderReinitialize
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bSQLiteApplyPreviewSafe =
+		SQLiteApplyPreview.bIsValid
+		&& SQLiteApplyPreview.bCanApplyInFuture
+		&& SQLiteApplyPreview.bWouldChangeSQLitePath
+		&& SQLiteApplyPreview.bWouldChangeSQLiteConfig
+		&& SQLiteApplyPreview.bRequiresRestartOrReinitialize
+		&& DoesSQLUIPersistenceSettingsApplyPreviewContainText(
+			SQLiteApplyPreview,
+			TEXT("Not applied"))
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
 	if (!Result.bSQLiteDraftRepresented
 		|| !Result.bSQLiteDraftDisplayGenerated
 		|| !Result.bSQLiteDraftDidNotCreateDb
-		|| !Result.bSQLiteDisplayDidNotCreateDb)
+		|| !Result.bSQLiteDisplayDidNotCreateDb
+		|| !Result.bBackendChangeApplyPreviewDetected
+		|| !Result.bSQLiteApplyPreviewSafe)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
-			TEXT("SQLUI persistence settings draft probe failed: SQLite draft/display representation was not validation-only."));
+			TEXT("SQLUI persistence settings draft probe failed: SQLite draft/display/preview representation was not validation/preview-only."));
 	}
 
 	FSQLUIPersistenceSettingsDraft EmptySQLitePathDraft = DefaultDraft;
@@ -9101,6 +9235,9 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			MakePersistenceSettingsValidationDisplay(
 				EmptySQLitePathDraft,
 				EmptySQLitePathValidation);
+	const FSQLUIPersistenceSettingsApplyPreviewResult EmptySQLitePathApplyPreview =
+		USQLUIPersistenceSettingsDraftLibrary::PreviewPersistenceSettingsDraftApply(
+			EmptySQLitePathDraft);
 	Result.bSQLiteEmptyPathRejected =
 		!EmptySQLitePathValidation.bIsValid
 		&& DoesSQLUIPersistenceSettingsValidationHaveSeverity(
@@ -9116,6 +9253,13 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			EmptySQLitePathDisplay,
 			TEXT("SQLite requires a database path"))
 		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bSQLiteEmptyPathApplyPreviewRejected =
+		!EmptySQLitePathApplyPreview.bIsValid
+		&& !EmptySQLitePathApplyPreview.bCanApplyInFuture
+		&& DoesSQLUIPersistenceSettingsApplyPreviewContainText(
+			EmptySQLitePathApplyPreview,
+			TEXT("SQLite requires a database path"))
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
 	if (!Result.bSQLiteEmptyPathRejected)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
@@ -9127,6 +9271,12 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
 			TEXT("SQLUI persistence settings draft probe failed: empty SQLite path display did not show a user-readable error."));
+	}
+	if (!Result.bSQLiteEmptyPathApplyPreviewRejected)
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: empty SQLite path apply preview did not reject safely."));
 	}
 
 	FSQLUIPersistenceSettingsDraft ProviderAutoInitDraft = DefaultDraft;
@@ -9140,6 +9290,9 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			MakePersistenceSettingsValidationDisplay(
 				ProviderAutoInitDraft,
 				ProviderAutoInitValidation);
+	const FSQLUIPersistenceSettingsApplyPreviewResult ProviderAutoInitApplyPreview =
+		USQLUIPersistenceSettingsDraftLibrary::PreviewPersistenceSettingsDraftApply(
+			ProviderAutoInitDraft);
 	const bool bAutoInitAfter =
 		FSQLUILayoutRepositoryRuntimeSettingsPolicy::ShouldAutoInitializeProvider(
 			DefaultSettings,
@@ -9159,13 +9312,23 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			ProviderAutoInitDisplay,
 			TEXT("Enabled (pending)"))
 		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bProviderAutoInitApplyPreviewDetected =
+		ProviderAutoInitApplyPreview.bIsValid
+		&& ProviderAutoInitApplyPreview.bCanApplyInFuture
+		&& ProviderAutoInitApplyPreview.bWouldChangeProviderAutoInitialize
+		&& ProviderAutoInitApplyPreview.bRequiresRestartOrReinitialize
+		&& DoesSQLUIPersistenceSettingsApplyPreviewContainText(
+			ProviderAutoInitApplyPreview,
+			TEXT("Startup behavior is unchanged"))
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
 	if (!Result.bProviderAutoInitPendingValidated
 		|| !Result.bProviderAutoInitPolicyUnchanged
-		|| !Result.bProviderAutoInitDisplayPending)
+		|| !Result.bProviderAutoInitDisplayPending
+		|| !Result.bProviderAutoInitApplyPreviewDetected)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
-			TEXT("SQLUI persistence settings draft probe failed: provider auto-init draft/display changed policy or failed validation."));
+			TEXT("SQLUI persistence settings draft probe failed: provider auto-init draft/display/preview changed policy or failed validation."));
 	}
 
 	USQLUISamplePersistenceSettingsDraftPresenter* DraftPresenter =
@@ -9452,6 +9615,9 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			MakePersistenceSettingsValidationDisplay(
 				SQLiteDraft,
 				RepeatedSQLiteValidation);
+	const FSQLUIPersistenceSettingsApplyPreviewResult RepeatedSQLiteApplyPreview =
+		USQLUIPersistenceSettingsDraftLibrary::PreviewPersistenceSettingsDraftApply(
+			SQLiteDraft);
 	Result.bRepeatedValidationDeterministic =
 		AreSQLUIPersistenceSettingsValidationResultsEquivalent(
 			SQLiteValidation,
@@ -9462,12 +9628,18 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			SQLiteDisplay,
 			RepeatedSQLiteDisplay)
 		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bRepeatedApplyPreviewDeterministic =
+		AreSQLUIPersistenceSettingsApplyPreviewsEquivalent(
+			SQLiteApplyPreview,
+			RepeatedSQLiteApplyPreview)
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
 	if (!Result.bRepeatedValidationDeterministic
-		|| !Result.bRepeatedDisplayDeterministic)
+		|| !Result.bRepeatedDisplayDeterministic
+		|| !Result.bRepeatedApplyPreviewDeterministic)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
-			TEXT("SQLUI persistence settings draft probe failed: repeated validation/display was not deterministic."));
+			TEXT("SQLUI persistence settings draft probe failed: repeated validation/display/apply preview was not deterministic."));
 	}
 
 	const FString SidecarPath = Result.SidecarDatabasePath + TEXT("-wal");
@@ -9477,14 +9649,20 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 	SidecarDraft.PendingRuntimeConfig.SQLiteDatabasePath = Result.SidecarDatabasePath;
 	USQLUIPersistenceSettingsDraftDisplayLibrary::
 		ValidateAndMakePersistenceSettingsValidationDisplay(SidecarDraft);
+	USQLUIPersistenceSettingsDraftLibrary::PreviewPersistenceSettingsDraftApply(
+		SidecarDraft);
 	Result.bSidecarPreservedDuringValidation =
 		bSidecarCreated
 		&& FPaths::FileExists(SidecarPath);
-	if (!Result.bSidecarPreservedDuringValidation)
+	Result.bSidecarPreservedDuringApplyPreview =
+		bSidecarCreated
+		&& FPaths::FileExists(SidecarPath);
+	if (!Result.bSidecarPreservedDuringValidation
+		|| !Result.bSidecarPreservedDuringApplyPreview)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
-			TEXT("SQLUI persistence settings draft probe failed: validation deleted a smoke-owned sidecar file."));
+			TEXT("SQLUI persistence settings draft probe failed: validation or apply preview deleted a smoke-owned sidecar file."));
 	}
 
 	Result.bDatabaseFilesRemoved =
@@ -9513,6 +9691,13 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bProviderAutoInitPendingValidated
 		&& Result.bProviderAutoInitPolicyUnchanged
 		&& Result.bProviderAutoInitDisplayPending
+		&& Result.bDefaultApplyPreviewSafe
+		&& Result.bCurrentApplyPreviewNoChanges
+		&& Result.bBackendChangeApplyPreviewDetected
+		&& Result.bSQLiteApplyPreviewSafe
+		&& Result.bUnknownBackendApplyPreviewRejected
+		&& Result.bSQLiteEmptyPathApplyPreviewRejected
+		&& Result.bProviderAutoInitApplyPreviewDetected
 		&& Result.bSampleAdapterDefaultDisplayGenerated
 		&& Result.bSampleAdapterDefaultDisplaySafe
 		&& Result.bSampleAdapterUnknownBackendDisplayShowsError
@@ -9535,7 +9720,9 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bPanelWidgetContractValidatedWithoutAssetOrViewport
 		&& Result.bRepeatedValidationDeterministic
 		&& Result.bRepeatedDisplayDeterministic
+		&& Result.bRepeatedApplyPreviewDeterministic
 		&& Result.bSidecarPreservedDuringValidation
+		&& Result.bSidecarPreservedDuringApplyPreview
 		&& Result.bDatabaseFilesRemoved;
 
 	return Result;
