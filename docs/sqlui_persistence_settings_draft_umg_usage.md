@@ -2,7 +2,7 @@
 
 This document is the focused Blueprint/UMG binding recipe for the optional SQLUISamples persistence settings draft validation widget shell.
 
-It documents how future UI work can subclass or bind to `USQLUISamplePersistenceSettingsDraftPanelWidget` without adding actual widget assets in this PR. It does not add maps, startup wiring, viewport attachment, polling, settings editing, apply/save behavior, reset/delete behavior, provider lifecycle behavior, migrations, seed-copy behavior, or database file creation.
+PR #110 is docs-only. It documents how future UI work can subclass or bind to the #109 `USQLUISamplePersistenceSettingsDraftPanelWidget` C++ shell without adding actual widget assets in this PR. It does not add maps, startup wiring, viewport attachment, polling, settings editing, apply/save behavior, reset/delete behavior, provider lifecycle behavior, migrations, seed-copy behavior, or database file creation.
 
 Related docs:
 
@@ -17,12 +17,15 @@ Related docs:
 
 The current stack is intentionally validation-only:
 
-- `USQLUIPersistenceSettingsDraftLibrary` creates and validates non-mutating draft settings.
-- `USQLUIPersistenceSettingsDraftDisplayLibrary` converts validation results into `FSQLUIPersistenceSettingsValidationDisplayRow` values and a display summary.
-- `USQLUISamplePersistenceSettingsDraftPresenter` stores display rows, formatted lines, summary text, and validation flags for sample/dev and Blueprint-facing use.
-- `USQLUISamplePersistenceSettingsDraftPanelWidget` is the optional C++ `UUserWidget` shell over the presenter.
+- #106: `USQLUIPersistenceSettingsDraftLibrary` creates and validates non-mutating draft settings.
+- #107: `USQLUIPersistenceSettingsDraftDisplayLibrary` converts validation results into `FSQLUIPersistenceSettingsValidationDisplayRow` values and a display summary.
+- #108: `USQLUISamplePersistenceSettingsDraftPresenter` is the SQLUISamples sample/dev adapter for those rows; it stores display rows, formatted lines, summary text, and validation flags for sample/dev and Blueprint-facing use.
+- #109: `USQLUISamplePersistenceSettingsDraftPanelWidget` is the optional C++ `UUserWidget` shell over the #108 presenter/adapter.
+- #110: this guide documents safe future Blueprint subclassing and binding for that shell.
 
-The shell is sample/dev-facing. It creates no visual layout, adds no widget blueprint asset, and is not wired into startup, maps, config, timers, tick, polling, or the viewport.
+The #109 shell is sample/dev-facing and delegates to the #108 SQLUISamples presenter/adapter, which consumes SQLUICore draft validation/display surfaces from #106 and #107. Future UI should consume the display rows, display summary, summary text, and validation flags only. It should not duplicate draft validation, path policy, backend policy, provider lifecycle policy, file checks, or persistence policy in Blueprint or widget code.
+
+The shell creates no visual layout, adds no widget blueprint asset, and is not wired into startup, maps, config, timers, tick, polling, or the viewport.
 
 The shell exposes explicit refresh/build methods:
 
@@ -47,6 +50,8 @@ The persistence settings draft validation UMG foundation is complete as a bindin
 
 This remains sample/dev-facing and validation-only. It is not a full settings screen and does not add backend selector controls, SQLite path editing controls, provider auto-init toggles, Apply/Cancel behavior, settings save behavior, reset/delete actions, migration controls, seed-copy controls, provider/repository initialization, database creation, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, or auto-refresh.
 
+A valid draft or successful display refresh means only that validation/display data was produced. It does not mean settings were applied, saved, written to config, or made active.
+
 Future editable settings or reset/delete UX should build on SQLUICore policy helpers and the dedicated plan in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). Widgets should keep using draft display rows and must not know SQL, schema, migration ids, seed-copy policy, sidecar internals, direct file deletion, or live repository mutation rules.
 
 ## Future Blueprint Recipe
@@ -60,10 +65,13 @@ A future Blueprint/UMG PR can use the shell like this:
 5. Optionally map `State` to a visual treatment such as normal, good, warning, or error.
 6. Optionally expose `DetailText` as a tooltip or small help line.
 7. Show `SummaryText` for the overall pending/draft state.
-8. Add a Refresh button only if it calls one of the explicit refresh/build methods.
-9. Treat refresh/build as caller-invoked validation display work only.
+8. Show backend, validation summary, errors/warnings, and restart/reinitialize information when those values are exposed by the rows or summary.
+9. Add a Refresh button only if it calls one of the explicit refresh/build methods.
+10. Treat refresh/build as caller-invoked validation display work only.
 
 Use `FormattedLines` only for simple sample text or commandlet-style output. Product UI should prefer structured rows.
+
+Rows and summary data are display-only. They are not settings controls and should not be used as proof that a backend, SQLite path, provider auto-init policy, or runtime repository has changed.
 
 ## Refresh And Build Boundaries
 
