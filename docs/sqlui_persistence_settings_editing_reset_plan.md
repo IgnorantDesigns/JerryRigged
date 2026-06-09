@@ -102,6 +102,22 @@ The first implementation should prefer a non-mutating pending model and validati
 
 That first implementation slice now exists as `FSQLUIPersistenceSettingsDraft`, `FSQLUIPersistenceSettingsValidationResult`, and `USQLUIPersistenceSettingsDraftLibrary`. It can create a draft from current/default runtime settings, reset a draft value back to current values, and validate pending backend/path/provider-auto-init policy without applying anything. `USQLUIPersistenceSettingsDraftDisplayLibrary` formats those validation results into UI-safe summary/row data for future sample or settings panels. `USQLUISamplePersistenceSettingsDraftPresenter` and `USQLUISamplePersistenceSettingsDraftPanelWidget` provide optional SQLUISamples sample/dev-facing consumption surfaces for those rows. These draft, display, adapter, and widget-shell helpers do not write config, initialize providers/repositories, create SQLite database files, create directories from display generation, run migrations, copy seed databases, delete files, add settings controls, or change startup behavior. The safe Blueprint/UMG binding recipe for the draft widget shell is documented in [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md).
 
+## Completed Draft Validation Foundation
+
+The non-mutating draft validation UI foundation is complete through the #105-#110 sequence:
+
+- #105 documented this editing/reset UX plan.
+- #106 added the SQLUICore validation-only draft/pending settings model.
+- #107 added UI-safe validation display rows and summary.
+- #108 added the optional SQLUISamples draft validation presenter/adapter.
+- #109 added the optional SQLUISamples C++ UMG widget shell for draft validation display.
+- #110 documented safe UMG subclassing and binding for that shell.
+- `-UsePersistenceSettingsDraftProbe` validates the draft model, display rows, sample adapter, and widget-shell contract without widget blueprint assets, maps, viewport attachment, startup wiring, settings mutation, or provider/repository initialization.
+
+This checkpoint is still not settings editing. It adds no backend selector UI, SQLite path editor UI, provider auto-init control, Apply/Cancel behavior, settings save/config-write behavior, reset/delete UX, widget blueprint asset, map, startup wiring, viewport attachment, polling, ticking, auto-refresh, provider/repository initialization, migration, seed-copy behavior, or default config change. Refresh/build/validation remains caller-invoked only.
+
+The next apply/cancel phase should build on this foundation and must keep widgets as presentation/intent-capture layers. Future helpers should use SQLUICore policy surfaces, keep widgets from writing config directly, keep widgets from initializing providers/repositories directly, keep widgets from deleting files directly, keep runtime database writes under `Saved/SQLUI`, show restart/reopen/reinitialize-required messaging instead of forcing lifecycle changes, and keep validation failures user-readable and non-destructive. Reset/delete behavior must route through SQLUICore database management helper/policy surfaces.
+
 ## Backend Selection Design
 
 The backend selector should show the current configured backend and allow only supported values:

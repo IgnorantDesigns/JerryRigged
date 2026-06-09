@@ -79,6 +79,14 @@ This checkpoint is not a settings screen and not a startup path. It adds no widg
 
 The dedicated next-phase plan for mutating settings and reset UX lives in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). PR #105 recorded that plan only; the first follow-ups implement only the non-mutating draft/validation model, validation display rows, a SQLUISamples sample/dev adapter for those rows, and an optional C++ UMG widget shell contract. Backend selector UI, SQLite path editor UI, provider auto-init controls, settings apply/save, reset/delete behavior, and product startup policy remain future work.
 
+## Draft Validation Foundation Checkpoint
+
+The non-mutating persistence settings draft validation UI foundation is complete as a safe base for future Apply/Cancel work. It includes the #105 editing/reset UX plan, #106 validation-only draft model, #107 validation display rows/summary, #108 optional SQLUISamples draft validation presenter/adapter, #109 optional C++ UMG widget shell, #110 safe UMG usage guide, and `-UsePersistenceSettingsDraftProbe` smoke coverage.
+
+This checkpoint still does not implement a product settings screen. It adds no settings controls, backend selector UI, SQLite path editor UI, provider auto-init controls, settings apply/save/config-write behavior, reset/delete actions, widget blueprint assets, maps, startup wiring, viewport attachment, polling, ticking, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, or default config changes. The draft validation and display paths remain caller-invoked, display-only, and non-mutating.
+
+Future Apply/Cancel work should keep widgets ignorant of SQL, schema, migrations, seed-copy policy, sidecar internals, deletion behavior, and provider/repository lifecycle details. Widgets should not write config directly, initialize providers/repositories, or delete files. Apply should route through SQLUICore helper/policy surfaces, keep validation failures user-readable and non-destructive, avoid silently initializing providers/repositories, and show restart/reopen/reinitialize-required messaging when lifecycle work is needed.
+
 Future settings-editing and reset work must preserve these prerequisites:
 
 - Use SQLUICore helper/policy surfaces for repository selection, status, path resolution, schema/migration status, seed-copy policy, and database management.
