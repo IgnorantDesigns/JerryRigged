@@ -1467,6 +1467,42 @@ struct SQLUISAMPLES_API FSQLUISamplePersistenceSettingsDraftProbeResult
 	bool bSampleAdapterRepeatedDisplayDeterministic = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelWidgetClassDerivedFromUserWidget = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelWidgetBlueprintDefaultRefreshFunctionCallable = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelWidgetBlueprintCurrentRefreshFunctionCallable = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelWidgetBlueprintBuildFunctionCallable = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelWidgetRefreshFunctionsNotBlueprintPure = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelWidgetCachedGetterFunctionsBlueprintPure = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelWidgetRowsPropertyBlueprintVisible = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelWidgetFormattedLinesPropertyBlueprintVisible = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelWidgetRefreshResultPropertyBlueprintVisible = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelWidgetSummaryTextPropertyBlueprintVisible = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelWidgetValidationFlagsBlueprintVisible = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bPanelWidgetContractValidatedWithoutAssetOrViewport = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bRepeatedDisplayDeterministic = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
