@@ -3,6 +3,7 @@
 #include "SQLUISamplePersistenceStatusPanelAdapter.h"
 #include "SQLUISamplePersistenceStatusPanelWidget.h"
 #include "SQLUISamplePersistenceStatusPresenter.h"
+#include "SQLUISamplePersistenceSettingsDraftPresenter.h"
 #include "Database/SQLUIDatabaseAsyncQueue.h"
 #include "Database/SQLUIDatabaseAsyncRunner.h"
 #include "Database/SQLUISQLiteLayoutReadProbe.h"
@@ -8926,7 +8927,7 @@ bool AreSQLUIPersistenceSettingsValidationDisplaysEquivalent(
 }
 
 FSQLUISamplePersistenceSettingsDraftProbeResult
-RunSQLUISamplePersistenceSettingsDraftProbe()
+RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 {
 	FSQLUISamplePersistenceSettingsDraftProbeResult Result;
 	Result.DatabasePath =
@@ -9166,6 +9167,131 @@ RunSQLUISamplePersistenceSettingsDraftProbe()
 			TEXT("SQLUI persistence settings draft probe failed: provider auto-init draft/display changed policy or failed validation."));
 	}
 
+	USQLUISamplePersistenceSettingsDraftPresenter* DraftPresenter =
+		NewObject<USQLUISamplePersistenceSettingsDraftPresenter>(
+			Outer ? Outer : GetTransientPackage());
+	if (!IsValid(DraftPresenter))
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: sample draft presenter was not created."));
+	}
+	else
+	{
+		const FSQLUISamplePersistenceSettingsDraftRefreshResult
+			DefaultAdapterResult =
+				DraftPresenter->RefreshDefaultPersistenceSettingsDraftDisplay();
+		Result.bSampleAdapterDefaultDisplayGenerated =
+			DefaultAdapterResult.bSucceeded
+			&& DefaultAdapterResult.Rows.Num() > 0
+			&& DefaultAdapterResult.FormattedLines.Num()
+				== DefaultAdapterResult.Rows.Num()
+			&& DoesSQLUIPersistenceSettingsValidationDisplayContainField(
+				DefaultAdapterResult.DisplaySummary,
+				TEXT("Backend"))
+			&& DoesSQLUIPersistenceSettingsValidationDisplayContainField(
+				DefaultAdapterResult.DisplaySummary,
+				TEXT("Summary"));
+		Result.bSampleAdapterDefaultDisplaySafe =
+			DefaultAdapterResult.bIsValid
+			&& !DefaultAdapterResult.bHasErrors
+			&& !DefaultAdapterResult.bHasWarnings
+			&& !DefaultAdapterResult.bRequiresRestartOrReinitialize
+			&& DoesSQLUIPersistenceSettingsValidationDisplayContainText(
+				DefaultAdapterResult.DisplaySummary,
+				TEXT("InMemory"))
+			&& DraftPresenter->GetRows().Num()
+				== DefaultAdapterResult.Rows.Num()
+			&& DraftPresenter->GetFormattedLines().Num()
+				== DefaultAdapterResult.FormattedLines.Num()
+			&& DraftPresenter->GetSummaryText()
+				== DefaultAdapterResult.SummaryText
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsDraftRefreshResult
+			UnknownBackendAdapterResult =
+				DraftPresenter->BuildPersistenceSettingsDraftValidationDisplay(
+					UnknownBackendDraft);
+		Result.bSampleAdapterUnknownBackendDisplayShowsError =
+			UnknownBackendAdapterResult.bHasErrors
+			&& DoesSQLUIPersistenceSettingsValidationDisplayContainState(
+				UnknownBackendAdapterResult.DisplaySummary,
+				ESQLUIPersistenceSettingsValidationDisplayState::Error)
+			&& DoesSQLUIPersistenceSettingsValidationDisplayContainText(
+				UnknownBackendAdapterResult.DisplaySummary,
+				TEXT("not a selectable SQLUI persistence backend"))
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsDraftRefreshResult
+			SQLiteAdapterResult =
+				DraftPresenter->BuildPersistenceSettingsDraftValidationDisplay(
+					SQLiteDraft);
+		Result.bSampleAdapterSQLiteDraftDisplayGenerated =
+			SQLiteAdapterResult.bSucceeded
+			&& SQLiteAdapterResult.bIsValid
+			&& SQLiteAdapterResult.bRequiresRestartOrReinitialize
+			&& DoesSQLUIPersistenceSettingsValidationDisplayContainField(
+				SQLiteAdapterResult.DisplaySummary,
+				TEXT("SQLitePath"))
+			&& DoesSQLUIPersistenceSettingsValidationDisplayContainText(
+				SQLiteAdapterResult.DisplaySummary,
+				Result.DatabasePath);
+		Result.bSampleAdapterSQLiteDisplayDidNotCreateDb =
+			!DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsDraftRefreshResult
+			EmptySQLitePathAdapterResult =
+				DraftPresenter->BuildPersistenceSettingsDraftValidationDisplay(
+					EmptySQLitePathDraft);
+		Result.bSampleAdapterSQLiteEmptyPathDisplayShowsError =
+			EmptySQLitePathAdapterResult.bHasErrors
+			&& DoesSQLUIPersistenceSettingsValidationDisplayContainState(
+				EmptySQLitePathAdapterResult.DisplaySummary,
+				ESQLUIPersistenceSettingsValidationDisplayState::Error)
+			&& DoesSQLUIPersistenceSettingsValidationDisplayContainText(
+				EmptySQLitePathAdapterResult.DisplaySummary,
+				TEXT("SQLite requires a database path"))
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsDraftRefreshResult
+			ProviderAutoInitAdapterResult =
+				DraftPresenter->BuildPersistenceSettingsDraftValidationDisplay(
+					ProviderAutoInitDraft);
+		Result.bSampleAdapterProviderAutoInitDisplayPending =
+			ProviderAutoInitAdapterResult.bSucceeded
+			&& ProviderAutoInitAdapterResult.bHasWarnings
+			&& DoesSQLUIPersistenceSettingsValidationDisplayContainText(
+				ProviderAutoInitAdapterResult.DisplaySummary,
+				TEXT("Enabled (pending)"))
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsDraftRefreshResult
+			RepeatedSQLiteAdapterResult =
+				DraftPresenter->BuildPersistenceSettingsDraftValidationDisplay(
+					SQLiteDraft);
+		Result.bSampleAdapterRepeatedDisplayDeterministic =
+			AreSQLUIPersistenceSettingsValidationDisplaysEquivalent(
+				SQLiteAdapterResult.DisplaySummary,
+				RepeatedSQLiteAdapterResult.DisplaySummary)
+			&& RepeatedSQLiteAdapterResult.FormattedLines
+				== SQLiteAdapterResult.FormattedLines
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		if (!Result.bSampleAdapterDefaultDisplayGenerated
+			|| !Result.bSampleAdapterDefaultDisplaySafe
+			|| !Result.bSampleAdapterUnknownBackendDisplayShowsError
+			|| !Result.bSampleAdapterSQLiteDraftDisplayGenerated
+			|| !Result.bSampleAdapterSQLiteDisplayDidNotCreateDb
+			|| !Result.bSampleAdapterSQLiteEmptyPathDisplayShowsError
+			|| !Result.bSampleAdapterProviderAutoInitDisplayPending
+			|| !Result.bSampleAdapterRepeatedDisplayDeterministic)
+		{
+			AppendSQLUISamplePersistenceSettingsDraftProbeError(
+				Result,
+				TEXT("SQLUI persistence settings draft probe failed: sample adapter did not preserve validation-only display behavior."));
+		}
+	}
+
 	const FSQLUIPersistenceSettingsValidationResult RepeatedSQLiteValidation =
 		USQLUIPersistenceSettingsDraftLibrary::ValidatePersistenceSettingsDraft(SQLiteDraft);
 	const FSQLUIPersistenceSettingsValidationDisplaySummary RepeatedSQLiteDisplay =
@@ -9234,6 +9360,14 @@ RunSQLUISamplePersistenceSettingsDraftProbe()
 		&& Result.bProviderAutoInitPendingValidated
 		&& Result.bProviderAutoInitPolicyUnchanged
 		&& Result.bProviderAutoInitDisplayPending
+		&& Result.bSampleAdapterDefaultDisplayGenerated
+		&& Result.bSampleAdapterDefaultDisplaySafe
+		&& Result.bSampleAdapterUnknownBackendDisplayShowsError
+		&& Result.bSampleAdapterSQLiteDraftDisplayGenerated
+		&& Result.bSampleAdapterSQLiteDisplayDidNotCreateDb
+		&& Result.bSampleAdapterSQLiteEmptyPathDisplayShowsError
+		&& Result.bSampleAdapterProviderAutoInitDisplayPending
+		&& Result.bSampleAdapterRepeatedDisplayDeterministic
 		&& Result.bRepeatedValidationDeterministic
 		&& Result.bRepeatedDisplayDeterministic
 		&& Result.bSidecarPreservedDuringValidation
@@ -11747,7 +11881,7 @@ FSQLUISampleSmokeTestResult USQLUISampleSmokeTestRunner::RunSmokeTest(
 	{
 		Result.bUsedPersistenceSettingsDraftProbe = true;
 		Result.PersistenceSettingsDraftProbe =
-			RunSQLUISamplePersistenceSettingsDraftProbe();
+			RunSQLUISamplePersistenceSettingsDraftProbe(WorldContextObject);
 		if (!Result.PersistenceSettingsDraftProbe.bSucceeded)
 		{
 			Result.bSucceeded = false;

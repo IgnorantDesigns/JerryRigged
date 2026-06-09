@@ -3091,6 +3091,14 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("SQLite display did not create DB"), ProbeResult.bSQLiteDisplayDidNotCreateDb);
 	LogPersistenceSettingsDraftBool(TEXT("SQLite empty path display shows error"), ProbeResult.bSQLiteEmptyPathDisplayShowsError);
 	LogPersistenceSettingsDraftBool(TEXT("provider auto-init display pending"), ProbeResult.bProviderAutoInitDisplayPending);
+	LogPersistenceSettingsDraftBool(TEXT("sample adapter default display generated"), ProbeResult.bSampleAdapterDefaultDisplayGenerated);
+	LogPersistenceSettingsDraftBool(TEXT("sample adapter default display safe"), ProbeResult.bSampleAdapterDefaultDisplaySafe);
+	LogPersistenceSettingsDraftBool(TEXT("sample adapter unknown backend display shows error"), ProbeResult.bSampleAdapterUnknownBackendDisplayShowsError);
+	LogPersistenceSettingsDraftBool(TEXT("sample adapter SQLite draft display generated"), ProbeResult.bSampleAdapterSQLiteDraftDisplayGenerated);
+	LogPersistenceSettingsDraftBool(TEXT("sample adapter SQLite display did not create DB"), ProbeResult.bSampleAdapterSQLiteDisplayDidNotCreateDb);
+	LogPersistenceSettingsDraftBool(TEXT("sample adapter SQLite empty path display shows error"), ProbeResult.bSampleAdapterSQLiteEmptyPathDisplayShowsError);
+	LogPersistenceSettingsDraftBool(TEXT("sample adapter provider auto-init display pending"), ProbeResult.bSampleAdapterProviderAutoInitDisplayPending);
+	LogPersistenceSettingsDraftBool(TEXT("sample adapter repeated display deterministic"), ProbeResult.bSampleAdapterRepeatedDisplayDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("repeated validation deterministic"), ProbeResult.bRepeatedValidationDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("repeated display deterministic"), ProbeResult.bRepeatedDisplayDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during validation"), ProbeResult.bSidecarPreservedDuringValidation);
