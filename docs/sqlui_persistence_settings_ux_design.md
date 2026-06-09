@@ -11,6 +11,7 @@ Related docs:
 - [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md) tracks current phase status and next slices.
 - [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md) plans the next mutating settings editing, apply/cancel, backend selection, SQLite path, provider auto-init, and reset/delete UX phase.
 - [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) documents the focused read-only UMG binding recipe for the optional widget shell.
+- [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) documents the validation-only draft settings UMG binding recipe for the optional widget shell.
 - [`sqlui_smoke_test.md`](sqlui_smoke_test.md) lists editor smoke-test commands.
 - [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) documents local packaged validation and packaged runtime smoke paths.
 
@@ -52,7 +53,7 @@ The first UI-consumption slice also exists as `USQLUIPersistenceStatusDisplayLib
 
 The first settings-editing foundation slice now exists as `FSQLUIPersistenceSettingsDraft`, `FSQLUIPersistenceSettingsValidationResult`, and `USQLUIPersistenceSettingsDraftLibrary`. It is still non-mutating: callers can represent current and pending runtime settings, validate backend/path/provider-auto-init choices, and reset the in-memory draft value back to current values, but no settings are applied or saved. Draft validation does not create database files, run migrations, copy seed databases, initialize providers/repositories, delete files, add UI controls, or change startup behavior. `USQLUIPersistenceSettingsDraftDisplayLibrary` now adds a UI-safe summary/row formatter for those validation results so a future sample or settings panel can show pending backend/path/provider-auto-init status without owning apply, save, or lifecycle behavior.
 
-`USQLUISamplePersistenceSettingsDraftPresenter` and `USQLUISamplePersistenceSettingsDraftPanelWidget` are optional SQLUISamples sample/dev surfaces for those draft validation rows. The widget shell is a C++ `UUserWidget` subclass only: it creates no visual layout, adds no widget blueprint asset, is not added to the viewport, is not wired into maps/startup/config, and does not refresh from lifecycle hooks. Its caller-invoked refresh/build functions delegate to the presenter, cache rows/result/summary in memory, and remain validation/display-only.
+`USQLUISamplePersistenceSettingsDraftPresenter` and `USQLUISamplePersistenceSettingsDraftPanelWidget` are optional SQLUISamples sample/dev surfaces for those draft validation rows. The widget shell is a C++ `UUserWidget` subclass only: it creates no visual layout, adds no widget blueprint asset, is not added to the viewport, is not wired into maps/startup/config, and does not refresh from lifecycle hooks. Its caller-invoked refresh/build functions delegate to the presenter, cache rows/result/summary in memory, and remain validation/display-only. The focused usage recipe in [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) records how a future Blueprint subclass can bind to those rows without adding apply/save/reset behavior or persistence lifecycle side effects.
 
 `USQLUISamplePersistenceStatusPresenter` is the first optional SQLUISamples sample/dev surface over those rows. It stores the display rows plus stable formatted strings for simple sample UI, Blueprint, or commandlet presentation and exposes Blueprint-callable, caller-invoked refresh functions for re-querying those same rows. It is not a full settings screen, is not wired into startup, maps, or default config, and it does not add settings editing, reset/delete actions, provider initialization, repository initialization, migrations, seed copy, database creation, or file deletion.
 
@@ -240,7 +241,7 @@ Use the existing SQLUISamples panel adapter, which delegates to the presenter ho
 
 Future Blueprint/UMG work may alternatively subclass or bind to `USQLUISamplePersistenceStatusPanelWidget`. Its refresh methods call the same adapter path, and its row/result/summary properties are only cached in-memory values. The shell should not be treated as a completed settings screen.
 
-For the focused widget-shell binding recipe and manual local checklist, see [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md).
+For the focused read-only status widget-shell binding recipe and manual local checklist, see [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md). For the validation-only draft settings widget-shell binding recipe, see [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md).
 
 Display each `FSQLUIPersistenceStatusDisplayRow` without reinterpreting storage details:
 

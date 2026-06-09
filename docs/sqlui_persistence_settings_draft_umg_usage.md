@@ -1,0 +1,181 @@
+# SQLUI Persistence Settings Draft UMG Usage
+
+This document is the focused Blueprint/UMG binding recipe for the optional SQLUISamples persistence settings draft validation widget shell.
+
+It documents how future UI work can subclass or bind to `USQLUISamplePersistenceSettingsDraftPanelWidget` without adding actual widget assets in this PR. It does not add maps, startup wiring, viewport attachment, polling, settings editing, apply/save behavior, reset/delete behavior, provider lifecycle behavior, migrations, seed-copy behavior, or database file creation.
+
+Related docs:
+
+- [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) defines the broader future persistence settings UX.
+- [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md) plans the future mutating settings editing, apply/cancel, backend selection, SQLite path, provider auto-init, and reset/delete UX phase.
+- [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) documents the read-only status-panel UMG binding recipe.
+- [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md) summarizes current SQLite runtime status and safety boundaries.
+- [`sqlui_repository_architecture.md`](sqlui_repository_architecture.md) describes repository and UI/storage ownership boundaries.
+- [`sqlui_smoke_test.md`](sqlui_smoke_test.md) lists the local smoke command that validates the draft model, display rows, presenter, and widget shell.
+
+## Existing Draft Validation Stack
+
+The current stack is intentionally validation-only:
+
+- `USQLUIPersistenceSettingsDraftLibrary` creates and validates non-mutating draft settings.
+- `USQLUIPersistenceSettingsDraftDisplayLibrary` converts validation results into `FSQLUIPersistenceSettingsValidationDisplayRow` values and a display summary.
+- `USQLUISamplePersistenceSettingsDraftPresenter` stores display rows, formatted lines, summary text, and validation flags for sample/dev and Blueprint-facing use.
+- `USQLUISamplePersistenceSettingsDraftPanelWidget` is the optional C++ `UUserWidget` shell over the presenter.
+
+The shell is sample/dev-facing. It creates no visual layout, adds no widget blueprint asset, and is not wired into startup, maps, config, timers, tick, polling, or the viewport.
+
+The shell exposes explicit refresh/build methods:
+
+- `RefreshDefaultPersistenceSettingsDraftPanel()`
+- `RefreshCurrentPersistenceSettingsDraftPanel()`
+- `BuildPersistenceSettingsDraftPanel(const FSQLUIPersistenceSettingsDraft& Draft)`
+
+The shell exposes cached data through Blueprint-readable properties and pure getters:
+
+- `Rows` / `GetRows()`
+- `FormattedLines` / `GetFormattedLines()`
+- `LastRefreshResult` / `GetLastRefreshResult()`
+- `SummaryText` / `GetSummaryText()`
+- `bIsValid`
+- `bHasErrors`
+- `bHasWarnings`
+- `bRequiresRestartOrReinitialize`
+
+## Foundation Checkpoint
+
+The persistence settings draft validation UMG foundation is complete as a binding scaffold. It includes the SQLUICore draft model, SQLUICore validation result, SQLUICore display rows, optional SQLUISamples presenter, optional C++ UMG widget shell, and non-asset smoke coverage for the presenter/widget-shell contract.
+
+This remains sample/dev-facing and validation-only. It is not a full settings screen and does not add backend selector controls, SQLite path editing controls, provider auto-init toggles, Apply/Cancel behavior, settings save behavior, reset/delete actions, migration controls, seed-copy controls, provider/repository initialization, database creation, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, or auto-refresh.
+
+Future editable settings or reset/delete UX should build on SQLUICore policy helpers and the dedicated plan in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). Widgets should keep using draft display rows and must not know SQL, schema, migration ids, seed-copy policy, sidecar internals, direct file deletion, or live repository mutation rules.
+
+## Future Blueprint Recipe
+
+A future Blueprint/UMG PR can use the shell like this:
+
+1. Create a widget blueprint subclass of `USQLUISamplePersistenceSettingsDraftPanelWidget`.
+2. Add a simple visual list or text layout for validation rows.
+3. Bind the visual list to `Rows` or `GetRows()`.
+4. For each `FSQLUIPersistenceSettingsValidationDisplayRow`, display `Label` and `Value`.
+5. Optionally map `State` to a visual treatment such as normal, good, warning, or error.
+6. Optionally expose `DetailText` as a tooltip or small help line.
+7. Show `SummaryText` for the overall pending/draft state.
+8. Add a Refresh button only if it calls one of the explicit refresh/build methods.
+9. Treat refresh/build as caller-invoked validation display work only.
+
+Use `FormattedLines` only for simple sample text or commandlet-style output. Product UI should prefer structured rows.
+
+## Refresh And Build Boundaries
+
+Refresh/build is validation-only draft display work. It is not any of the following:
+
+- Polling.
+- Ticking.
+- Timer-driven refresh.
+- Startup initialization.
+- Viewport attachment.
+- Provider initialization.
+- Repository initialization.
+- Database creation.
+- Schema initialization.
+- Migration.
+- Seed copy.
+- Reset/delete.
+- Settings apply.
+- Settings save.
+- Backend selection.
+
+Do not call refresh/build automatically from construction, `NativeConstruct`, `PreConstruct`, `Tick`, timers, startup, map load, config load, or a latent refresh loop unless a later PR explicitly scopes a safe optional UI path.
+
+## Display Semantics
+
+The UI should display the row model without reinterpreting storage internals:
+
+- Default `InMemory` draft state is normal and safe, not an error.
+- SQLite draft state is pending until explicitly applied by future work.
+- A pending SQLite path should be display-only and must not create directories or database files.
+- A missing SQLite database is not alarming unless SQLite is the active/applied backend and the future product policy says it should exist.
+- Provider auto-init changes are pending policy choices, not live provider lifecycle changes.
+- Unknown or unsupported backend values should be shown as validation errors.
+- Empty SQLite paths should be shown as validation errors only for pending SQLite selections.
+- Restart or reinitialize requirements should be shown as pending requirements, not performed by the widget.
+
+Use careful words such as `Draft`, `Pending`, `Would change`, `Validation only`, and `Not applied`. Do not imply that the widget has applied, saved, initialized, migrated, copied, reset, deleted, or changed live runtime state.
+
+## Out-Of-Scope Controls
+
+This usage guide does not introduce:
+
+- Backend selector controls.
+- SQLite path editor controls.
+- Provider auto-init toggles.
+- Settings save/apply controls.
+- Cancel controls.
+- Reset/delete buttons.
+- Migration controls.
+- Seed-copy controls.
+- Direct file browser/delete behavior.
+
+Future settings editing and reset/delete UX must be scoped separately and should follow [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). Future reset behavior must go through SQLUICore database management helper/policy surfaces instead of widget-owned file deletion.
+
+## Ownership Boundaries
+
+Widgets and sample UI should consume validation rows. They should not own persistence internals.
+
+Widgets must not:
+
+- Know SQL strings.
+- Know SQLite schema details.
+- Know migration ids or versioning internals.
+- Know seed-copy policy internals.
+- Know SQLite sidecar internals.
+- Perform file existence, file size, sidecar, or schema checks directly.
+- Initialize providers or repositories.
+- Create database files.
+- Run migrations.
+- Copy seed databases.
+- Delete files.
+- Apply or save settings.
+
+JerryRigged remains a thin host. SQLUICore remains the storage/policy boundary and should not gain UMG, Slate, SlateCore, editor-only, or widget dependencies for this UI surface. SQLUISamples may provide optional sample/dev widget shells, but those shells should remain presentation scaffolds.
+
+## Manual Local Checklist
+
+For a future local/manual Blueprint exploration, keep the asset local unless a later PR explicitly scopes committing it:
+
+- Create a local widget blueprint subclass of `USQLUISamplePersistenceSettingsDraftPanelWidget`.
+- Add a simple list/text layout for `Label` and `Value` rows.
+- Optionally show `State`, `DetailText`, and `SummaryText`.
+- Add a Refresh button that calls an explicit refresh/build method.
+- Do not wire the widget into startup, default maps, config, GameInstance, or viewport by default.
+- Do not add Apply, Save, Cancel, Reset, Delete, backend selector, SQLite path editor, provider auto-init, migration, or seed-copy controls in this local shell.
+- Do not commit the local widget asset unless a future PR explicitly scopes that asset.
+- Confirm the default `InMemory` draft displays as safe.
+- Confirm a pending SQLite draft does not create SQLite database files.
+- Confirm no persistence settings draft probe DB or sidecar files remain after smoke tests.
+
+## Smoke Coverage
+
+The existing `-UsePersistenceSettingsDraftProbe` smoke path validates the SQLUICore draft model, validation result, display-row formatting, SQLUISamples presenter, and C++ widget shell contract by reflection. It checks that the widget shell derives from `UUserWidget`, that refresh/build functions are Blueprint-callable and not `BlueprintPure`, that cached widget-shell getters are `BlueprintPure`, and that cached row/formatted-lines/result/summary/validation-flag properties are Blueprint-visible.
+
+The smoke path validates that contract without requiring committed widget blueprint assets, maps, startup wiring, or viewport attachment. It also keeps refresh/build caller-invoked and confirms default `InMemory` validation display does not initialize providers/repositories or create SQLite database files.
+
+This guide adds no new smoke flag. Cleanup expectations remain unchanged: the probe removes only smoke-owned database and sidecar files under `Saved/SQLUI/SmokeTests/PersistenceSettingsDraft`.
+
+## Remaining Work
+
+Still future work:
+
+- Actual widget blueprint assets.
+- Visual layout.
+- Startup/map/config integration.
+- Settings editing controls.
+- Backend selection UI.
+- SQLite path editing UI.
+- Provider auto-init controls.
+- Apply/Cancel behavior.
+- Settings save behavior.
+- Reset/delete UX.
+- Product startup policy.
+
+The next mutating settings/reset phase is planned in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), but no editing, apply/save, provider lifecycle, or reset/delete behavior exists in the current validation-only widget shell.
