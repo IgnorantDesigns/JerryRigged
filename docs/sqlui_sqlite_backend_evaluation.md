@@ -5,6 +5,7 @@ This document records the SQLite backend evaluation that led SQLUI to use engine
 For the concise phase status and roadmap, see [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md).
 For the consolidated current implementation status, see [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md).
 For the planned persistence settings editing/reset UX phase, see [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md).
+For the validation-only draft settings UMG binding recipe, see [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md).
 For the local packaged-build validation scaffold, see [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md).
 
 ## Purpose
@@ -248,7 +249,7 @@ Remaining blockers before promoting SQLite to production/default persistence:
 - Expanding packaged runtime SQLite lifecycle coverage beyond the first local packaged executable smoke.
 - Production SQLite service lifecycle, shutdown draining beyond stale-callback suppression, and cancellation policy.
 - Actual future schema migrations, version-specific upgrade transforms, and compatibility policy beyond the first version/status framework.
-- Production/user-facing runtime settings UI/UX, settings apply/save behavior, normal startup initialization policy, and database path policy beyond the safe default-off config-backed settings/provider/subsystem path, docs-only settings editing/reset plan, and non-mutating draft validation/display model plus sample/dev display/widget-shell contracts.
+- Production/user-facing runtime settings UI/UX, settings apply/save behavior, normal startup initialization policy, and database path policy beyond the safe default-off config-backed settings/provider/subsystem path, docs-only settings editing/reset plan, non-mutating draft validation/display model, sample/dev display/widget-shell contracts, and validation-only draft widget-shell usage guide.
 - Product seed database asset location, packaging, versioning, and upgrade policy beyond the first explicit copy helper.
 
 ## Evaluation Criteria
