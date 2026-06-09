@@ -103,6 +103,35 @@ The safety boundaries remain unchanged:
 
 Future settings-editing or reset work should build on this foundation and the dedicated plan in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). That work must keep widgets ignorant of SQL, schema, migrations, seed-copy policy, SQLite sidecar internals, direct file deletion, and concrete repository lifecycle details. Writable runtime database state should remain under `Saved/SQLUI/...`. User-facing reset/delete behavior should route through SQLUICore database management helper/policy surfaces, not widget-owned deletion. Editable settings should use pending/apply semantics instead of directly mutating live persistence from widgets. Any future PR that adds settings editing, reset/delete behavior, startup/default map/config wiring, or packaged runtime lifecycle changes should include matching smoke coverage and packaged validation where appropriate.
 
+## Persistence Settings Draft Validation UI Foundation Checkpoint
+
+The non-mutating SQLUI persistence settings draft validation UI foundation is complete as a documented and smoke-validated base for future apply/cancel work.
+
+This checkpoint records the completed validation-only sequence:
+
+- #105: docs-only settings editing/reset UX plan.
+- #106: `USQLUIPersistenceSettingsDraftLibrary` and `FSQLUIPersistenceSettingsDraft` for validation-only pending settings.
+- #107: `USQLUIPersistenceSettingsDraftDisplayLibrary` and UI-safe validation display rows/summary.
+- #108: optional SQLUISamples sample/dev-facing draft validation presenter/adapter.
+- #109: optional SQLUISamples C++ UMG widget shell for draft validation display.
+- #110: safe UMG subclassing and binding guide.
+- #111: final non-mutating draft validation foundation checkpoint.
+- `-UsePersistenceSettingsDraftProbe`: smoke coverage for the draft model, validation display rows, sample adapter, and C++ UMG widget shell contract.
+
+This checkpoint is still not settings editing. It adds no apply/save/config-write behavior, backend selector UI, SQLite path editor UI, provider auto-init control, reset/delete UX, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, default config changes, or default startup behavior changes. Refresh/build/validation remains caller-invoked only.
+
+The safety boundaries remain unchanged:
+
+- `InMemory` remains the safe default backend.
+- SQLite remains opt-in and is not enabled by default.
+- Provider auto-init remains off by default.
+- No default config creates SQLite database files.
+- SQLUICore remains free of UMG, Slate, SlateCore, editor-only, and widget dependencies.
+- SQLUISamples is sample/dev-facing consumption only and does not own persistence policy.
+- Draft validation, validation display generation, SQLUISamples draft adapter refresh, and the draft validation widget shell remain non-mutating: they do not create databases or directories, open databases for writing, run migrations, copy seeds, initialize providers/repositories, or delete files outside smoke-owned cleanup.
+
+The next apply/cancel phase must build on SQLUICore helper/policy surfaces. Future work should keep widgets ignorant of SQL, schema, migrations, seed-copy policy, sidecar internals, deletion behavior, and provider/repository lifecycle. Widgets should not write config directly, initialize providers/repositories, or delete files directly. Apply/cancel work should use explicit pending/apply/cancel semantics, keep validation failures user-readable and non-destructive, avoid silently initializing providers/repositories during apply, and show restart/reopen/reinitialize-required messaging instead of forcing lifecycle changes from widget code. Reset/delete behavior must route through SQLUICore database management helper/policy surfaces. Any new apply/cancel path needs focused smoke coverage, and any startup, default map, config, viewport, or packaged lifecycle change needs packaged validation.
+
 ## Implemented Capabilities
 
 | Capability | Current status | Notes |

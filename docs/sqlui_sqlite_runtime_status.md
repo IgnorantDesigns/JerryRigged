@@ -126,6 +126,25 @@ This foundation remains read-only. It does not create databases, run migrations,
 
 PR #105 planned future settings-editing/reset work in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). The first follow-ups add only the non-mutating SQLUICore draft/validation model, UI-safe validation display rows, an optional SQLUISamples sample/dev adapter for those rows, and an optional C++ UMG widget shell contract; they do not add mutating settings behavior. Future implementation should keep widgets ignorant of SQL, schema, migration ids, seed-copy policy, sidecar internals, and direct file deletion. Settings edits should use a pending/apply model instead of mutating live persistence from widget bindings. Reset/delete UX should call SQLUICore database management helper/policy surfaces and must not let widgets delete files directly. SQLite should not become the default, and provider auto-init should not become default, without separate explicitly scoped policy PRs.
 
+## Persistence Settings Draft Validation UI Foundation
+
+The non-mutating persistence settings draft validation UI foundation is now complete as a sample/dev-facing base for future apply/cancel work. The completed chain is:
+
+- #105 settings editing/reset UX plan.
+- #106 validation-only SQLUICore draft/pending settings model.
+- #107 UI-safe validation display rows and summary.
+- #108 optional SQLUISamples sample/dev-facing draft validation presenter/adapter.
+- #109 optional SQLUISamples C++ `UUserWidget` shell for draft validation display.
+- #110 safe UMG usage and binding guide.
+- #111 final non-mutating draft validation foundation checkpoint.
+- `-UsePersistenceSettingsDraftProbe` smoke coverage for the draft model, display rows, sample adapter, and widget-shell contract.
+
+This foundation is not settings editing. It does not add settings controls, backend selector UI, SQLite path editor UI, provider auto-init controls, Apply/Cancel behavior, settings save/config-write behavior, reset/delete actions, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, or default config changes.
+
+The draft validation path remains caller-invoked and non-mutating. Validation, display generation, the SQLUISamples presenter/adapter, and the C++ widget shell do not create databases or directories, open databases for writing, run migrations, copy seeds, initialize providers/repositories, or delete files outside smoke-owned cleanup. `InMemory` remains the safe default, SQLite remains explicit opt-in, provider auto-init remains off by default, and no default config creates SQLite database files.
+
+Future apply/cancel work should reuse SQLUICore helper and policy surfaces. Widgets should capture user intent and display SQLUICore-provided validation/status data; they should not know SQL, schema, migration ids, seed-copy policy, SQLite sidecar internals, direct deletion rules, or provider/repository lifecycle details. Widgets also should not write config directly, initialize providers/repositories, or delete files directly. Reset/delete UX should route through SQLUICore database management helper/policy surfaces. Any future apply/cancel implementation needs focused smoke coverage, and any startup, default map, config, viewport, provider lifecycle, or packaged runtime lifecycle change needs packaged validation.
+
 The packaged runtime provider startup smoke proves this holder can be intentionally created from packaged startup/runtime code and initialized from command-line repository settings. That proof runs only with `-SQLUIRuntimeProviderStartupSmoke`; normal startup still does not auto-initialize a provider or SQLite.
 
 The packaged runtime provider subsystem smoke proves the app-level subsystem holder path. It runs only with `-SQLUIRuntimeProviderSubsystemSmoke` plus explicit `-SQLUILayoutRepositoryProviderAutoInit` and repository settings. When the flags are absent, the subsystem remains passive and normal startup still does not initialize SQLite.
