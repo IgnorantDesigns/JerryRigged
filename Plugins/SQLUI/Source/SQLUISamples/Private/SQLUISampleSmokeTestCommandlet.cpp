@@ -3099,6 +3099,18 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("sample adapter SQLite empty path display shows error"), ProbeResult.bSampleAdapterSQLiteEmptyPathDisplayShowsError);
 	LogPersistenceSettingsDraftBool(TEXT("sample adapter provider auto-init display pending"), ProbeResult.bSampleAdapterProviderAutoInitDisplayPending);
 	LogPersistenceSettingsDraftBool(TEXT("sample adapter repeated display deterministic"), ProbeResult.bSampleAdapterRepeatedDisplayDeterministic);
+	LogPersistenceSettingsDraftBool(TEXT("panel widget class derived from UUserWidget"), ProbeResult.bPanelWidgetClassDerivedFromUserWidget);
+	LogPersistenceSettingsDraftBool(TEXT("panel widget Blueprint default refresh function callable"), ProbeResult.bPanelWidgetBlueprintDefaultRefreshFunctionCallable);
+	LogPersistenceSettingsDraftBool(TEXT("panel widget Blueprint current refresh function callable"), ProbeResult.bPanelWidgetBlueprintCurrentRefreshFunctionCallable);
+	LogPersistenceSettingsDraftBool(TEXT("panel widget Blueprint build function callable"), ProbeResult.bPanelWidgetBlueprintBuildFunctionCallable);
+	LogPersistenceSettingsDraftBool(TEXT("panel widget refresh functions not BlueprintPure"), ProbeResult.bPanelWidgetRefreshFunctionsNotBlueprintPure);
+	LogPersistenceSettingsDraftBool(TEXT("panel widget cached getter functions BlueprintPure"), ProbeResult.bPanelWidgetCachedGetterFunctionsBlueprintPure);
+	LogPersistenceSettingsDraftBool(TEXT("panel widget rows property Blueprint visible"), ProbeResult.bPanelWidgetRowsPropertyBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("panel widget formatted lines property Blueprint visible"), ProbeResult.bPanelWidgetFormattedLinesPropertyBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("panel widget refresh result property Blueprint visible"), ProbeResult.bPanelWidgetRefreshResultPropertyBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("panel widget summary text property Blueprint visible"), ProbeResult.bPanelWidgetSummaryTextPropertyBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("panel widget validation flags Blueprint visible"), ProbeResult.bPanelWidgetValidationFlagsBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("panel widget contract validated without asset or viewport"), ProbeResult.bPanelWidgetContractValidatedWithoutAssetOrViewport);
 	LogPersistenceSettingsDraftBool(TEXT("repeated validation deterministic"), ProbeResult.bRepeatedValidationDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("repeated display deterministic"), ProbeResult.bRepeatedDisplayDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during validation"), ProbeResult.bSidecarPreservedDuringValidation);

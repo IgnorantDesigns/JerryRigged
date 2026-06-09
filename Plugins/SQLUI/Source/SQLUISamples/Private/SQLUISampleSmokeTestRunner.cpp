@@ -3,6 +3,7 @@
 #include "SQLUISamplePersistenceStatusPanelAdapter.h"
 #include "SQLUISamplePersistenceStatusPanelWidget.h"
 #include "SQLUISamplePersistenceStatusPresenter.h"
+#include "SQLUISamplePersistenceSettingsDraftPanelWidget.h"
 #include "SQLUISamplePersistenceSettingsDraftPresenter.h"
 #include "Database/SQLUIDatabaseAsyncQueue.h"
 #include "Database/SQLUIDatabaseAsyncRunner.h"
@@ -9292,6 +9293,158 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		}
 	}
 
+	const UClass* DraftPanelWidgetClass =
+		USQLUISamplePersistenceSettingsDraftPanelWidget::StaticClass();
+	Result.bPanelWidgetClassDerivedFromUserWidget =
+		DraftPanelWidgetClass
+		&& DraftPanelWidgetClass->IsChildOf(UUserWidget::StaticClass());
+	Result.bPanelWidgetBlueprintDefaultRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			DraftPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsDraftPanelWidget,
+				RefreshDefaultPersistenceSettingsDraftPanel));
+	Result.bPanelWidgetBlueprintCurrentRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			DraftPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsDraftPanelWidget,
+				RefreshCurrentPersistenceSettingsDraftPanel));
+	Result.bPanelWidgetBlueprintBuildFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			DraftPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsDraftPanelWidget,
+				BuildPersistenceSettingsDraftPanel));
+	Result.bPanelWidgetRefreshFunctionsNotBlueprintPure =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			DraftPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsDraftPanelWidget,
+				RefreshDefaultPersistenceSettingsDraftPanel))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			DraftPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsDraftPanelWidget,
+				RefreshCurrentPersistenceSettingsDraftPanel))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			DraftPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsDraftPanelWidget,
+				BuildPersistenceSettingsDraftPanel));
+	Result.bPanelWidgetCachedGetterFunctionsBlueprintPure =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			DraftPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsDraftPanelWidget,
+				GetRows))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			DraftPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsDraftPanelWidget,
+				GetFormattedLines))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			DraftPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsDraftPanelWidget,
+				GetLastRefreshResult))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			DraftPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsDraftPanelWidget,
+				GetSummaryText));
+	Result.bPanelWidgetRowsPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			DraftPanelWidgetClass,
+			TEXT("Rows"));
+	Result.bPanelWidgetFormattedLinesPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			DraftPanelWidgetClass,
+			TEXT("FormattedLines"));
+	Result.bPanelWidgetRefreshResultPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			DraftPanelWidgetClass,
+			TEXT("LastRefreshResult"));
+	Result.bPanelWidgetSummaryTextPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			DraftPanelWidgetClass,
+			TEXT("SummaryText"));
+	Result.bPanelWidgetValidationFlagsBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			DraftPanelWidgetClass,
+			TEXT("bIsValid"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			DraftPanelWidgetClass,
+			TEXT("bHasErrors"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			DraftPanelWidgetClass,
+			TEXT("bHasWarnings"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			DraftPanelWidgetClass,
+			TEXT("bRequiresRestartOrReinitialize"));
+	// Reflection keeps this proof independent from widget blueprint assets,
+	// maps, viewport attachment, widget construction, and startup wiring.
+	Result.bPanelWidgetContractValidatedWithoutAssetOrViewport =
+		DraftPanelWidgetClass
+		&& Result.bPanelWidgetClassDerivedFromUserWidget
+		&& Result.bPanelWidgetBlueprintDefaultRefreshFunctionCallable
+		&& Result.bPanelWidgetBlueprintCurrentRefreshFunctionCallable
+		&& Result.bPanelWidgetBlueprintBuildFunctionCallable
+		&& Result.bPanelWidgetRefreshFunctionsNotBlueprintPure
+		&& Result.bPanelWidgetCachedGetterFunctionsBlueprintPure
+		&& Result.bPanelWidgetRowsPropertyBlueprintVisible
+		&& Result.bPanelWidgetFormattedLinesPropertyBlueprintVisible
+		&& Result.bPanelWidgetRefreshResultPropertyBlueprintVisible
+		&& Result.bPanelWidgetSummaryTextPropertyBlueprintVisible
+		&& Result.bPanelWidgetValidationFlagsBlueprintVisible;
+
+	const auto AppendPanelWidgetReflectionFailure =
+		[&Result](const bool bPassed, const TCHAR* FailureMessage)
+		{
+			if (!bPassed)
+			{
+				AppendSQLUISamplePersistenceSettingsDraftProbeError(
+					Result,
+					FailureMessage);
+			}
+		};
+	AppendPanelWidgetReflectionFailure(
+		Result.bPanelWidgetClassDerivedFromUserWidget,
+		TEXT("SQLUI persistence settings draft probe failed: draft panel widget shell did not derive from UUserWidget."));
+	AppendPanelWidgetReflectionFailure(
+		Result.bPanelWidgetBlueprintDefaultRefreshFunctionCallable,
+		TEXT("SQLUI persistence settings draft probe failed: draft panel widget default refresh was not BlueprintCallable."));
+	AppendPanelWidgetReflectionFailure(
+		Result.bPanelWidgetBlueprintCurrentRefreshFunctionCallable,
+		TEXT("SQLUI persistence settings draft probe failed: draft panel widget current refresh was not BlueprintCallable."));
+	AppendPanelWidgetReflectionFailure(
+		Result.bPanelWidgetBlueprintBuildFunctionCallable,
+		TEXT("SQLUI persistence settings draft probe failed: draft panel widget build function was not BlueprintCallable."));
+	AppendPanelWidgetReflectionFailure(
+		Result.bPanelWidgetRefreshFunctionsNotBlueprintPure,
+		TEXT("SQLUI persistence settings draft probe failed: draft panel widget refresh/build functions were unexpectedly BlueprintPure."));
+	AppendPanelWidgetReflectionFailure(
+		Result.bPanelWidgetCachedGetterFunctionsBlueprintPure,
+		TEXT("SQLUI persistence settings draft probe failed: draft panel widget cached getter functions were not BlueprintPure."));
+	AppendPanelWidgetReflectionFailure(
+		Result.bPanelWidgetRowsPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: draft panel widget Rows property was not Blueprint-visible."));
+	AppendPanelWidgetReflectionFailure(
+		Result.bPanelWidgetFormattedLinesPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: draft panel widget FormattedLines property was not Blueprint-visible."));
+	AppendPanelWidgetReflectionFailure(
+		Result.bPanelWidgetRefreshResultPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: draft panel widget LastRefreshResult property was not Blueprint-visible."));
+	AppendPanelWidgetReflectionFailure(
+		Result.bPanelWidgetSummaryTextPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: draft panel widget SummaryText property was not Blueprint-visible."));
+	AppendPanelWidgetReflectionFailure(
+		Result.bPanelWidgetValidationFlagsBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: draft panel widget validation flag properties were not Blueprint-visible."));
+	AppendPanelWidgetReflectionFailure(
+		Result.bPanelWidgetContractValidatedWithoutAssetOrViewport,
+		TEXT("SQLUI persistence settings draft probe failed: draft panel widget shell contract could not be validated by reflection without an asset or viewport."));
+
 	const FSQLUIPersistenceSettingsValidationResult RepeatedSQLiteValidation =
 		USQLUIPersistenceSettingsDraftLibrary::ValidatePersistenceSettingsDraft(SQLiteDraft);
 	const FSQLUIPersistenceSettingsValidationDisplaySummary RepeatedSQLiteDisplay =
@@ -9368,6 +9521,18 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bSampleAdapterSQLiteEmptyPathDisplayShowsError
 		&& Result.bSampleAdapterProviderAutoInitDisplayPending
 		&& Result.bSampleAdapterRepeatedDisplayDeterministic
+		&& Result.bPanelWidgetClassDerivedFromUserWidget
+		&& Result.bPanelWidgetBlueprintDefaultRefreshFunctionCallable
+		&& Result.bPanelWidgetBlueprintCurrentRefreshFunctionCallable
+		&& Result.bPanelWidgetBlueprintBuildFunctionCallable
+		&& Result.bPanelWidgetRefreshFunctionsNotBlueprintPure
+		&& Result.bPanelWidgetCachedGetterFunctionsBlueprintPure
+		&& Result.bPanelWidgetRowsPropertyBlueprintVisible
+		&& Result.bPanelWidgetFormattedLinesPropertyBlueprintVisible
+		&& Result.bPanelWidgetRefreshResultPropertyBlueprintVisible
+		&& Result.bPanelWidgetSummaryTextPropertyBlueprintVisible
+		&& Result.bPanelWidgetValidationFlagsBlueprintVisible
+		&& Result.bPanelWidgetContractValidatedWithoutAssetOrViewport
 		&& Result.bRepeatedValidationDeterministic
 		&& Result.bRepeatedDisplayDeterministic
 		&& Result.bSidecarPreservedDuringValidation
