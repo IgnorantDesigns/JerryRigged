@@ -104,7 +104,7 @@ That first implementation slice now exists as `FSQLUIPersistenceSettingsDraft`, 
 
 ## Completed Draft Validation Foundation
 
-The non-mutating draft validation UI foundation is complete through the #105-#110 sequence:
+The non-mutating draft validation UI foundation is complete through the #105-#111 sequence:
 
 - #105 documented this editing/reset UX plan.
 - #106 added the SQLUICore validation-only draft/pending settings model.
@@ -112,6 +112,7 @@ The non-mutating draft validation UI foundation is complete through the #105-#11
 - #108 added the optional SQLUISamples draft validation presenter/adapter.
 - #109 added the optional SQLUISamples C++ UMG widget shell for draft validation display.
 - #110 documented safe UMG subclassing and binding for that shell.
+- #111 records the final non-mutating draft validation foundation checkpoint.
 - `-UsePersistenceSettingsDraftProbe` validates the draft model, display rows, sample adapter, and widget-shell contract without widget blueprint assets, maps, viewport attachment, startup wiring, settings mutation, or provider/repository initialization.
 
 This checkpoint is still not settings editing. It adds no backend selector UI, SQLite path editor UI, provider auto-init control, Apply/Cancel behavior, settings save/config-write behavior, reset/delete UX, widget blueprint asset, map, startup wiring, viewport attachment, polling, ticking, auto-refresh, provider/repository initialization, migration, seed-copy behavior, or default config change. Refresh/build/validation remains caller-invoked only.

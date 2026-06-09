@@ -136,6 +136,7 @@ The non-mutating persistence settings draft validation UI foundation is now comp
 - #108 optional SQLUISamples sample/dev-facing draft validation presenter/adapter.
 - #109 optional SQLUISamples C++ `UUserWidget` shell for draft validation display.
 - #110 safe UMG usage and binding guide.
+- #111 final non-mutating draft validation foundation checkpoint.
 - `-UsePersistenceSettingsDraftProbe` smoke coverage for the draft model, display rows, sample adapter, and widget-shell contract.
 
 This foundation is not settings editing. It does not add settings controls, backend selector UI, SQLite path editor UI, provider auto-init controls, Apply/Cancel behavior, settings save/config-write behavior, reset/delete actions, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, or default config changes.

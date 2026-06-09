@@ -115,6 +115,7 @@ This checkpoint records the completed validation-only sequence:
 - #108: optional SQLUISamples sample/dev-facing draft validation presenter/adapter.
 - #109: optional SQLUISamples C++ UMG widget shell for draft validation display.
 - #110: safe UMG subclassing and binding guide.
+- #111: final non-mutating draft validation foundation checkpoint.
 - `-UsePersistenceSettingsDraftProbe`: smoke coverage for the draft model, validation display rows, sample adapter, and C++ UMG widget shell contract.
 
 This checkpoint is still not settings editing. It adds no apply/save/config-write behavior, backend selector UI, SQLite path editor UI, provider auto-init control, reset/delete UX, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, default config changes, or default startup behavior changes. Refresh/build/validation remains caller-invoked only.

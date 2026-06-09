@@ -46,7 +46,7 @@ The shell exposes cached data through Blueprint-readable properties and pure get
 
 ## Foundation Checkpoint
 
-The persistence settings draft validation UMG foundation is complete as a binding scaffold. It includes the #105 settings editing/reset UX plan, the #106 SQLUICore draft model and validation result, the #107 SQLUICore display rows and summary, the #108 optional SQLUISamples presenter/adapter, the #109 optional C++ UMG widget shell, this #110 usage guide, and `-UsePersistenceSettingsDraftProbe` non-asset smoke coverage for the draft model, display rows, presenter/adapter, and widget-shell contract.
+The persistence settings draft validation UMG foundation is complete as a binding scaffold. It includes the #105 settings editing/reset UX plan, the #106 SQLUICore draft model and validation result, the #107 SQLUICore display rows and summary, the #108 optional SQLUISamples presenter/adapter, the #109 optional C++ UMG widget shell, this #110 usage guide, the #111 final checkpoint, and `-UsePersistenceSettingsDraftProbe` non-asset smoke coverage for the draft model, display rows, presenter/adapter, and widget-shell contract.
 
 This remains sample/dev-facing and validation-only. It is not a full settings screen and does not add settings editing controls, backend selector controls, SQLite path editing controls, provider auto-init toggles, Apply/Cancel behavior, settings save behavior, config writes, reset/delete actions, migration controls, seed-copy controls, provider/repository initialization, database creation, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, or auto-refresh.
 
