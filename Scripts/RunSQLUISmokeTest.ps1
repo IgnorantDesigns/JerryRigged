@@ -144,7 +144,8 @@ Parameters:
       Blueprint-facing presenter/panel adapter/widget shell hook probe.
 
   -UsePersistenceSettingsDraftProbe
-      Run the optional SQLUICore validation-only persistence settings draft probe.
+      Run the optional SQLUICore validation-only persistence settings draft and
+      validation display-row probe.
 
   -UseSQLiteMigrationProbe
       Run the optional SQLUICore SQLite migration-runner probe.

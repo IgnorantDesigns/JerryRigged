@@ -1,6 +1,6 @@
 # SQLUI Persistence Settings Editing And Reset Plan
 
-This document plans the next SQLUI persistence settings UX phase after the completed read-only status foundation. PR #105 was a docs-only design and sequencing PR. The first implementation slice now adds a non-mutating SQLUICore draft/pending settings model plus validation-only behavior; it still does not implement settings editing UI controls, backend selector controls, SQLite path editor controls, provider auto-init toggle controls, reset/delete behavior, settings save/apply behavior, startup wiring, widget assets, config, Build.cs changes, plugin descriptor changes, maps, Content assets, packaged outputs, or packaged runtime behavior.
+This document plans the next SQLUI persistence settings UX phase after the completed read-only status foundation. PR #105 was a docs-only design and sequencing PR. The first implementation slices now add a non-mutating SQLUICore draft/pending settings model, validation-only behavior, and UI-safe validation display rows; they still do not implement settings editing UI controls, backend selector controls, SQLite path editor controls, provider auto-init toggle controls, reset/delete behavior, settings save/apply behavior, startup wiring, widget assets, config, Build.cs changes, plugin descriptor changes, maps, Content assets, packaged outputs, or packaged runtime behavior.
 
 Related docs:
 
@@ -99,7 +99,7 @@ Editable settings should have an explicit pending state:
 
 The first implementation should prefer a non-mutating pending model and validation helper before any UI control can change live runtime persistence.
 
-That first implementation slice now exists as `FSQLUIPersistenceSettingsDraft`, `FSQLUIPersistenceSettingsValidationResult`, and `USQLUIPersistenceSettingsDraftLibrary`. It can create a draft from current/default runtime settings, reset a draft value back to current values, and validate pending backend/path/provider-auto-init policy without applying anything. It does not write config, initialize providers/repositories, create SQLite database files, run migrations, copy seed databases, delete files, add UI controls, or change startup behavior.
+That first implementation slice now exists as `FSQLUIPersistenceSettingsDraft`, `FSQLUIPersistenceSettingsValidationResult`, and `USQLUIPersistenceSettingsDraftLibrary`. It can create a draft from current/default runtime settings, reset a draft value back to current values, and validate pending backend/path/provider-auto-init policy without applying anything. `USQLUIPersistenceSettingsDraftDisplayLibrary` now formats those validation results into UI-safe summary/row data for future sample or settings panels. These draft and display helpers do not write config, initialize providers/repositories, create SQLite database files, run migrations, copy seed databases, delete files, add UI controls, or change startup behavior.
 
 ## Backend Selection Design
 
@@ -195,7 +195,7 @@ Those actions should have distinct labels, explanations, and confirmations.
 
 Future mutating settings/reset PRs should add focused smoke coverage as behavior appears:
 
-- Pending settings model can change values without mutating live runtime state. The first validation-only smoke path is `-UsePersistenceSettingsDraftProbe`.
+- Pending settings model can change values without mutating live runtime state. The first validation-only smoke path is `-UsePersistenceSettingsDraftProbe`, which also verifies UI-safe validation display rows.
 - Cancel discards pending values.
 - Validation rejects empty or unsafe SQLite paths without creating files.
 - Backend selection requires Apply.
@@ -218,17 +218,18 @@ Recommended future sequence:
 1. Add this docs-only plan.
 2. Add a non-mutating pending settings model or view-model. Complete as the SQLUICore persistence settings draft model.
 3. Add validation-only SQLUICore policy helpers for editable settings. Complete for the first backend/path/provider-auto-init draft checks.
-4. Add Apply/Cancel helper APIs without widget controls.
-5. Add a backend selector UI shell that edits pending state only.
-6. Add SQLite path display/edit validation that does not create files.
-7. Add reset UX confirmation and smoke coverage through SQLUICore database management helpers.
-8. Add packaged validation for any startup, config, default map, viewport, or packaged lifecycle integration.
+4. Add UI-safe validation display rows for draft validation results. Complete as `USQLUIPersistenceSettingsDraftDisplayLibrary`.
+5. Add Apply/Cancel helper APIs without widget controls.
+6. Add a backend selector UI shell that edits pending state only.
+7. Add SQLite path display/edit validation that does not create files.
+8. Add reset UX confirmation and smoke coverage through SQLUICore database management helpers.
+9. Add packaged validation for any startup, config, default map, viewport, or packaged lifecycle integration.
 
 Each implementation PR should keep the blast radius narrow and should not combine default policy changes with UI scaffolding.
 
 ## Packaged Validation Policy
 
-The validation-only draft model does not require full packaged validation because it does not touch maps, config, startup behavior, package behavior, viewport attachment, provider lifecycle, or packaged lifecycle flow. It adds runtime code and editor commandlet smoke coverage only for non-mutating validation.
+The validation-only draft model and UI-safe validation display rows do not require full packaged validation because they do not touch maps, config, startup behavior, package behavior, viewport attachment, provider lifecycle, or packaged lifecycle flow. They add runtime code and editor commandlet smoke coverage only for non-mutating validation/display formatting.
 
 Future PRs that wire settings UI into startup, default maps, config-backed provider lifecycle, viewport attachment, or packaged runtime persistence should run packaged validation appropriate to that behavior.
 

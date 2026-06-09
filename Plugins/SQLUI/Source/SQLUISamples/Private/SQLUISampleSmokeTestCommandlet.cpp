@@ -3084,7 +3084,15 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("SQLite empty path rejected"), ProbeResult.bSQLiteEmptyPathRejected);
 	LogPersistenceSettingsDraftBool(TEXT("provider auto-init pending validated"), ProbeResult.bProviderAutoInitPendingValidated);
 	LogPersistenceSettingsDraftBool(TEXT("provider auto-init policy unchanged"), ProbeResult.bProviderAutoInitPolicyUnchanged);
+	LogPersistenceSettingsDraftBool(TEXT("default display generated"), ProbeResult.bDefaultDisplayGenerated);
+	LogPersistenceSettingsDraftBool(TEXT("default display safe"), ProbeResult.bDefaultDisplaySafe);
+	LogPersistenceSettingsDraftBool(TEXT("unknown backend display shows error"), ProbeResult.bUnknownBackendDisplayShowsError);
+	LogPersistenceSettingsDraftBool(TEXT("SQLite draft display generated"), ProbeResult.bSQLiteDraftDisplayGenerated);
+	LogPersistenceSettingsDraftBool(TEXT("SQLite display did not create DB"), ProbeResult.bSQLiteDisplayDidNotCreateDb);
+	LogPersistenceSettingsDraftBool(TEXT("SQLite empty path display shows error"), ProbeResult.bSQLiteEmptyPathDisplayShowsError);
+	LogPersistenceSettingsDraftBool(TEXT("provider auto-init display pending"), ProbeResult.bProviderAutoInitDisplayPending);
 	LogPersistenceSettingsDraftBool(TEXT("repeated validation deterministic"), ProbeResult.bRepeatedValidationDeterministic);
+	LogPersistenceSettingsDraftBool(TEXT("repeated display deterministic"), ProbeResult.bRepeatedDisplayDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during validation"), ProbeResult.bSidecarPreservedDuringValidation);
 	LogPersistenceSettingsDraftBool(TEXT("database files removed"), ProbeResult.bDatabaseFilesRemoved);
 
