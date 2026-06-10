@@ -3113,6 +3113,16 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("sample adapter SQLite empty path display shows error"), ProbeResult.bSampleAdapterSQLiteEmptyPathDisplayShowsError);
 	LogPersistenceSettingsDraftBool(TEXT("sample adapter provider auto-init display pending"), ProbeResult.bSampleAdapterProviderAutoInitDisplayPending);
 	LogPersistenceSettingsDraftBool(TEXT("sample adapter repeated display deterministic"), ProbeResult.bSampleAdapterRepeatedDisplayDeterministic);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter default display generated"), ProbeResult.bApplyPreviewAdapterDefaultDisplayGenerated);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter default display safe"), ProbeResult.bApplyPreviewAdapterDefaultDisplaySafe);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter current display no changes"), ProbeResult.bApplyPreviewAdapterCurrentDisplayNoChanges);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter backend change detected"), ProbeResult.bApplyPreviewAdapterBackendChangeDetected);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter SQLite display generated"), ProbeResult.bApplyPreviewAdapterSQLiteDisplayGenerated);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter SQLite display did not create DB"), ProbeResult.bApplyPreviewAdapterSQLiteDisplayDidNotCreateDb);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter unknown backend shows error"), ProbeResult.bApplyPreviewAdapterUnknownBackendShowsError);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter SQLite empty path shows error"), ProbeResult.bApplyPreviewAdapterSQLiteEmptyPathShowsError);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter provider auto-init pending"), ProbeResult.bApplyPreviewAdapterProviderAutoInitPending);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter repeated display deterministic"), ProbeResult.bApplyPreviewAdapterRepeatedDisplayDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("panel widget class derived from UUserWidget"), ProbeResult.bPanelWidgetClassDerivedFromUserWidget);
 	LogPersistenceSettingsDraftBool(TEXT("panel widget Blueprint default refresh function callable"), ProbeResult.bPanelWidgetBlueprintDefaultRefreshFunctionCallable);
 	LogPersistenceSettingsDraftBool(TEXT("panel widget Blueprint current refresh function callable"), ProbeResult.bPanelWidgetBlueprintCurrentRefreshFunctionCallable);
@@ -3132,6 +3142,7 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during validation"), ProbeResult.bSidecarPreservedDuringValidation);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply preview"), ProbeResult.bSidecarPreservedDuringApplyPreview);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply preview display"), ProbeResult.bSidecarPreservedDuringApplyPreviewDisplay);
+	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply preview adapter"), ProbeResult.bSidecarPreservedDuringApplyPreviewAdapter);
 	LogPersistenceSettingsDraftBool(TEXT("database files removed"), ProbeResult.bDatabaseFilesRemoved);
 
 	if (ProbeResult.bSucceeded)

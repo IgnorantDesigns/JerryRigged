@@ -3,6 +3,7 @@
 #include "SQLUISamplePersistenceStatusPanelAdapter.h"
 #include "SQLUISamplePersistenceStatusPanelWidget.h"
 #include "SQLUISamplePersistenceStatusPresenter.h"
+#include "SQLUISamplePersistenceSettingsApplyPreviewPresenter.h"
 #include "SQLUISamplePersistenceSettingsDraftPanelWidget.h"
 #include "SQLUISamplePersistenceSettingsDraftPresenter.h"
 #include "Database/SQLUIDatabaseAsyncQueue.h"
@@ -9683,6 +9684,176 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		}
 	}
 
+	USQLUISamplePersistenceSettingsApplyPreviewPresenter* ApplyPreviewPresenter =
+		NewObject<USQLUISamplePersistenceSettingsApplyPreviewPresenter>(
+			Outer ? Outer : GetTransientPackage());
+	if (!IsValid(ApplyPreviewPresenter))
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: sample apply preview presenter was not created."));
+	}
+	else
+	{
+		const FSQLUISamplePersistenceSettingsApplyPreviewRefreshResult
+			DefaultApplyPreviewAdapterResult =
+				ApplyPreviewPresenter
+					->RefreshDefaultPersistenceSettingsApplyPreviewDisplay();
+		Result.bApplyPreviewAdapterDefaultDisplayGenerated =
+			DefaultApplyPreviewAdapterResult.bSucceeded
+			&& DefaultApplyPreviewAdapterResult.Rows.Num() > 0
+			&& DefaultApplyPreviewAdapterResult.FormattedLines.Num()
+				== DefaultApplyPreviewAdapterResult.Rows.Num()
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainField(
+				DefaultApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("ApplyPreviewSummary"))
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainField(
+				DefaultApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("HasChanges"));
+		Result.bApplyPreviewAdapterDefaultDisplaySafe =
+			DefaultApplyPreviewAdapterResult.bIsValid
+			&& !DefaultApplyPreviewAdapterResult.bHasErrors
+			&& !DefaultApplyPreviewAdapterResult.bHasWarnings
+			&& !DefaultApplyPreviewAdapterResult.bCanApplyInFuture
+			&& !DefaultApplyPreviewAdapterResult.bHasChanges
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainText(
+				DefaultApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("No changes to apply"))
+			&& ApplyPreviewPresenter->GetRows().Num()
+				== DefaultApplyPreviewAdapterResult.Rows.Num()
+			&& ApplyPreviewPresenter->GetFormattedLines().Num()
+				== DefaultApplyPreviewAdapterResult.FormattedLines.Num()
+			&& ApplyPreviewPresenter->GetSummaryText()
+				== DefaultApplyPreviewAdapterResult.SummaryText
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsApplyPreviewRefreshResult
+			CurrentApplyPreviewAdapterResult =
+				ApplyPreviewPresenter
+					->RefreshCurrentPersistenceSettingsApplyPreviewDisplay();
+		Result.bApplyPreviewAdapterCurrentDisplayNoChanges =
+			CurrentApplyPreviewAdapterResult.bSucceeded
+			&& CurrentApplyPreviewAdapterResult.bIsValid
+			&& !CurrentApplyPreviewAdapterResult.bHasChanges
+			&& !CurrentApplyPreviewAdapterResult.bCanApplyInFuture
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainText(
+				CurrentApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("No changes to apply"))
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsApplyPreviewRefreshResult
+			SQLiteApplyPreviewAdapterResult =
+				ApplyPreviewPresenter
+					->BuildPersistenceSettingsApplyPreviewDisplay(SQLiteDraft);
+		Result.bApplyPreviewAdapterBackendChangeDetected =
+			SQLiteApplyPreviewAdapterResult.bSucceeded
+			&& SQLiteApplyPreviewAdapterResult.bCanApplyInFuture
+			&& SQLiteApplyPreviewAdapterResult.bHasChanges
+			&& SQLiteApplyPreviewAdapterResult.bWouldNeedRepositoryReopen
+			&& SQLiteApplyPreviewAdapterResult.bWouldNeedProviderReinitialize
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainField(
+				SQLiteApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("BackendChange"))
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainText(
+				SQLiteApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("Would change"));
+		Result.bApplyPreviewAdapterSQLiteDisplayGenerated =
+			SQLiteApplyPreviewAdapterResult.bSucceeded
+			&& SQLiteApplyPreviewAdapterResult.bIsValid
+			&& SQLiteApplyPreviewAdapterResult.bRequiresRestartOrReinitialize
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainField(
+				SQLiteApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("SQLitePathOrPolicyChange"))
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainText(
+				SQLiteApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("SQLite remains opt-in"));
+		Result.bApplyPreviewAdapterSQLiteDisplayDidNotCreateDb =
+			!DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsApplyPreviewRefreshResult
+			UnknownBackendApplyPreviewAdapterResult =
+				ApplyPreviewPresenter
+					->BuildPersistenceSettingsApplyPreviewDisplay(
+						UnknownBackendDraft);
+		Result.bApplyPreviewAdapterUnknownBackendShowsError =
+			UnknownBackendApplyPreviewAdapterResult.bHasErrors
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainState(
+				UnknownBackendApplyPreviewAdapterResult.DisplaySummary,
+				ESQLUIPersistenceSettingsValidationDisplayState::Error)
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainText(
+				UnknownBackendApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("not a selectable SQLUI persistence backend"))
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainText(
+				UnknownBackendApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("Future Apply would be blocked"))
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsApplyPreviewRefreshResult
+			EmptySQLitePathApplyPreviewAdapterResult =
+				ApplyPreviewPresenter
+					->BuildPersistenceSettingsApplyPreviewDisplay(
+						EmptySQLitePathDraft);
+		Result.bApplyPreviewAdapterSQLiteEmptyPathShowsError =
+			EmptySQLitePathApplyPreviewAdapterResult.bHasErrors
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainState(
+				EmptySQLitePathApplyPreviewAdapterResult.DisplaySummary,
+				ESQLUIPersistenceSettingsValidationDisplayState::Error)
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainText(
+				EmptySQLitePathApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("SQLite requires a database path"))
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainText(
+				EmptySQLitePathApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("Future Apply would be blocked"))
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsApplyPreviewRefreshResult
+			ProviderAutoInitApplyPreviewAdapterResult =
+				ApplyPreviewPresenter
+					->BuildPersistenceSettingsApplyPreviewDisplay(
+						ProviderAutoInitDraft);
+		Result.bApplyPreviewAdapterProviderAutoInitPending =
+			ProviderAutoInitApplyPreviewAdapterResult.bSucceeded
+			&& ProviderAutoInitApplyPreviewAdapterResult.bHasWarnings
+			&& ProviderAutoInitApplyPreviewAdapterResult
+				.bRequiresRestartOrReinitialize
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainField(
+				ProviderAutoInitApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("ProviderAutoInitChange"))
+			&& DoesSQLUIPersistenceSettingsApplyPreviewDisplayContainText(
+				ProviderAutoInitApplyPreviewAdapterResult.DisplaySummary,
+				TEXT("Startup behavior is unchanged"))
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsApplyPreviewRefreshResult
+			RepeatedSQLiteApplyPreviewAdapterResult =
+				ApplyPreviewPresenter
+					->BuildPersistenceSettingsApplyPreviewDisplayFromPreview(
+						SQLiteApplyPreview);
+		Result.bApplyPreviewAdapterRepeatedDisplayDeterministic =
+			AreSQLUIPersistenceSettingsApplyPreviewDisplaysEquivalent(
+				SQLiteApplyPreviewAdapterResult.DisplaySummary,
+				RepeatedSQLiteApplyPreviewAdapterResult.DisplaySummary)
+			&& RepeatedSQLiteApplyPreviewAdapterResult.FormattedLines
+				== SQLiteApplyPreviewAdapterResult.FormattedLines
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		if (!Result.bApplyPreviewAdapterDefaultDisplayGenerated
+			|| !Result.bApplyPreviewAdapterDefaultDisplaySafe
+			|| !Result.bApplyPreviewAdapterCurrentDisplayNoChanges
+			|| !Result.bApplyPreviewAdapterBackendChangeDetected
+			|| !Result.bApplyPreviewAdapterSQLiteDisplayGenerated
+			|| !Result.bApplyPreviewAdapterSQLiteDisplayDidNotCreateDb
+			|| !Result.bApplyPreviewAdapterUnknownBackendShowsError
+			|| !Result.bApplyPreviewAdapterSQLiteEmptyPathShowsError
+			|| !Result.bApplyPreviewAdapterProviderAutoInitPending
+			|| !Result.bApplyPreviewAdapterRepeatedDisplayDeterministic)
+		{
+			AppendSQLUISamplePersistenceSettingsDraftProbeError(
+				Result,
+				TEXT("SQLUI persistence settings draft probe failed: sample apply preview adapter did not preserve preview-only display behavior."));
+		}
+	}
+
 	const UClass* DraftPanelWidgetClass =
 		USQLUISamplePersistenceSettingsDraftPanelWidget::StaticClass();
 	Result.bPanelWidgetClassDerivedFromUserWidget =
@@ -9891,6 +10062,14 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		SidecarDraft);
 	USQLUIPersistenceSettingsApplyPreviewDisplayLibrary::
 		PreviewAndMakePersistenceSettingsApplyPreviewDisplay(SidecarDraft);
+	if (USQLUISamplePersistenceSettingsApplyPreviewPresenter*
+			SidecarApplyPreviewPresenter =
+				NewObject<USQLUISamplePersistenceSettingsApplyPreviewPresenter>(
+					Outer ? Outer : GetTransientPackage()))
+	{
+		SidecarApplyPreviewPresenter
+			->BuildPersistenceSettingsApplyPreviewDisplay(SidecarDraft);
+	}
 	Result.bSidecarPreservedDuringValidation =
 		bSidecarCreated
 		&& FPaths::FileExists(SidecarPath);
@@ -9900,13 +10079,17 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 	Result.bSidecarPreservedDuringApplyPreviewDisplay =
 		bSidecarCreated
 		&& FPaths::FileExists(SidecarPath);
+	Result.bSidecarPreservedDuringApplyPreviewAdapter =
+		bSidecarCreated
+		&& FPaths::FileExists(SidecarPath);
 	if (!Result.bSidecarPreservedDuringValidation
 		|| !Result.bSidecarPreservedDuringApplyPreview
-		|| !Result.bSidecarPreservedDuringApplyPreviewDisplay)
+		|| !Result.bSidecarPreservedDuringApplyPreviewDisplay
+		|| !Result.bSidecarPreservedDuringApplyPreviewAdapter)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
-			TEXT("SQLUI persistence settings draft probe failed: validation, apply preview, or apply preview display deleted a smoke-owned sidecar file."));
+			TEXT("SQLUI persistence settings draft probe failed: validation, apply preview, apply preview display, or apply preview adapter deleted a smoke-owned sidecar file."));
 	}
 
 	Result.bDatabaseFilesRemoved =
@@ -9957,6 +10140,16 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bSampleAdapterSQLiteEmptyPathDisplayShowsError
 		&& Result.bSampleAdapterProviderAutoInitDisplayPending
 		&& Result.bSampleAdapterRepeatedDisplayDeterministic
+		&& Result.bApplyPreviewAdapterDefaultDisplayGenerated
+		&& Result.bApplyPreviewAdapterDefaultDisplaySafe
+		&& Result.bApplyPreviewAdapterCurrentDisplayNoChanges
+		&& Result.bApplyPreviewAdapterBackendChangeDetected
+		&& Result.bApplyPreviewAdapterSQLiteDisplayGenerated
+		&& Result.bApplyPreviewAdapterSQLiteDisplayDidNotCreateDb
+		&& Result.bApplyPreviewAdapterUnknownBackendShowsError
+		&& Result.bApplyPreviewAdapterSQLiteEmptyPathShowsError
+		&& Result.bApplyPreviewAdapterProviderAutoInitPending
+		&& Result.bApplyPreviewAdapterRepeatedDisplayDeterministic
 		&& Result.bPanelWidgetClassDerivedFromUserWidget
 		&& Result.bPanelWidgetBlueprintDefaultRefreshFunctionCallable
 		&& Result.bPanelWidgetBlueprintCurrentRefreshFunctionCallable
@@ -9976,6 +10169,7 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bSidecarPreservedDuringValidation
 		&& Result.bSidecarPreservedDuringApplyPreview
 		&& Result.bSidecarPreservedDuringApplyPreviewDisplay
+		&& Result.bSidecarPreservedDuringApplyPreviewAdapter
 		&& Result.bDatabaseFilesRemoved;
 
 	return Result;
