@@ -11,6 +11,7 @@ Related docs:
 - [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) documents the read-only status-panel UMG binding recipe.
 - [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md) summarizes current SQLite runtime status and safety boundaries.
 - [`sqlui_repository_architecture.md`](sqlui_repository_architecture.md) describes repository and UI/storage ownership boundaries.
+- [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md) documents the focused apply-preview widget-shell binding recipe.
 - [`sqlui_smoke_test.md`](sqlui_smoke_test.md) lists the local smoke command that validates the draft model, apply preview, apply-preview display rows, validation display rows, sample presenters, and widget shell.
 
 ## Existing Draft Validation Stack
@@ -24,7 +25,8 @@ The current stack is intentionally validation/preview-only:
 - Apply-preview display adapter: `USQLUISamplePersistenceSettingsApplyPreviewPresenter` is the SQLUISamples sample/dev adapter for dry-run apply-preview display rows; it stores rows, formatted lines, summary text, and preview flags for sample/dev and Blueprint-facing use without applying anything.
 - #109: `USQLUISamplePersistenceSettingsDraftPanelWidget` is the optional C++ `UUserWidget` shell over the #108 presenter/adapter.
 - Apply-preview panel shell: `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` is the optional C++ `UUserWidget` shell over the apply-preview presenter/adapter. It creates no visual layout, adds no widget blueprint asset, is not wired into startup/maps/config/viewport, and exposes only caller-invoked refresh/build plus cached display data.
-- #110: this guide documents safe future Blueprint subclassing and binding for those validation/apply-preview shells.
+- #110: this guide documents safe future Blueprint subclassing and binding for the validation shell and the shared validation/preview-only boundaries.
+- Apply-preview usage guide: [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md) documents the focused safe binding recipe for `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget`.
 
 The #109 shell is sample/dev-facing and delegates to the #108 SQLUISamples presenter/adapter, which consumes SQLUICore draft validation/display surfaces from #106 and #107. Future UI should consume the display rows, display summary, summary text, and validation flags only. It should not duplicate draft validation, path policy, backend policy, provider lifecycle policy, file checks, or persistence policy in Blueprint or widget code.
 
@@ -172,7 +174,7 @@ For a future local/manual Blueprint exploration, keep the asset local unless a l
 
 The existing `-UsePersistenceSettingsDraftProbe` smoke path validates the SQLUICore draft model, validation result, validation display-row formatting, apply-preview display-row formatting, SQLUISamples validation/apply-preview presenters, and validation/apply-preview C++ widget shell contracts by reflection. It checks that the widget shells derive from `UUserWidget`, that refresh/build functions are Blueprint-callable and not `BlueprintPure`, that cached widget-shell getters are `BlueprintPure`, and that cached row/formatted-lines/result/summary/flag properties are Blueprint-visible.
 
-The smoke path validates that contract without requiring committed widget blueprint assets, maps, startup wiring, or viewport attachment. It also keeps refresh/build caller-invoked and confirms default `InMemory` validation display does not initialize providers/repositories or create SQLite database files.
+The smoke path validates that contract without requiring committed widget blueprint assets, maps, startup wiring, or viewport attachment. It also keeps refresh/build caller-invoked and confirms default `InMemory` validation/apply-preview display does not initialize providers/repositories or create SQLite database files. The focused apply-preview shell recipe lives in [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md).
 
 This guide adds no new smoke flag. Cleanup expectations remain unchanged: the probe removes only smoke-owned database and sidecar files under `Saved/SQLUI/SmokeTests/PersistenceSettingsDraft`.
 
