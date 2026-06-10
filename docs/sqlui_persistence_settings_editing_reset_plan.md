@@ -6,7 +6,8 @@ Related docs:
 
 - [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) defines the broader persistence settings UX policy.
 - [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) documents the current read-only UMG binding recipe.
-- [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) documents the validation/preview-only draft settings UMG binding recipe.
+- [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) documents the validation-only draft settings UMG binding recipe.
+- [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md) documents the dry-run apply-preview UMG binding recipe.
 - [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md) summarizes implemented SQLite runtime behavior and safety boundaries.
 - [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md) tracks current phase status and next slices.
 - [`sqlui_repository_architecture.md`](sqlui_repository_architecture.md) describes repository, factory, provider, and widget ownership boundaries.
@@ -100,7 +101,7 @@ Editable settings should have an explicit pending state:
 
 The first implementation should prefer a non-mutating pending model and validation helper before any UI control can change live runtime persistence.
 
-That first implementation slice now exists as `FSQLUIPersistenceSettingsDraft`, `FSQLUIPersistenceSettingsValidationResult`, `FSQLUIPersistenceSettingsApplyPreviewResult`, and `USQLUIPersistenceSettingsDraftLibrary`. It can create a draft from current/default runtime settings, reset a draft value back to current values, validate pending backend/path/provider-auto-init policy, and build a dry-run apply-intent preview without applying anything. `USQLUIPersistenceSettingsDraftDisplayLibrary` formats validation results and apply-preview results into UI-safe summary/row data for future sample or settings panels. `USQLUISamplePersistenceSettingsDraftPresenter`, `USQLUISamplePersistenceSettingsApplyPreviewPresenter`, `USQLUISamplePersistenceSettingsDraftPanelWidget`, and `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` provide optional SQLUISamples sample/dev-facing consumption surfaces for those rows. These draft, preview, display, adapter, and widget-shell helpers do not write config, initialize providers/repositories, create SQLite database files, create directories from display generation or preview generation, open databases for writing, run migrations, copy seed databases, delete files, add settings controls, or change startup behavior. The safe Blueprint/UMG binding recipe for the validation/apply-preview widget shells is documented in [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md).
+That first implementation slice now exists as `FSQLUIPersistenceSettingsDraft`, `FSQLUIPersistenceSettingsValidationResult`, `FSQLUIPersistenceSettingsApplyPreviewResult`, and `USQLUIPersistenceSettingsDraftLibrary`. It can create a draft from current/default runtime settings, reset a draft value back to current values, validate pending backend/path/provider-auto-init policy, and build a dry-run apply-intent preview without applying anything. `USQLUIPersistenceSettingsDraftDisplayLibrary` formats validation results and apply-preview results into UI-safe summary/row data for future sample or settings panels. `USQLUISamplePersistenceSettingsDraftPresenter`, `USQLUISamplePersistenceSettingsApplyPreviewPresenter`, `USQLUISamplePersistenceSettingsDraftPanelWidget`, and `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` provide optional SQLUISamples sample/dev-facing consumption surfaces for those rows. These draft, preview, display, adapter, and widget-shell helpers do not write config, initialize providers/repositories, create SQLite database files, create directories from display generation or preview generation, open databases for writing, run migrations, copy seed databases, delete files, add settings controls, or change startup behavior. The safe Blueprint/UMG binding recipes are documented in [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) for draft validation and [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md) for dry-run apply-preview display.
 
 ## Completed Draft Validation Foundation
 
@@ -111,7 +112,8 @@ The non-mutating draft validation UI foundation is complete through the #105-#11
 - #107 added UI-safe validation display rows and summary.
 - #108 added the optional SQLUISamples draft validation presenter/adapter.
 - #109 added the optional SQLUISamples C++ UMG widget shell for draft validation display.
-- #110 documented safe UMG subclassing and binding for the validation/apply-preview shells.
+- #110 documented safe UMG subclassing and binding for the validation shell and shared validation/preview boundaries.
+- A focused apply-preview UMG usage guide now documents safe subclassing and binding for the #115 `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` shell without adding actual Apply/Save behavior or settings controls.
 - #111 records the final non-mutating draft validation foundation checkpoint.
 - #112 added the non-mutating dry-run apply-intent preview.
 - SQLUICore now also exposes UI-safe apply-preview display rows/summary that format what a future Apply would do without applying anything.
