@@ -11,7 +11,7 @@ For deeper reference, see:
 - [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) for the future user-facing persistence/settings UX policy.
 - [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md) for the planned settings editing, apply/cancel, backend selection, SQLite path, provider auto-init, and reset/delete UX phase.
 - [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) for the focused read-only UMG binding recipe.
-- [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) for the validation-only draft settings UMG binding recipe.
+- [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) for the validation/preview-only draft settings UMG binding recipe.
 - [`sqlui_smoke_test.md`](sqlui_smoke_test.md) for local editor smoke commands.
 - [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) for packaged build and packaged runtime smoke validation.
 
@@ -39,8 +39,9 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - A docs-only read-only persistence status panel contract records how future Blueprint/UMG UI should consume the adapter/presenter/display-row path safely.
 - A focused read-only UMG usage guide now records the safe future widget blueprint subclass/binding recipe, refresh boundaries, display semantics, and manual local checklist.
 - A non-mutating SQLUICore persistence settings draft model now represents current/pending backend/path/provider-auto-init choices and validates them without applying settings, creating DB files, running migrations, copying seeds, deleting files, or initializing providers/repositories.
+- A non-mutating SQLUICore dry-run apply-intent preview now reports what a future Apply would do for a validated settings draft without applying settings, saving config, creating directories or DB files, opening DBs for writing, running migrations, copying seeds, deleting files, or initializing providers/repositories.
 - Optional SQLUISamples persistence settings draft presenter and C++ UMG widget shell surfaces now consume the SQLUICore validation display rows for sample/dev-facing display and future Blueprint binding without adding settings controls, apply/save behavior, DB creation, directory creation from display generation, migrations, seed copy, provider/repository initialization, widget blueprint assets, maps, startup wiring, viewport attachment, or destructive actions.
-- A focused validation-only draft UMG usage guide now records the safe future widget blueprint subclass/binding recipe, display semantics, refresh/build boundaries, and manual local checklist for that draft widget shell.
+- A focused validation/preview-only draft UMG usage guide now records the safe future widget blueprint subclass/binding recipe, display semantics, preview semantics, refresh/build boundaries, and manual local checklist for that draft widget shell.
 - The draft validation sequence is: #106 validation-only draft model, #107 validation display rows/summary, #108 SQLUISamples draft presenter/adapter, #109 optional C++ draft validation UMG shell, and #110 docs-only safe usage/binding guide.
 - Schema initialization and database creation are repository-owned and opt-in.
 - The current known production migration set is only `001_initial_layout_schema`.
@@ -116,9 +117,12 @@ This checkpoint records the completed validation-only sequence:
 - #109: optional SQLUISamples C++ UMG widget shell for draft validation display.
 - #110: safe UMG subclassing and binding guide.
 - #111: final non-mutating draft validation foundation checkpoint.
-- `-UsePersistenceSettingsDraftProbe`: smoke coverage for the draft model, validation display rows, sample adapter, and C++ UMG widget shell contract.
+- Dry-run SQLUICore apply-intent preview.
+- `-UsePersistenceSettingsDraftProbe`: smoke coverage for the draft model, apply preview, validation display rows, sample adapter, and C++ UMG widget shell contract.
 
-This checkpoint is still not settings editing. It adds no apply/save/config-write behavior, backend selector UI, SQLite path editor UI, provider auto-init control, reset/delete UX, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, default config changes, or default startup behavior changes. Refresh/build/validation remains caller-invoked only.
+This checkpoint is still not settings editing. It adds no actual apply/save/config-write behavior, backend selector UI, SQLite path editor UI, provider auto-init control, reset/delete UX, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, default config changes, or default startup behavior changes. Refresh/build/validation/preview remains caller-invoked only.
+
+The dry-run apply-intent preview reports whether a future Apply would have changes, whether backend/SQLite/provider-auto-init policy would change, and whether restart/reopen/reinitialize messaging should be shown. It uses future-oriented "would change" and "not applied" semantics and does not write config or mutate runtime persistence.
 
 The safety boundaries remain unchanged:
 
@@ -160,6 +164,7 @@ The next apply/cancel phase must build on SQLUICore helper/policy surfaces. Futu
 | Persistence settings UX design | Documented | Future UI policy covers storage modes, defaults, DB path/status/reset, seed, migration, error, and startup behavior. |
 | Persistence settings editing/reset plan | Documented | Future mutating UX policy covers pending/apply/cancel, backend selection, SQLite path editing, provider auto-init, reset/delete safety, validation, and sequencing. |
 | Persistence settings draft validation | Implemented | SQLUICore draft/pending model validates future backend/path/provider-auto-init edits without apply/save/config writes, DB creation, migrations, seed copy, provider init, repository init, or UI controls. |
+| Persistence settings apply-intent preview | Implemented | SQLUICore dry-run result reports whether a future Apply would have changes and require restart/reopen/reinitialize messaging; it does not apply/save settings, write config, create directories/DBs, open DBs for writing, run migrations, copy seeds, initialize providers/repositories, delete files, or add UI controls. |
 | Persistence settings draft validation display rows | Implemented | SQLUICore formats validation-only draft results into UI-safe summary/row data without apply/save/config writes, lifecycle behavior, DB creation, migrations, seed copy, provider/repository init, destructive actions, or UI controls. |
 | Persistence settings draft validation sample adapter | Implemented | SQLUISamples consumes SQLUICore draft validation display rows through a sample/dev presenter with cached rows/summary strings, without settings controls, apply/save/config writes, DB creation, migrations, seed copy, provider/repository init, destructive actions, widget assets, maps, or startup wiring. |
 | Persistence settings draft validation UMG shell | Implemented | Optional SQLUISamples C++ `UUserWidget` shell delegates to the draft presenter and exposes cached validation rows/result/summary/flags for future Blueprint binding; no widget blueprint asset, map, viewport attachment, startup wiring, settings controls, apply/save behavior, reset/delete actions, DB creation, migrations, seed copy, provider/repository init, or destructive actions. |
@@ -196,7 +201,7 @@ The next apply/cancel phase must build on SQLUICore helper/policy surfaces. Futu
 | Persistence status surface | `-UsePersistenceStatusSurfaceProbe` | Covered | Verifies default `InMemory` status, inactive provider/repository state without forced init, read-only SQLite DB/schema status, sidecar detection, and cleanup. |
 | Persistence status display rows | `-UsePersistenceStatusDisplayRowsProbe` | Covered | Verifies UI-friendly rows for default and SQLite snapshots, sidecar reporting, read-only formatting, and cleanup. |
 | Persistence status sample surface / Blueprint hook | `-UsePersistenceStatusSampleSurfaceProbe` | Covered | Documents and validates the optional SQLUISamples presenter, panel adapter, and C++ UMG widget shell binding contract, including non-pure refresh hooks, pure cached widget getters, Blueprint-visible cached rows/formatted-lines/result/summary, display-row consumption, explicit deterministic refresh, graceful missing SQLite DB state, sidecar preservation during refresh, no asset/map/viewport requirement, and cleanup. |
-| Persistence settings draft validation/display rows, sample adapter, and UMG shell | `-UsePersistenceSettingsDraftProbe` | Covered | Verifies default/current draft validation and display rows, sample adapter consumption, C++ UMG widget shell reflection contract, unknown backend rejection/error display, SQLite draft/path display without DB creation, empty SQLite path rejection/error display, provider auto-init pending validation/display without policy mutation, deterministic validation/display/adapter output, sidecar preservation, and cleanup. |
+| Persistence settings draft validation/display rows, apply preview, sample adapter, and UMG shell | `-UsePersistenceSettingsDraftProbe` | Covered | Verifies default/current draft validation, display rows, dry-run apply-preview no-change behavior, sample adapter consumption, C++ UMG widget shell reflection contract, unknown backend rejection/error display/blocked preview, SQLite draft/path display and preview without DB creation, empty SQLite path rejection/error display/blocked preview, provider auto-init pending validation/display/preview without policy mutation, deterministic validation/display/preview/adapter output, sidecar preservation, and cleanup. |
 | SQLite migration runner | `-UseSQLiteMigrationProbe` | Covered | Smoke-only migration runner proof. |
 | Layout schema migration | `-UseSQLiteLayoutSchemaMigrationProbe` | Covered | Applies and verifies `001_initial_layout_schema`. |
 | SQLite layout read probe | `-UseSQLiteLayoutReadProbe` | Covered | Seeds one layout and verifies list/load mapping. |
@@ -288,7 +293,7 @@ The safe default remains non-SQLite.
 
 Prioritized remaining work:
 
-1. Implement the production/user-facing runtime settings UI described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md), and [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md), following the read-only panel contract and validation-only draft binding recipe while keeping SQLite opt-in and `InMemory` as the safe default. The current draft model and display rows are validation-only; apply/cancel behavior, actual UI controls, and reset/delete UX remain future work.
+1. Implement the production/user-facing runtime settings UI described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md), and [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md), following the read-only panel contract and validation/preview-only draft binding recipe while keeping SQLite opt-in and `InMemory` as the safe default. The current draft model, apply preview, and display rows are non-mutating; actual apply/cancel behavior, actual UI controls, and reset/delete UX remain future work.
 2. Product startup policy that intentionally configures the passive runtime provider subsystem outside packaged smoke flags.
 3. Actual future schema migrations and data transforms beyond `001_initial_layout_schema`.
 4. Production async database service design beyond the current per-repository callback queue.
@@ -304,9 +309,9 @@ Prioritized remaining work:
 Suggested next PRs, in priority order:
 
 1. Add the next settings draft helper slice: explicit Apply/Cancel request/result shapes that still avoid widget controls until the lifecycle policy is reviewed.
-   Build on the completed validation-only draft model and display rows, keep SQLite opt-in, keep `InMemory` as the safe default, and do not write config or reinitialize providers until an explicitly scoped apply PR does so.
+   Build on the completed validation-only draft model, dry-run apply-intent preview, and display rows, keep SQLite opt-in, keep `InMemory` as the safe default, and do not write config or reinitialize providers until an explicitly scoped apply PR does so.
 2. First actual persistence settings widget/panel slice from [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) and [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md).
-   Build on the completed read-only foundation and validation-only draft/display model, bind to the read-only status display rows or optional SQLUISamples widget-shell/adapter/presenter shape, keep refresh caller-invoked, and add mutating settings/reset behavior only after pending/apply semantics, confirmation, provider-shutdown policy, and SQLUICore-mediated reset/delete boundaries are implemented and smoke-tested.
+   Build on the completed read-only foundation and validation/preview-only draft/display model, bind to the read-only status display rows or optional SQLUISamples widget-shell/adapter/presenter shape, keep refresh caller-invoked, and add mutating settings/reset behavior only after pending/apply semantics, confirmation, provider-shutdown policy, and SQLUICore-mediated reset/delete boundaries are implemented and smoke-tested.
 3. Production async service design doc or small scaffold.
    Decide whether the current per-repository callback queue is enough or whether SQLUI needs a longer-lived DB service for production runtime use.
 4. SQLite history/checkpoint/previews API planning.

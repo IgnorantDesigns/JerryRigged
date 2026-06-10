@@ -1,12 +1,12 @@
 # SQLUI Persistence Settings Editing And Reset Plan
 
-This document plans the next SQLUI persistence settings UX phase after the completed read-only status foundation. PR #105 was a docs-only design and sequencing PR. The first implementation slices now add a non-mutating SQLUICore draft/pending settings model, validation-only behavior, UI-safe validation display rows, a SQLUISamples sample/dev adapter that consumes those display rows, and an optional C++ UMG widget shell contract for future Blueprint binding; they still do not implement settings editing UI controls, backend selector controls, SQLite path editor controls, provider auto-init toggle controls, reset/delete behavior, settings save/apply behavior, startup wiring, widget blueprint assets, config, Build.cs changes, plugin descriptor changes, maps, Content assets, packaged outputs, or packaged runtime behavior.
+This document plans the next SQLUI persistence settings UX phase after the completed read-only status foundation. PR #105 was a docs-only design and sequencing PR. The first implementation slices now add a non-mutating SQLUICore draft/pending settings model, validation-only behavior, UI-safe validation display rows, a dry-run apply-intent preview, a SQLUISamples sample/dev adapter that consumes those display rows, and an optional C++ UMG widget shell contract for future Blueprint binding; they still do not implement settings editing UI controls, backend selector controls, SQLite path editor controls, provider auto-init toggle controls, reset/delete behavior, settings save/apply behavior, startup wiring, widget blueprint assets, config, Build.cs changes, plugin descriptor changes, maps, Content assets, packaged outputs, or packaged runtime behavior.
 
 Related docs:
 
 - [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) defines the broader persistence settings UX policy.
 - [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) documents the current read-only UMG binding recipe.
-- [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) documents the validation-only draft settings UMG binding recipe.
+- [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) documents the validation/preview-only draft settings UMG binding recipe.
 - [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md) summarizes implemented SQLite runtime behavior and safety boundaries.
 - [`sqlui_sqlite_phase_status_roadmap.md`](sqlui_sqlite_phase_status_roadmap.md) tracks current phase status and next slices.
 - [`sqlui_repository_architecture.md`](sqlui_repository_architecture.md) describes repository, factory, provider, and widget ownership boundaries.
@@ -100,7 +100,7 @@ Editable settings should have an explicit pending state:
 
 The first implementation should prefer a non-mutating pending model and validation helper before any UI control can change live runtime persistence.
 
-That first implementation slice now exists as `FSQLUIPersistenceSettingsDraft`, `FSQLUIPersistenceSettingsValidationResult`, and `USQLUIPersistenceSettingsDraftLibrary`. It can create a draft from current/default runtime settings, reset a draft value back to current values, and validate pending backend/path/provider-auto-init policy without applying anything. `USQLUIPersistenceSettingsDraftDisplayLibrary` formats those validation results into UI-safe summary/row data for future sample or settings panels. `USQLUISamplePersistenceSettingsDraftPresenter` and `USQLUISamplePersistenceSettingsDraftPanelWidget` provide optional SQLUISamples sample/dev-facing consumption surfaces for those rows. These draft, display, adapter, and widget-shell helpers do not write config, initialize providers/repositories, create SQLite database files, create directories from display generation, run migrations, copy seed databases, delete files, add settings controls, or change startup behavior. The safe Blueprint/UMG binding recipe for the draft widget shell is documented in [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md).
+That first implementation slice now exists as `FSQLUIPersistenceSettingsDraft`, `FSQLUIPersistenceSettingsValidationResult`, `FSQLUIPersistenceSettingsApplyPreviewResult`, and `USQLUIPersistenceSettingsDraftLibrary`. It can create a draft from current/default runtime settings, reset a draft value back to current values, validate pending backend/path/provider-auto-init policy, and build a dry-run apply-intent preview without applying anything. `USQLUIPersistenceSettingsDraftDisplayLibrary` formats validation results into UI-safe summary/row data for future sample or settings panels. `USQLUISamplePersistenceSettingsDraftPresenter` and `USQLUISamplePersistenceSettingsDraftPanelWidget` provide optional SQLUISamples sample/dev-facing consumption surfaces for those rows. These draft, preview, display, adapter, and widget-shell helpers do not write config, initialize providers/repositories, create SQLite database files, create directories from display generation or preview generation, open databases for writing, run migrations, copy seed databases, delete files, add settings controls, or change startup behavior. The safe Blueprint/UMG binding recipe for the draft widget shell is documented in [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md).
 
 ## Completed Draft Validation Foundation
 
@@ -115,7 +115,13 @@ The non-mutating draft validation UI foundation is complete through the #105-#11
 - #111 records the final non-mutating draft validation foundation checkpoint.
 - `-UsePersistenceSettingsDraftProbe` validates the draft model, display rows, sample adapter, and widget-shell contract without widget blueprint assets, maps, viewport attachment, startup wiring, settings mutation, or provider/repository initialization.
 
-This checkpoint is still not settings editing. It adds no backend selector UI, SQLite path editor UI, provider auto-init control, Apply/Cancel behavior, settings save/config-write behavior, reset/delete UX, widget blueprint asset, map, startup wiring, viewport attachment, polling, ticking, auto-refresh, provider/repository initialization, migration, seed-copy behavior, or default config change. Refresh/build/validation remains caller-invoked only.
+This checkpoint is still not settings editing. It adds no backend selector UI, SQLite path editor UI, provider auto-init control, Apply/Cancel behavior, settings save/config-write behavior, reset/delete UX, widget blueprint asset, map, startup wiring, viewport attachment, polling, ticking, auto-refresh, provider/repository initialization, migration, seed-copy behavior, or default config change. Refresh/build/validation/preview remains caller-invoked only.
+
+## Dry-Run Apply-Intent Preview Slice
+
+The first apply/cancel phase code slice is non-mutating only. `USQLUIPersistenceSettingsDraftLibrary::PreviewPersistenceSettingsDraftApply` now evaluates a validated draft and reports whether a future Apply would have changes, whether backend/SQLite/provider-auto-init policy would change, and whether restart/reopen/reinitialize messaging should be shown.
+
+The preview deliberately uses future-oriented wording such as "would change" and "not applied." It does not apply settings, save config, create directories or database files, open databases for writing, run migrations, copy seed databases, initialize providers/repositories, reset databases, delete files, add settings controls, change defaults, or change startup behavior. `-UsePersistenceSettingsDraftProbe` covers the preview alongside draft validation/display rows and verifies default/current no-change previews, backend/SQLite/provider-auto-init change previews, invalid backend/path rejection, deterministic output, sidecar preservation, and smoke-owned cleanup.
 
 The next apply/cancel phase should build on this foundation and must keep widgets as presentation/intent-capture layers. Future helpers should use SQLUICore policy surfaces, keep widgets from writing config directly, keep widgets from initializing providers/repositories directly, keep widgets from deleting files directly, keep runtime database writes under `Saved/SQLUI`, show restart/reopen/reinitialize-required messaging instead of forcing lifecycle changes, and keep validation failures user-readable and non-destructive. Reset/delete behavior must route through SQLUICore database management helper/policy surfaces.
 
@@ -213,7 +219,7 @@ Those actions should have distinct labels, explanations, and confirmations.
 
 Future mutating settings/reset PRs should add focused smoke coverage as behavior appears:
 
-- Pending settings model can change values without mutating live runtime state. The first validation-only smoke path is `-UsePersistenceSettingsDraftProbe`, which also verifies UI-safe validation display rows, the SQLUISamples sample adapter that consumes them, and the optional C++ UMG widget shell contract by reflection without widget blueprint assets, maps, viewport attachment, or startup wiring.
+- Pending settings model can change values without mutating live runtime state. The first validation/preview-only smoke path is `-UsePersistenceSettingsDraftProbe`, which also verifies the dry-run apply-intent preview, UI-safe validation display rows, the SQLUISamples sample adapter that consumes them, and the optional C++ UMG widget shell contract by reflection without widget blueprint assets, maps, viewport attachment, or startup wiring.
 - Cancel discards pending values.
 - Validation rejects empty or unsafe SQLite paths without creating files.
 - Backend selection requires Apply.
@@ -239,17 +245,18 @@ Recommended future sequence:
 4. Add UI-safe validation display rows for draft validation results. Complete as `USQLUIPersistenceSettingsDraftDisplayLibrary`.
 5. Add a sample/dev-facing SQLUISamples adapter for validation display rows. Complete as `USQLUISamplePersistenceSettingsDraftPresenter`.
 6. Add an optional C++ UMG widget shell contract for draft validation rows. Complete as `USQLUISamplePersistenceSettingsDraftPanelWidget`.
-7. Add Apply/Cancel helper APIs without widget controls.
-8. Add a backend selector UI shell that edits pending state only.
-9. Add SQLite path display/edit validation that does not create files.
-10. Add reset UX confirmation and smoke coverage through SQLUICore database management helpers.
-11. Add packaged validation for any startup, config, default map, viewport, or packaged lifecycle integration.
+7. Add a non-mutating dry-run apply-intent preview. Complete as `FSQLUIPersistenceSettingsApplyPreviewResult` and `PreviewPersistenceSettingsDraftApply`.
+8. Add actual Apply/Cancel helper APIs without widget controls.
+9. Add a backend selector UI shell that edits pending state only.
+10. Add SQLite path display/edit validation that does not create files.
+11. Add reset UX confirmation and smoke coverage through SQLUICore database management helpers.
+12. Add packaged validation for any startup, config, default map, viewport, or packaged lifecycle integration.
 
 Each implementation PR should keep the blast radius narrow and should not combine default policy changes with UI scaffolding.
 
 ## Packaged Validation Policy
 
-The validation-only draft model, UI-safe validation display rows, sample/dev-facing adapter, and optional C++ UMG widget shell do not require full packaged validation because they do not touch maps, config, startup behavior, package behavior, viewport attachment, provider lifecycle, or packaged lifecycle flow. They add runtime code and editor commandlet smoke coverage only for non-mutating validation/display formatting, sample consumption, and reflection-validated binding contracts.
+The validation-only draft model, dry-run apply-intent preview, UI-safe validation display rows, sample/dev-facing adapter, and optional C++ UMG widget shell do not require full packaged validation because they do not touch maps, config, startup behavior, package behavior, viewport attachment, provider lifecycle, or packaged lifecycle flow. They add runtime code and editor commandlet smoke coverage only for non-mutating validation/preview/display formatting, sample consumption, and reflection-validated binding contracts.
 
 Future PRs that wire settings UI into startup, default maps, config-backed provider lifecycle, viewport attachment, or packaged runtime persistence should run packaged validation appropriate to that behavior.
 
