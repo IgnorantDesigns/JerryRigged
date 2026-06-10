@@ -46,7 +46,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - An optional SQLUISamples apply-preview C++ UMG widget shell now delegates to the apply-preview presenter and exposes cached rows/summary/preview flags for future Blueprint binding without adding actual Apply behavior, settings controls, DB creation, migrations, seed copy, provider/repository initialization, widget assets, maps, startup wiring, viewport attachment, or destructive actions.
 - Optional SQLUISamples persistence settings draft presenter and C++ UMG widget shell surfaces now consume the SQLUICore validation display rows for sample/dev-facing display and future Blueprint binding without adding settings controls, apply/save behavior, DB creation, directory creation from display generation, migrations, seed copy, provider/repository initialization, widget blueprint assets, maps, startup wiring, viewport attachment, or destructive actions.
 - A focused validation-only draft UMG usage guide now records the safe future widget blueprint subclass/binding recipe, display semantics, refresh/build boundaries, and manual local checklist for the draft validation widget shell.
-- A focused apply-preview UMG usage guide now records the safe future widget blueprint subclass/binding recipe, preview semantics, refresh/build boundaries, and manual local checklist for the dry-run apply-preview widget shell.
+- A focused #116 apply-preview UMG usage guide now records the safe future widget blueprint subclass/binding recipe, preview semantics, refresh/build boundaries, and manual local checklist for the dry-run apply-preview widget shell.
 - The draft validation sequence is: #106 validation-only draft model, #107 validation display rows/summary, #108 SQLUISamples draft presenter/adapter, #109 optional C++ draft validation UMG shell, and #110 docs-only safe usage/binding guide.
 - Schema initialization and database creation are repository-owned and opt-in.
 - The current known production migration set is only `001_initial_layout_schema`.
@@ -123,7 +123,7 @@ This checkpoint records the completed validation-only sequence:
 - #110: safe UMG subclassing and binding guide.
 - #111: final non-mutating draft validation foundation checkpoint.
 - Dry-run SQLUICore apply-intent preview.
-- Focused apply-preview UMG usage guide for the optional #115 apply-preview widget shell.
+- #116: focused apply-preview UMG usage guide for the optional #115 apply-preview widget shell.
 - `-UsePersistenceSettingsDraftProbe`: smoke coverage for the draft model, apply preview, validation/apply-preview display rows, validation/apply-preview sample adapters, and validation/apply-preview C++ UMG widget shell contracts.
 
 This checkpoint is still not settings editing. It adds no actual apply/save/config-write behavior, backend selector UI, SQLite path editor UI, provider auto-init control, reset/delete UX, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, default config changes, or default startup behavior changes. Refresh/build/validation/preview remains caller-invoked only.

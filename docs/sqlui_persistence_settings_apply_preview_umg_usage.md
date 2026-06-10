@@ -2,7 +2,7 @@
 
 This document is the focused Blueprint/UMG binding recipe for the optional SQLUISamples persistence settings apply-preview widget shell.
 
-PR #115 added `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` as a C++ `UUserWidget` shell for dry-run apply-preview display. This guide documents how future local Blueprint/UMG work can subclass or bind to that shell safely, without adding widget Blueprint assets, maps, startup wiring, viewport attachment, polling, ticking, settings controls, actual Apply/Save behavior, reset/delete behavior, provider lifecycle behavior, migrations, seed-copy behavior, or database file creation.
+PR #115 added `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` as a C++ `UUserWidget` shell for dry-run apply-preview display. PR #116 is docs-only: it adds this guide for how future local Blueprint/UMG work can subclass or bind to that shell safely, without adding widget Blueprint assets, maps, startup wiring, viewport attachment, polling, ticking, settings controls, actual Apply/Save behavior, reset/delete behavior, provider lifecycle behavior, migrations, seed-copy behavior, directory creation, or database file creation.
 
 Related docs:
 
@@ -64,8 +64,9 @@ A future Blueprint/UMG PR can use the shell like this:
 6. Optionally expose `DetailText` as a tooltip or small help line.
 7. Show `SummaryText` for the overall preview state.
 8. Show `bCanApplyInFuture`, `bHasChanges`, `bWouldNeedProviderReinitialize`, `bWouldNeedRepositoryReopen`, and `bRequiresRestartOrReinitialize` only as dry-run preview flags.
-9. Add a local test button only if it calls one of the explicit refresh/build methods.
-10. Treat every row and flag as display-only.
+9. Show "would change backend," "would change SQLite path," "would affect provider auto-init," and similar pending-change details only when they are exposed through the shell's rows, summary, or underlying SQLUICore preview/display model.
+10. Add a local test button only if it calls one of the explicit refresh/build methods.
+11. Treat every row and flag as display-only.
 
 Do not call refresh/build automatically from construction, `NativeConstruct`, `PreConstruct`, `Tick`, timers, startup, map load, config load, or a polling loop unless a later PR explicitly scopes a safe optional UI path. Refresh/build is report generation, not lifecycle work.
 
@@ -83,7 +84,9 @@ The apply-preview UI should preserve future-oriented wording:
 
 Use careful words such as `Would change`, `Would require`, `Preview only`, `Not applied`, `Not saved`, `Pending`, and `No changes to apply`.
 
-Do not imply that the widget has applied settings, saved config, initialized a provider, opened or created a database, run migrations, copied seeds, reset state, deleted files, changed the active repository, or changed startup behavior.
+Do not imply that the widget has applied settings, saved config, created directories, initialized a provider, opened a database for writing, opened or created a database, run migrations, copied seeds, reset state, deleted files, changed the active repository, or changed startup behavior.
+
+Do not surface low-level SQL strings, schema details, migration internals, sidecar naming, or direct file-status checks from widget code. Those details stay behind SQLUICore policy/display surfaces.
 
 ## Out Of Scope
 
@@ -93,6 +96,7 @@ This usage guide does not introduce:
 - Save button.
 - Cancel button.
 - Settings apply/save/config-write behavior.
+- Settings save/apply flow.
 - Backend selector UI controls.
 - SQLite path editor UI controls.
 - Provider auto-init toggle/control.
@@ -124,6 +128,7 @@ Widgets and sample UI must not:
 - Open databases for writing.
 - Run migrations.
 - Copy seed databases.
+- Initialize provider/repository state.
 - Write config.
 - Apply or save settings.
 - Delete files.

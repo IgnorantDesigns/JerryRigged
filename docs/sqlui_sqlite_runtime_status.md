@@ -142,7 +142,7 @@ The non-mutating persistence settings draft validation UI foundation is now comp
 - UI-safe SQLUICore apply-preview display rows/summary.
 - Optional SQLUISamples apply-preview presenter/adapter for sample/dev-facing dry-run preview display.
 - Optional SQLUISamples apply-preview C++ `UUserWidget` shell for sample/dev-facing dry-run preview display.
-- Focused apply-preview UMG usage and binding guide.
+- #116 focused apply-preview UMG usage and binding guide.
 - `-UsePersistenceSettingsDraftProbe` smoke coverage for the draft model, apply preview, apply-preview display rows, validation display rows, validation/apply-preview sample adapters, and validation/apply-preview widget-shell contracts.
 
 This foundation is not settings editing. It does not add settings controls, backend selector UI, SQLite path editor UI, provider auto-init controls, Apply/Cancel behavior, settings save/config-write behavior, reset/delete actions, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, or default config changes.
