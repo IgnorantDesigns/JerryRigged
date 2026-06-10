@@ -23,7 +23,8 @@ The current stack is intentionally validation/preview-only:
 - #108: `USQLUISamplePersistenceSettingsDraftPresenter` is the SQLUISamples sample/dev adapter for those rows; it stores display rows, formatted lines, summary text, and validation flags for sample/dev and Blueprint-facing use.
 - Apply-preview display adapter: `USQLUISamplePersistenceSettingsApplyPreviewPresenter` is the SQLUISamples sample/dev adapter for dry-run apply-preview display rows; it stores rows, formatted lines, summary text, and preview flags for sample/dev and Blueprint-facing use without applying anything.
 - #109: `USQLUISamplePersistenceSettingsDraftPanelWidget` is the optional C++ `UUserWidget` shell over the #108 presenter/adapter.
-- #110: this guide documents safe future Blueprint subclassing and binding for that shell.
+- Apply-preview panel shell: `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` is the optional C++ `UUserWidget` shell over the apply-preview presenter/adapter. It creates no visual layout, adds no widget blueprint asset, is not wired into startup/maps/config/viewport, and exposes only caller-invoked refresh/build plus cached display data.
+- #110: this guide documents safe future Blueprint subclassing and binding for those validation/apply-preview shells.
 
 The #109 shell is sample/dev-facing and delegates to the #108 SQLUISamples presenter/adapter, which consumes SQLUICore draft validation/display surfaces from #106 and #107. Future UI should consume the display rows, display summary, summary text, and validation flags only. It should not duplicate draft validation, path policy, backend policy, provider lifecycle policy, file checks, or persistence policy in Blueprint or widget code.
 
@@ -48,13 +49,13 @@ The shell exposes cached data through Blueprint-readable properties and pure get
 
 ## Foundation Checkpoint
 
-The persistence settings draft validation UMG foundation is complete as a binding scaffold. It includes the #105 settings editing/reset UX plan, the #106 SQLUICore draft model and validation result, the #107 SQLUICore display rows and summary, the #108 optional SQLUISamples validation presenter/adapter, the #109 optional C++ UMG widget shell, this #110 usage guide, the #111 final checkpoint, the SQLUICore dry-run apply-intent preview, UI-safe apply-preview display rows/summary, an optional SQLUISamples apply-preview presenter/adapter, and `-UsePersistenceSettingsDraftProbe` non-asset smoke coverage for the draft model, apply preview, apply-preview display rows, validation display rows, presenters/adapters, and widget-shell contract.
+The persistence settings draft validation UMG foundation is complete as a binding scaffold. It includes the #105 settings editing/reset UX plan, the #106 SQLUICore draft model and validation result, the #107 SQLUICore display rows and summary, the #108 optional SQLUISamples validation presenter/adapter, the #109 optional C++ UMG widget shell, this #110 usage guide, the #111 final checkpoint, the SQLUICore dry-run apply-intent preview, UI-safe apply-preview display rows/summary, an optional SQLUISamples apply-preview presenter/adapter, an optional SQLUISamples apply-preview C++ UMG widget shell, and `-UsePersistenceSettingsDraftProbe` non-asset smoke coverage for the draft model, apply preview, apply-preview display rows, validation display rows, presenters/adapters, and widget-shell contracts.
 
 This remains sample/dev-facing and validation/preview-only. It is not a full settings screen and does not add settings editing controls, backend selector controls, SQLite path editing controls, provider auto-init toggles, actual Apply/Cancel behavior, settings save behavior, config writes, reset/delete actions, migration controls, seed-copy controls, provider/repository initialization, database creation, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, or auto-refresh.
 
 A valid draft or successful display refresh means only that validation/display data was produced. It does not mean settings were applied, saved, written to config, or made active.
 
-The apply-intent preview, apply-preview display rows, and apply-preview sample presenter are report data only. They may use "would change" and "not applied" messaging, but they do not save settings, write config, initialize providers/repositories, create directories or database files, open databases for writing, run migrations, copy seeds, reset databases, or delete files.
+The apply-intent preview, apply-preview display rows, apply-preview sample presenter, and apply-preview widget shell are report data only. They may use "would change" and "not applied" messaging, but they do not save settings, write config, initialize providers/repositories, create directories or database files, open databases for writing, run migrations, copy seeds, reset databases, or delete files.
 
 Future editable settings or reset/delete UX should build on SQLUICore policy helpers and the dedicated plan in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). Widgets should keep using draft display rows and must not know SQL, schema, migration ids, seed-copy policy, sidecar internals, direct file deletion, live repository mutation rules, provider lifecycle rules, or config-write details.
 
@@ -169,7 +170,7 @@ For a future local/manual Blueprint exploration, keep the asset local unless a l
 
 ## Smoke Coverage
 
-The existing `-UsePersistenceSettingsDraftProbe` smoke path validates the SQLUICore draft model, validation result, validation display-row formatting, apply-preview display-row formatting, SQLUISamples validation/apply-preview presenters, and C++ widget shell contract by reflection. It checks that the widget shell derives from `UUserWidget`, that refresh/build functions are Blueprint-callable and not `BlueprintPure`, that cached widget-shell getters are `BlueprintPure`, and that cached row/formatted-lines/result/summary/validation-flag properties are Blueprint-visible.
+The existing `-UsePersistenceSettingsDraftProbe` smoke path validates the SQLUICore draft model, validation result, validation display-row formatting, apply-preview display-row formatting, SQLUISamples validation/apply-preview presenters, and validation/apply-preview C++ widget shell contracts by reflection. It checks that the widget shells derive from `UUserWidget`, that refresh/build functions are Blueprint-callable and not `BlueprintPure`, that cached widget-shell getters are `BlueprintPure`, and that cached row/formatted-lines/result/summary/flag properties are Blueprint-visible.
 
 The smoke path validates that contract without requiring committed widget blueprint assets, maps, startup wiring, or viewport attachment. It also keeps refresh/build caller-invoked and confirms default `InMemory` validation display does not initialize providers/repositories or create SQLite database files.
 
