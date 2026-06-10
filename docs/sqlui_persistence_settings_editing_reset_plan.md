@@ -105,7 +105,7 @@ That first implementation slice now exists as `FSQLUIPersistenceSettingsDraft`, 
 
 ## Completed Draft Validation Foundation
 
-The non-mutating draft validation UI foundation is complete through the #105-#111 sequence:
+The non-mutating draft validation UI foundation is complete through the #105-#111 sequence, and the apply-preview UI foundation is complete through #112-#117:
 
 - #105 documented this editing/reset UX plan.
 - #106 added the SQLUICore validation-only draft/pending settings model.
@@ -113,12 +113,13 @@ The non-mutating draft validation UI foundation is complete through the #105-#11
 - #108 added the optional SQLUISamples draft validation presenter/adapter.
 - #109 added the optional SQLUISamples C++ UMG widget shell for draft validation display.
 - #110 documented safe UMG subclassing and binding for the validation shell and shared validation/preview boundaries.
-- A focused apply-preview UMG usage guide now documents safe subclassing and binding for the #115 `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` shell without adding actual Apply/Save behavior or settings controls.
 - #111 records the final non-mutating draft validation foundation checkpoint.
 - #112 added the non-mutating dry-run apply-intent preview.
-- SQLUICore now also exposes UI-safe apply-preview display rows/summary that format what a future Apply would do without applying anything.
-- SQLUISamples now also exposes an optional sample/dev-facing apply-preview presenter that consumes those SQLUICore display rows and caches rows/summary strings for future sample UI work.
-- SQLUISamples now also exposes an optional apply-preview C++ UMG widget shell that delegates to the apply-preview presenter and caches rows/summary/preview flags for future Blueprint binding.
+- #113 added UI-safe apply-preview display rows/summary that format what a future Apply would do without applying anything.
+- #114 added the optional SQLUISamples sample/dev-facing apply-preview presenter that consumes those SQLUICore display rows and caches rows/summary strings for future sample UI work.
+- #115 added the optional apply-preview C++ UMG widget shell that delegates to the apply-preview presenter and caches rows/summary/preview flags for future Blueprint binding.
+- #116 documented safe subclassing and binding for the #115 `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` shell without adding actual Apply/Save behavior or settings controls.
+- #117 records the final non-mutating apply-preview foundation checkpoint.
 - `-UsePersistenceSettingsDraftProbe` validates the draft model, validation display rows, apply preview display rows, validation/apply-preview sample adapters, and validation/apply-preview widget-shell contracts without widget blueprint assets, maps, viewport attachment, startup wiring, settings mutation, or provider/repository initialization.
 
 This checkpoint is still not settings editing. It adds no backend selector UI, SQLite path editor UI, provider auto-init control, Apply/Cancel behavior, settings save/config-write behavior, reset/delete UX, widget blueprint asset, map, startup wiring, viewport attachment, polling, ticking, auto-refresh, provider/repository initialization, migration, seed-copy behavior, or default config change. Refresh/build/validation/preview remains caller-invoked only.

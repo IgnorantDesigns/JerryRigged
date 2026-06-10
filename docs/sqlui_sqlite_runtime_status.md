@@ -138,11 +138,12 @@ The non-mutating persistence settings draft validation UI foundation is now comp
 - #109 optional SQLUISamples C++ `UUserWidget` shell for draft validation display.
 - #110 safe UMG usage and binding guide.
 - #111 final non-mutating draft validation foundation checkpoint.
-- Dry-run SQLUICore apply-intent preview.
-- UI-safe SQLUICore apply-preview display rows/summary.
-- Optional SQLUISamples apply-preview presenter/adapter for sample/dev-facing dry-run preview display.
-- Optional SQLUISamples apply-preview C++ `UUserWidget` shell for sample/dev-facing dry-run preview display.
+- #112 dry-run SQLUICore apply-intent preview.
+- #113 UI-safe SQLUICore apply-preview display rows/summary.
+- #114 optional SQLUISamples apply-preview presenter/adapter for sample/dev-facing dry-run preview display.
+- #115 optional SQLUISamples apply-preview C++ `UUserWidget` shell for sample/dev-facing dry-run preview display.
 - #116 focused apply-preview UMG usage and binding guide.
+- #117 final non-mutating apply-preview foundation checkpoint.
 - `-UsePersistenceSettingsDraftProbe` smoke coverage for the draft model, apply preview, apply-preview display rows, validation display rows, validation/apply-preview sample adapters, and validation/apply-preview widget-shell contracts.
 
 This foundation is not settings editing. It does not add settings controls, backend selector UI, SQLite path editor UI, provider auto-init controls, Apply/Cancel behavior, settings save/config-write behavior, reset/delete actions, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, or default config changes.
@@ -150,6 +151,14 @@ This foundation is not settings editing. It does not add settings controls, back
 The draft validation and apply-preview paths remain caller-invoked and non-mutating. Validation, dry-run preview generation, validation display generation, apply-preview display generation, the SQLUISamples presenters/adapters, and the C++ widget shells do not create databases or directories, open databases for writing, run migrations, copy seeds, initialize providers/repositories, or delete files outside smoke-owned cleanup. `InMemory` remains the safe default, SQLite remains explicit opt-in, provider auto-init remains off by default, and no default config creates SQLite database files.
 
 Future apply/cancel work should reuse SQLUICore helper and policy surfaces. Widgets should capture user intent and display SQLUICore-provided validation/status data; they should not know SQL, schema, migration ids, seed-copy policy, SQLite sidecar internals, direct deletion rules, or provider/repository lifecycle details. Widgets also should not write config directly, initialize providers/repositories, or delete files directly. Reset/delete UX should route through SQLUICore database management helper/policy surfaces. Any future apply/cancel implementation needs focused smoke coverage, and any startup, default map, config, viewport, provider lifecycle, or packaged runtime lifecycle change needs packaged validation.
+
+## Persistence Settings Apply Preview UI Foundation
+
+The non-mutating persistence settings apply-preview UI foundation is now complete as a documented base for future apply/cancel helpers. It builds on the #105 settings editing/reset UX plan, #106 validation-only draft model, #107 validation display rows, #108 draft validation sample adapter, #109 draft validation C++ UMG widget shell, #110 draft validation UMG usage guide, and #111 draft validation checkpoint, then adds #112 dry-run apply-intent preview, #113 apply-preview display rows, #114 apply-preview sample adapter, #115 apply-preview C++ UMG widget shell, #116 apply-preview UMG usage guide, and the #117 final non-mutating apply-preview foundation checkpoint.
+
+This foundation is still not a product settings screen. It adds no actual apply/save/config-write behavior, settings editing controls, backend selector UI, SQLite path editor UI, provider auto-init controls, reset/delete UX, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, or default config changes. Refresh/build/validation/preview remains caller-invoked only.
+
+Future apply/cancel work must continue to route storage policy through SQLUICore. Widgets should not know SQL, schema, migration ids, seed-copy policy, SQLite sidecar internals, direct deletion behavior, or provider/repository lifecycle details. Widgets should not write config, initialize providers/repositories, create directories or databases, run migrations, copy seeds, or delete files directly. Apply/cancel work should use explicit pending/apply/cancel semantics, keep validation failures user-readable and non-destructive, avoid silently initializing providers/repositories during apply, and show restart/reopen/reinitialize-required messaging instead of forcing lifecycle changes from widget code. Any reset/delete behavior must route through SQLUICore database management helper/policy surfaces.
 
 The packaged runtime provider startup smoke proves this holder can be intentionally created from packaged startup/runtime code and initialized from command-line repository settings. That proof runs only with `-SQLUIRuntimeProviderStartupSmoke`; normal startup still does not auto-initialize a provider or SQLite.
 
