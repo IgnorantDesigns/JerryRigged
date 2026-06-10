@@ -142,6 +142,41 @@ The safety boundaries remain unchanged:
 
 The next apply/cancel phase must build on SQLUICore helper/policy surfaces. Future work should keep widgets ignorant of SQL, schema, migrations, seed-copy policy, sidecar internals, deletion behavior, and provider/repository lifecycle. Widgets should not write config directly, initialize providers/repositories, or delete files directly. Apply/cancel work should use explicit pending/apply/cancel semantics, keep validation failures user-readable and non-destructive, avoid silently initializing providers/repositories during apply, and show restart/reopen/reinitialize-required messaging instead of forcing lifecycle changes from widget code. Reset/delete behavior must route through SQLUICore database management helper/policy surfaces. Any new apply/cancel path needs focused smoke coverage, and any startup, default map, config, viewport, or packaged lifecycle change needs packaged validation.
 
+## Persistence Settings Apply Preview UI Foundation Checkpoint
+
+The non-mutating SQLUI persistence settings apply-preview UI foundation is complete as a documented and smoke-validated base for the next apply/cancel helper phase.
+
+This checkpoint closes the current non-mutating chain:
+
+- #105: settings editing/reset UX plan.
+- #106: validation-only draft/pending settings model.
+- #107: UI-safe validation display rows/summary.
+- #108: optional SQLUISamples draft validation sample adapter.
+- #109: optional C++ draft validation UMG widget shell.
+- #110: draft validation UMG usage guide.
+- #111: non-mutating draft validation foundation checkpoint.
+- #112: dry-run apply-intent preview model.
+- #113: UI-safe apply-preview display rows/summary.
+- #114: optional SQLUISamples apply-preview sample adapter.
+- #115: optional C++ apply-preview UMG widget shell.
+- #116: apply-preview UMG usage guide.
+- #117: final non-mutating apply-preview foundation checkpoint.
+- `-UsePersistenceSettingsDraftProbe`: smoke coverage for the draft model, validation display rows, draft validation sample adapter, draft validation C++ UMG widget shell contract, dry-run apply-intent preview, apply-preview display rows, apply-preview sample adapter, and apply-preview C++ UMG widget shell contract.
+
+This checkpoint is still not settings editing. It adds no actual apply/save/config-write behavior, settings editing controls, backend selector UI, SQLite path editor UI, provider auto-init control, reset/delete UX, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, default config changes, or default startup behavior changes. Refresh/build/validation/preview remains caller-invoked only.
+
+The safety boundaries remain unchanged:
+
+- `InMemory` remains the safe default backend.
+- SQLite remains opt-in and is not enabled by default.
+- Provider auto-init remains off by default.
+- No default config creates SQLite database files.
+- SQLUICore remains free of UMG, Slate, SlateCore, editor-only, and widget dependencies.
+- SQLUISamples is sample/dev-facing consumption only and does not own persistence policy.
+- Draft validation, validation display generation, dry-run apply preview, apply-preview display generation, SQLUISamples validation/apply-preview adapters, and validation/apply-preview widget shells remain non-mutating: they do not create databases or directories, open databases for writing, run migrations, copy seeds, initialize providers/repositories, or delete files outside smoke-owned cleanup.
+
+The next apply/cancel phase remains future work. It must use SQLUICore helper/policy surfaces, keep widgets ignorant of SQL, schema, migrations, seed-copy policy, sidecar internals, deletion behavior, and provider/repository lifecycle, and keep widgets from writing config, initializing providers/repositories, or deleting files directly. It should use explicit pending/apply/cancel semantics, keep validation failures user-readable and non-destructive, avoid silently initializing providers/repositories during apply, and show restart/reopen/reinitialize-required messaging instead of forcing lifecycle changes. Reset/delete UX must route through SQLUICore database management helper/policy surfaces. Any new apply/cancel path needs focused smoke coverage, and any startup, default map, config, viewport, provider lifecycle, or packaged runtime lifecycle change needs packaged validation.
+
 ## Implemented Capabilities
 
 | Capability | Current status | Notes |
@@ -302,7 +337,7 @@ The safe default remains non-SQLite.
 
 Prioritized remaining work:
 
-1. Implement the production/user-facing runtime settings UI described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md), [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md), and [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md), following the read-only panel contract, validation-only draft binding recipe, and dry-run apply-preview binding recipe while keeping SQLite opt-in and `InMemory` as the safe default. The current draft model, apply preview, validation display rows, apply-preview display rows, and sample adapters are non-mutating; actual apply/cancel behavior, actual UI controls, and reset/delete UX remain future work.
+1. Implement the production/user-facing runtime settings UI described in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md), [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md), [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md), and [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md), following the read-only panel contract, validation-only draft binding recipe, and dry-run apply-preview binding recipe while keeping SQLite opt-in and `InMemory` as the safe default. The current draft model, apply preview, validation display rows, apply-preview display rows, sample adapters, and widget shells are non-mutating; actual apply/cancel helpers, config-write behavior, actual UI controls, and reset/delete UX remain future work.
 2. Product startup policy that intentionally configures the passive runtime provider subsystem outside packaged smoke flags.
 3. Actual future schema migrations and data transforms beyond `001_initial_layout_schema`.
 4. Production async database service design beyond the current per-repository callback queue.

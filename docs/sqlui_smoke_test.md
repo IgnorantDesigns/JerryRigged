@@ -304,6 +304,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 
 The commandlet also accepts `-PersistenceSettingsDraftProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
+For the #117 apply-preview foundation checkpoint, this same probe covers:
+
+- Validation-only draft model.
+- Draft validation display rows/summary.
+- SQLUISamples draft validation adapter.
+- C++ draft validation UMG widget shell contract.
+- Dry-run apply-intent preview.
+- Apply-preview display rows/summary.
+- SQLUISamples apply-preview adapter.
+- C++ apply-preview UMG widget shell contract.
+
+The probe does not require widget blueprint assets or maps, does not attach widgets to the viewport, does not alter startup/config behavior, and does not add settings editing or actual apply/save behavior. Cleanup removes only smoke-owned files and the explicit checkpoint cleanup check should confirm no draft/status probe database or SQLite sidecar files remain.
+
 Expected log lines include:
 
 ```text

@@ -27,6 +27,10 @@ Future UI should consume the display rows, display summary, summary text, and pr
 
 The apply-preview shell is sample/dev-facing. It is not a full settings screen and it is not an actual Apply UI.
 
+## Foundation Checkpoint
+
+The non-mutating apply-preview UI foundation is complete through #112 dry-run apply-intent preview, #113 apply-preview display rows/summary, #114 optional SQLUISamples apply-preview presenter, #115 optional C++ apply-preview UMG widget shell, this #116 usage guide, the #117 final foundation checkpoint, and `-UsePersistenceSettingsDraftProbe` smoke coverage. That checkpoint builds on the #105-#111 validation-only draft foundation, but it still adds no settings editing, actual Apply/Cancel behavior, config writes, backend selector controls, SQLite path editor controls, provider auto-init controls, reset/delete UX, widget blueprint assets, maps, startup wiring, viewport attachment, polling, ticking, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, directory creation, database file creation, or default policy changes.
+
 ## Shell API Shape
 
 The shell exposes explicit caller-invoked methods:
