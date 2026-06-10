@@ -3098,6 +3098,16 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("unknown backend apply preview rejected"), ProbeResult.bUnknownBackendApplyPreviewRejected);
 	LogPersistenceSettingsDraftBool(TEXT("SQLite empty path apply preview rejected"), ProbeResult.bSQLiteEmptyPathApplyPreviewRejected);
 	LogPersistenceSettingsDraftBool(TEXT("provider auto-init apply preview detected"), ProbeResult.bProviderAutoInitApplyPreviewDetected);
+	LogPersistenceSettingsDraftBool(TEXT("default apply contract safe"), ProbeResult.bDefaultApplyContractSafe);
+	LogPersistenceSettingsDraftBool(TEXT("current apply contract no changes"), ProbeResult.bCurrentApplyContractNoChanges);
+	LogPersistenceSettingsDraftBool(TEXT("apply execution unavailable"), ProbeResult.bApplyExecutionUnavailable);
+	LogPersistenceSettingsDraftBool(TEXT("backend change apply contract detected"), ProbeResult.bBackendChangeApplyContractDetected);
+	LogPersistenceSettingsDraftBool(TEXT("SQLite apply contract safe"), ProbeResult.bSQLiteApplyContractSafe);
+	LogPersistenceSettingsDraftBool(TEXT("unknown backend apply contract blocked"), ProbeResult.bUnknownBackendApplyContractBlocked);
+	LogPersistenceSettingsDraftBool(TEXT("SQLite empty path apply contract blocked"), ProbeResult.bSQLiteEmptyPathApplyContractBlocked);
+	LogPersistenceSettingsDraftBool(TEXT("provider auto-init apply contract detected"), ProbeResult.bProviderAutoInitApplyContractDetected);
+	LogPersistenceSettingsDraftBool(TEXT("cancel preview safe"), ProbeResult.bCancelPreviewSafe);
+	LogPersistenceSettingsDraftBool(TEXT("cancel preview would discard changes"), ProbeResult.bCancelPreviewWouldDiscardChanges);
 	LogPersistenceSettingsDraftBool(TEXT("default apply preview display safe"), ProbeResult.bDefaultApplyPreviewDisplaySafe);
 	LogPersistenceSettingsDraftBool(TEXT("current apply preview display no changes"), ProbeResult.bCurrentApplyPreviewDisplayNoChanges);
 	LogPersistenceSettingsDraftBool(TEXT("backend change apply preview display detected"), ProbeResult.bBackendChangeApplyPreviewDisplayDetected);
@@ -3151,10 +3161,14 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("repeated display deterministic"), ProbeResult.bRepeatedDisplayDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("repeated apply preview deterministic"), ProbeResult.bRepeatedApplyPreviewDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("repeated apply preview display deterministic"), ProbeResult.bRepeatedApplyPreviewDisplayDeterministic);
+	LogPersistenceSettingsDraftBool(TEXT("repeated apply contract deterministic"), ProbeResult.bRepeatedApplyContractDeterministic);
+	LogPersistenceSettingsDraftBool(TEXT("repeated cancel preview deterministic"), ProbeResult.bRepeatedCancelPreviewDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during validation"), ProbeResult.bSidecarPreservedDuringValidation);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply preview"), ProbeResult.bSidecarPreservedDuringApplyPreview);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply preview display"), ProbeResult.bSidecarPreservedDuringApplyPreviewDisplay);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply preview adapter"), ProbeResult.bSidecarPreservedDuringApplyPreviewAdapter);
+	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply contract"), ProbeResult.bSidecarPreservedDuringApplyContract);
+	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during cancel preview"), ProbeResult.bSidecarPreservedDuringCancelPreview);
 	LogPersistenceSettingsDraftBool(TEXT("database files removed"), ProbeResult.bDatabaseFilesRemoved);
 
 	if (ProbeResult.bSucceeded)

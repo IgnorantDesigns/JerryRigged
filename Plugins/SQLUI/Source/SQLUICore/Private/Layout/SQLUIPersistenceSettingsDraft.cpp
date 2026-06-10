@@ -99,18 +99,40 @@ void AddSQLUIPersistenceSettingsApplyPreviewMessage(
 	Result.Messages.Add(MoveTemp(PreviewMessage));
 }
 
-bool DoesSQLUIPersistenceSettingsValidationHaveErrors(
-	const FSQLUIPersistenceSettingsValidationResult& Result)
+void AddSQLUIPersistenceSettingsContractMessage(
+	TArray<FSQLUIPersistenceSettingsValidationMessage>& Messages,
+	const ESQLUIPersistenceSettingsValidationMessageSeverity Severity,
+	const FString& Message,
+	const FString& DetailText = FString())
 {
-	for (const FSQLUIPersistenceSettingsValidationMessage& Message : Result.Messages)
+	FSQLUIPersistenceSettingsValidationMessage ContractMessage;
+	ContractMessage.Severity = Severity;
+	ContractMessage.Message = Message;
+	ContractMessage.DetailText = DetailText;
+	Messages.Add(MoveTemp(ContractMessage));
+}
+
+bool DoesSQLUIPersistenceSettingsMessageListHaveSeverity(
+	const TArray<FSQLUIPersistenceSettingsValidationMessage>& Messages,
+	const ESQLUIPersistenceSettingsValidationMessageSeverity Severity)
+{
+	for (const FSQLUIPersistenceSettingsValidationMessage& Message : Messages)
 	{
-		if (Message.Severity == ESQLUIPersistenceSettingsValidationMessageSeverity::Error)
+		if (Message.Severity == Severity)
 		{
 			return true;
 		}
 	}
 
 	return false;
+}
+
+bool DoesSQLUIPersistenceSettingsValidationHaveErrors(
+	const FSQLUIPersistenceSettingsValidationResult& Result)
+{
+	return DoesSQLUIPersistenceSettingsMessageListHaveSeverity(
+		Result.Messages,
+		ESQLUIPersistenceSettingsValidationMessageSeverity::Error);
 }
 
 bool AreSQLUIPersistenceSettingsStringsEquivalent(
@@ -171,6 +193,20 @@ bool WouldSQLUIPersistenceSettingsChangeSQLiteConfig(
 			!= Pending.bSQLiteCopySeedIfMissing
 		|| Current.bSQLiteOverwriteDatabaseFromSeed
 			!= Pending.bSQLiteOverwriteDatabaseFromSeed;
+}
+
+bool DoesSQLUIPersistenceSettingsDraftHavePendingChanges(
+	const FSQLUIPersistenceSettingsDraft& Draft)
+{
+	return Draft.CurrentRuntimeConfig.Backend != Draft.PendingRuntimeConfig.Backend
+		|| WouldSQLUIPersistenceSettingsChangeJsonFileConfig(
+			Draft.CurrentRuntimeConfig,
+			Draft.PendingRuntimeConfig)
+		|| WouldSQLUIPersistenceSettingsChangeSQLiteConfig(
+			Draft.CurrentRuntimeConfig,
+			Draft.PendingRuntimeConfig)
+		|| Draft.bCurrentProviderAutoInitialize
+			!= Draft.bPendingProviderAutoInitialize;
 }
 
 void ValidateSQLUIPersistenceSettingsBackend(
@@ -547,6 +583,127 @@ USQLUIPersistenceSettingsDraftLibrary::PreviewPersistenceSettingsDraftApply(
 
 		Result.SummaryText =
 			TEXT("SQLUI persistence settings apply preview is valid and has pending changes. Not applied.");
+	}
+
+	return Result;
+}
+
+FSQLUIPersistenceSettingsApplyContractResult
+USQLUIPersistenceSettingsDraftLibrary::BuildPersistenceSettingsApplyContract(
+	const FSQLUIPersistenceSettingsDraft& Draft)
+{
+	FSQLUIPersistenceSettingsApplyContractResult Result;
+	Result.ApplyPreview = PreviewPersistenceSettingsDraftApply(Draft);
+	Result.bCanApplyInFuture = Result.ApplyPreview.bCanApplyInFuture;
+	Result.bActualApplyImplemented = false;
+	Result.bCanExecuteApplyNow = false;
+	Result.bIsValid = Result.ApplyPreview.bIsValid;
+	Result.bHasChanges = Result.ApplyPreview.bHasChanges;
+	Result.bRequiresRestartOrReinitialize =
+		Result.ApplyPreview.bRequiresRestartOrReinitialize;
+	Result.bWouldChangeBackend = Result.ApplyPreview.bWouldChangeBackend;
+	Result.bWouldChangeSQLitePath = Result.ApplyPreview.bWouldChangeSQLitePath;
+	Result.bWouldChangeSQLiteConfig = Result.ApplyPreview.bWouldChangeSQLiteConfig;
+	Result.bWouldChangeProviderAutoInitialize =
+		Result.ApplyPreview.bWouldChangeProviderAutoInitialize;
+	Result.bWouldNeedProviderReinitialize =
+		Result.ApplyPreview.bWouldNeedProviderReinitialize;
+	Result.bWouldNeedRepositoryReopen =
+		Result.ApplyPreview.bWouldNeedRepositoryReopen;
+	Result.Messages = Result.ApplyPreview.Messages;
+
+	if (!Result.bIsValid)
+	{
+		Result.Availability =
+			ESQLUIPersistenceSettingsApplyAvailability::BlockedByValidation;
+	}
+	else if (!Result.bHasChanges)
+	{
+		Result.Availability =
+			ESQLUIPersistenceSettingsApplyAvailability::NoChanges;
+	}
+	else if (Result.bCanApplyInFuture)
+	{
+		Result.Availability =
+			ESQLUIPersistenceSettingsApplyAvailability::PreviewOnlyReady;
+	}
+	else
+	{
+		Result.Availability =
+			ESQLUIPersistenceSettingsApplyAvailability::NotImplemented;
+	}
+
+	AddSQLUIPersistenceSettingsContractMessage(
+		Result.Messages,
+		ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
+		TEXT("Actual Apply execution is not implemented."),
+		TEXT("This contract is preview-only. No settings were applied or saved."));
+
+	Result.bHasErrors =
+		!Result.bIsValid
+		|| DoesSQLUIPersistenceSettingsMessageListHaveSeverity(
+			Result.Messages,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error);
+	Result.bHasWarnings =
+		DoesSQLUIPersistenceSettingsMessageListHaveSeverity(
+			Result.Messages,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Warning);
+
+	if (!Result.bIsValid)
+	{
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings apply contract is blocked by validation. Actual Apply is not implemented. Not applied.");
+	}
+	else if (!Result.bHasChanges)
+	{
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings apply contract found no changes to apply. Actual Apply is not implemented. Not saved.");
+	}
+	else
+	{
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings apply contract is ready for a future Apply, but actual Apply is not implemented. Not applied or saved.");
+	}
+
+	return Result;
+}
+
+FSQLUIPersistenceSettingsCancelPreviewResult
+USQLUIPersistenceSettingsDraftLibrary::BuildPersistenceSettingsCancelPreview(
+	const FSQLUIPersistenceSettingsDraft& Draft)
+{
+	FSQLUIPersistenceSettingsCancelPreviewResult Result;
+	Result.bHasPendingChanges =
+		DoesSQLUIPersistenceSettingsDraftHavePendingChanges(Draft);
+	Result.bWouldDiscardChanges = Result.bHasPendingChanges;
+	Result.bWouldResetPendingToCurrent = Result.bHasPendingChanges;
+	Result.DraftAfterCancel = Draft;
+	Result.DraftAfterCancel.PendingRuntimeConfig = Draft.CurrentRuntimeConfig;
+	Result.DraftAfterCancel.bPendingProviderAutoInitialize =
+		Draft.bCurrentProviderAutoInitialize;
+	Result.DraftAfterCancel.bHasBackendOverride = false;
+	Result.DraftAfterCancel.bHasSQLiteDatabasePathOverride = false;
+	Result.DraftAfterCancel.bHasProviderAutoInitializeOverride = false;
+
+	if (Result.bHasPendingChanges)
+	{
+		AddSQLUIPersistenceSettingsContractMessage(
+			Result.Messages,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
+			TEXT("Cancel would discard pending SQLUI persistence settings changes."),
+			TEXT("This is a value preview only. No settings were applied, saved, or reset live."));
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings cancel preview would discard pending changes and restore pending values to current settings. Not applied or saved.");
+	}
+	else
+	{
+		AddSQLUIPersistenceSettingsContractMessage(
+			Result.Messages,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
+			TEXT("No pending SQLUI persistence settings changes to discard."),
+			TEXT("This is a value preview only. No settings were applied, saved, or reset live."));
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings cancel preview found no pending changes to discard. Not applied or saved.");
 	}
 
 	return Result;
