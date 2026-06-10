@@ -3098,6 +3098,13 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("unknown backend apply preview rejected"), ProbeResult.bUnknownBackendApplyPreviewRejected);
 	LogPersistenceSettingsDraftBool(TEXT("SQLite empty path apply preview rejected"), ProbeResult.bSQLiteEmptyPathApplyPreviewRejected);
 	LogPersistenceSettingsDraftBool(TEXT("provider auto-init apply preview detected"), ProbeResult.bProviderAutoInitApplyPreviewDetected);
+	LogPersistenceSettingsDraftBool(TEXT("default apply preview display safe"), ProbeResult.bDefaultApplyPreviewDisplaySafe);
+	LogPersistenceSettingsDraftBool(TEXT("current apply preview display no changes"), ProbeResult.bCurrentApplyPreviewDisplayNoChanges);
+	LogPersistenceSettingsDraftBool(TEXT("backend change apply preview display detected"), ProbeResult.bBackendChangeApplyPreviewDisplayDetected);
+	LogPersistenceSettingsDraftBool(TEXT("SQLite apply preview display safe"), ProbeResult.bSQLiteApplyPreviewDisplaySafe);
+	LogPersistenceSettingsDraftBool(TEXT("unknown backend apply preview display shows error"), ProbeResult.bUnknownBackendApplyPreviewDisplayShowsError);
+	LogPersistenceSettingsDraftBool(TEXT("SQLite empty path apply preview display shows error"), ProbeResult.bSQLiteEmptyPathApplyPreviewDisplayShowsError);
+	LogPersistenceSettingsDraftBool(TEXT("provider auto-init apply preview display pending"), ProbeResult.bProviderAutoInitApplyPreviewDisplayPending);
 	LogPersistenceSettingsDraftBool(TEXT("sample adapter default display generated"), ProbeResult.bSampleAdapterDefaultDisplayGenerated);
 	LogPersistenceSettingsDraftBool(TEXT("sample adapter default display safe"), ProbeResult.bSampleAdapterDefaultDisplaySafe);
 	LogPersistenceSettingsDraftBool(TEXT("sample adapter unknown backend display shows error"), ProbeResult.bSampleAdapterUnknownBackendDisplayShowsError);
@@ -3121,8 +3128,10 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("repeated validation deterministic"), ProbeResult.bRepeatedValidationDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("repeated display deterministic"), ProbeResult.bRepeatedDisplayDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("repeated apply preview deterministic"), ProbeResult.bRepeatedApplyPreviewDeterministic);
+	LogPersistenceSettingsDraftBool(TEXT("repeated apply preview display deterministic"), ProbeResult.bRepeatedApplyPreviewDisplayDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during validation"), ProbeResult.bSidecarPreservedDuringValidation);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply preview"), ProbeResult.bSidecarPreservedDuringApplyPreview);
+	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply preview display"), ProbeResult.bSidecarPreservedDuringApplyPreviewDisplay);
 	LogPersistenceSettingsDraftBool(TEXT("database files removed"), ProbeResult.bDatabaseFilesRemoved);
 
 	if (ProbeResult.bSucceeded)

@@ -146,7 +146,8 @@ Parameters:
   -UsePersistenceSettingsDraftProbe
       Run the optional SQLUICore validation/preview-only persistence settings draft
       and validation display-row probe, including the dry-run apply-intent preview,
-      SQLUISamples sample adapter, and C++ UMG widget shell contract.
+      apply preview display rows, SQLUISamples sample adapter, and C++ UMG widget
+      shell contract.
 
   -UseSQLiteMigrationProbe
       Run the optional SQLUICore SQLite migration-runner probe.

@@ -1464,6 +1464,27 @@ struct SQLUISAMPLES_API FSQLUISamplePersistenceSettingsDraftProbeResult
 	bool bProviderAutoInitApplyPreviewDetected = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bDefaultApplyPreviewDisplaySafe = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bCurrentApplyPreviewDisplayNoChanges = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bBackendChangeApplyPreviewDisplayDetected = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSQLiteApplyPreviewDisplaySafe = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bUnknownBackendApplyPreviewDisplayShowsError = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSQLiteEmptyPathApplyPreviewDisplayShowsError = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bProviderAutoInitApplyPreviewDisplayPending = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bSampleAdapterDefaultDisplayGenerated = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
@@ -1533,10 +1554,16 @@ struct SQLUISAMPLES_API FSQLUISamplePersistenceSettingsDraftProbeResult
 	bool bRepeatedApplyPreviewDeterministic = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bRepeatedApplyPreviewDisplayDeterministic = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bSidecarPreservedDuringValidation = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bSidecarPreservedDuringApplyPreview = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bSidecarPreservedDuringApplyPreviewDisplay = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bDatabaseFilesRemoved = false;
