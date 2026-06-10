@@ -3123,6 +3123,18 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter SQLite empty path shows error"), ProbeResult.bApplyPreviewAdapterSQLiteEmptyPathShowsError);
 	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter provider auto-init pending"), ProbeResult.bApplyPreviewAdapterProviderAutoInitPending);
 	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter repeated display deterministic"), ProbeResult.bApplyPreviewAdapterRepeatedDisplayDeterministic);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget class derived from UUserWidget"), ProbeResult.bApplyPreviewPanelWidgetClassDerivedFromUserWidget);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget Blueprint default refresh function callable"), ProbeResult.bApplyPreviewPanelWidgetBlueprintDefaultRefreshFunctionCallable);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget Blueprint current refresh function callable"), ProbeResult.bApplyPreviewPanelWidgetBlueprintCurrentRefreshFunctionCallable);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget Blueprint build function callable"), ProbeResult.bApplyPreviewPanelWidgetBlueprintBuildFunctionCallable);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget refresh functions not BlueprintPure"), ProbeResult.bApplyPreviewPanelWidgetRefreshFunctionsNotBlueprintPure);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget cached getter functions BlueprintPure"), ProbeResult.bApplyPreviewPanelWidgetCachedGetterFunctionsBlueprintPure);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget rows property Blueprint visible"), ProbeResult.bApplyPreviewPanelWidgetRowsPropertyBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget formatted lines property Blueprint visible"), ProbeResult.bApplyPreviewPanelWidgetFormattedLinesPropertyBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget refresh result property Blueprint visible"), ProbeResult.bApplyPreviewPanelWidgetRefreshResultPropertyBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget summary text property Blueprint visible"), ProbeResult.bApplyPreviewPanelWidgetSummaryTextPropertyBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget preview flags Blueprint visible"), ProbeResult.bApplyPreviewPanelWidgetPreviewFlagsBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget contract validated without asset or viewport"), ProbeResult.bApplyPreviewPanelWidgetContractValidatedWithoutAssetOrViewport);
 	LogPersistenceSettingsDraftBool(TEXT("panel widget class derived from UUserWidget"), ProbeResult.bPanelWidgetClassDerivedFromUserWidget);
 	LogPersistenceSettingsDraftBool(TEXT("panel widget Blueprint default refresh function callable"), ProbeResult.bPanelWidgetBlueprintDefaultRefreshFunctionCallable);
 	LogPersistenceSettingsDraftBool(TEXT("panel widget Blueprint current refresh function callable"), ProbeResult.bPanelWidgetBlueprintCurrentRefreshFunctionCallable);

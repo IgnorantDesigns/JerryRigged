@@ -1539,6 +1539,42 @@ struct SQLUISAMPLES_API FSQLUISamplePersistenceSettingsDraftProbeResult
 	bool bApplyPreviewAdapterRepeatedDisplayDeterministic = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyPreviewPanelWidgetClassDerivedFromUserWidget = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyPreviewPanelWidgetBlueprintDefaultRefreshFunctionCallable = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyPreviewPanelWidgetBlueprintCurrentRefreshFunctionCallable = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyPreviewPanelWidgetBlueprintBuildFunctionCallable = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyPreviewPanelWidgetRefreshFunctionsNotBlueprintPure = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyPreviewPanelWidgetCachedGetterFunctionsBlueprintPure = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyPreviewPanelWidgetRowsPropertyBlueprintVisible = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyPreviewPanelWidgetFormattedLinesPropertyBlueprintVisible = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyPreviewPanelWidgetRefreshResultPropertyBlueprintVisible = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyPreviewPanelWidgetSummaryTextPropertyBlueprintVisible = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyPreviewPanelWidgetPreviewFlagsBlueprintVisible = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyPreviewPanelWidgetContractValidatedWithoutAssetOrViewport = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bPanelWidgetClassDerivedFromUserWidget = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")

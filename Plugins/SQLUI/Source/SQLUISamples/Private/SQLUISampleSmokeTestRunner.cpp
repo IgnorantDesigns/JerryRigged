@@ -3,6 +3,7 @@
 #include "SQLUISamplePersistenceStatusPanelAdapter.h"
 #include "SQLUISamplePersistenceStatusPanelWidget.h"
 #include "SQLUISamplePersistenceStatusPresenter.h"
+#include "SQLUISamplePersistenceSettingsApplyPreviewPanelWidget.h"
 #include "SQLUISamplePersistenceSettingsApplyPreviewPresenter.h"
 #include "SQLUISamplePersistenceSettingsDraftPanelWidget.h"
 #include "SQLUISamplePersistenceSettingsDraftPresenter.h"
@@ -9854,6 +9855,170 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		}
 	}
 
+	const UClass* ApplyPreviewPanelWidgetClass =
+		USQLUISamplePersistenceSettingsApplyPreviewPanelWidget::StaticClass();
+	Result.bApplyPreviewPanelWidgetClassDerivedFromUserWidget =
+		ApplyPreviewPanelWidgetClass
+		&& ApplyPreviewPanelWidgetClass->IsChildOf(UUserWidget::StaticClass());
+	Result.bApplyPreviewPanelWidgetBlueprintDefaultRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			ApplyPreviewPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyPreviewPanelWidget,
+				RefreshDefaultPersistenceSettingsApplyPreviewPanel));
+	Result.bApplyPreviewPanelWidgetBlueprintCurrentRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			ApplyPreviewPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyPreviewPanelWidget,
+				RefreshCurrentPersistenceSettingsApplyPreviewPanel));
+	Result.bApplyPreviewPanelWidgetBlueprintBuildFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			ApplyPreviewPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyPreviewPanelWidget,
+				BuildPersistenceSettingsApplyPreviewPanel));
+	Result.bApplyPreviewPanelWidgetRefreshFunctionsNotBlueprintPure =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			ApplyPreviewPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyPreviewPanelWidget,
+				RefreshDefaultPersistenceSettingsApplyPreviewPanel))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			ApplyPreviewPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyPreviewPanelWidget,
+				RefreshCurrentPersistenceSettingsApplyPreviewPanel))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			ApplyPreviewPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyPreviewPanelWidget,
+				BuildPersistenceSettingsApplyPreviewPanel));
+	Result.bApplyPreviewPanelWidgetCachedGetterFunctionsBlueprintPure =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			ApplyPreviewPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyPreviewPanelWidget,
+				GetRows))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			ApplyPreviewPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyPreviewPanelWidget,
+				GetFormattedLines))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			ApplyPreviewPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyPreviewPanelWidget,
+				GetLastRefreshResult))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			ApplyPreviewPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyPreviewPanelWidget,
+				GetSummaryText));
+	Result.bApplyPreviewPanelWidgetRowsPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyPreviewPanelWidgetClass,
+			TEXT("Rows"));
+	Result.bApplyPreviewPanelWidgetFormattedLinesPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyPreviewPanelWidgetClass,
+			TEXT("FormattedLines"));
+	Result.bApplyPreviewPanelWidgetRefreshResultPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyPreviewPanelWidgetClass,
+			TEXT("LastRefreshResult"));
+	Result.bApplyPreviewPanelWidgetSummaryTextPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyPreviewPanelWidgetClass,
+			TEXT("SummaryText"));
+	Result.bApplyPreviewPanelWidgetPreviewFlagsBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyPreviewPanelWidgetClass,
+			TEXT("bCanApplyInFuture"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyPreviewPanelWidgetClass,
+			TEXT("bIsValid"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyPreviewPanelWidgetClass,
+			TEXT("bHasChanges"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyPreviewPanelWidgetClass,
+			TEXT("bHasErrors"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyPreviewPanelWidgetClass,
+			TEXT("bHasWarnings"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyPreviewPanelWidgetClass,
+			TEXT("bRequiresRestartOrReinitialize"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyPreviewPanelWidgetClass,
+			TEXT("bWouldNeedProviderReinitialize"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyPreviewPanelWidgetClass,
+			TEXT("bWouldNeedRepositoryReopen"));
+	// Reflection keeps this proof independent from widget blueprint assets,
+	// maps, viewport attachment, widget construction, and startup wiring.
+	Result.bApplyPreviewPanelWidgetContractValidatedWithoutAssetOrViewport =
+		ApplyPreviewPanelWidgetClass
+		&& Result.bApplyPreviewPanelWidgetClassDerivedFromUserWidget
+		&& Result.bApplyPreviewPanelWidgetBlueprintDefaultRefreshFunctionCallable
+		&& Result.bApplyPreviewPanelWidgetBlueprintCurrentRefreshFunctionCallable
+		&& Result.bApplyPreviewPanelWidgetBlueprintBuildFunctionCallable
+		&& Result.bApplyPreviewPanelWidgetRefreshFunctionsNotBlueprintPure
+		&& Result.bApplyPreviewPanelWidgetCachedGetterFunctionsBlueprintPure
+		&& Result.bApplyPreviewPanelWidgetRowsPropertyBlueprintVisible
+		&& Result.bApplyPreviewPanelWidgetFormattedLinesPropertyBlueprintVisible
+		&& Result.bApplyPreviewPanelWidgetRefreshResultPropertyBlueprintVisible
+		&& Result.bApplyPreviewPanelWidgetSummaryTextPropertyBlueprintVisible
+		&& Result.bApplyPreviewPanelWidgetPreviewFlagsBlueprintVisible;
+
+	const auto AppendApplyPreviewPanelWidgetReflectionFailure =
+		[&Result](const bool bPassed, const TCHAR* FailureMessage)
+		{
+			if (!bPassed)
+			{
+				AppendSQLUISamplePersistenceSettingsDraftProbeError(
+					Result,
+					FailureMessage);
+			}
+		};
+	AppendApplyPreviewPanelWidgetReflectionFailure(
+		Result.bApplyPreviewPanelWidgetClassDerivedFromUserWidget,
+		TEXT("SQLUI persistence settings draft probe failed: apply preview panel widget shell did not derive from UUserWidget."));
+	AppendApplyPreviewPanelWidgetReflectionFailure(
+		Result.bApplyPreviewPanelWidgetBlueprintDefaultRefreshFunctionCallable,
+		TEXT("SQLUI persistence settings draft probe failed: apply preview panel widget default refresh was not BlueprintCallable."));
+	AppendApplyPreviewPanelWidgetReflectionFailure(
+		Result.bApplyPreviewPanelWidgetBlueprintCurrentRefreshFunctionCallable,
+		TEXT("SQLUI persistence settings draft probe failed: apply preview panel widget current refresh was not BlueprintCallable."));
+	AppendApplyPreviewPanelWidgetReflectionFailure(
+		Result.bApplyPreviewPanelWidgetBlueprintBuildFunctionCallable,
+		TEXT("SQLUI persistence settings draft probe failed: apply preview panel widget build function was not BlueprintCallable."));
+	AppendApplyPreviewPanelWidgetReflectionFailure(
+		Result.bApplyPreviewPanelWidgetRefreshFunctionsNotBlueprintPure,
+		TEXT("SQLUI persistence settings draft probe failed: apply preview panel widget refresh/build functions were unexpectedly BlueprintPure."));
+	AppendApplyPreviewPanelWidgetReflectionFailure(
+		Result.bApplyPreviewPanelWidgetCachedGetterFunctionsBlueprintPure,
+		TEXT("SQLUI persistence settings draft probe failed: apply preview panel widget cached getter functions were not BlueprintPure."));
+	AppendApplyPreviewPanelWidgetReflectionFailure(
+		Result.bApplyPreviewPanelWidgetRowsPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply preview panel widget Rows property was not Blueprint-visible."));
+	AppendApplyPreviewPanelWidgetReflectionFailure(
+		Result.bApplyPreviewPanelWidgetFormattedLinesPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply preview panel widget FormattedLines property was not Blueprint-visible."));
+	AppendApplyPreviewPanelWidgetReflectionFailure(
+		Result.bApplyPreviewPanelWidgetRefreshResultPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply preview panel widget LastRefreshResult property was not Blueprint-visible."));
+	AppendApplyPreviewPanelWidgetReflectionFailure(
+		Result.bApplyPreviewPanelWidgetSummaryTextPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply preview panel widget SummaryText property was not Blueprint-visible."));
+	AppendApplyPreviewPanelWidgetReflectionFailure(
+		Result.bApplyPreviewPanelWidgetPreviewFlagsBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply preview panel widget preview flag properties were not Blueprint-visible."));
+	AppendApplyPreviewPanelWidgetReflectionFailure(
+		Result.bApplyPreviewPanelWidgetContractValidatedWithoutAssetOrViewport,
+		TEXT("SQLUI persistence settings draft probe failed: apply preview panel widget shell contract could not be validated by reflection without an asset or viewport."));
+
 	const UClass* DraftPanelWidgetClass =
 		USQLUISamplePersistenceSettingsDraftPanelWidget::StaticClass();
 	Result.bPanelWidgetClassDerivedFromUserWidget =
@@ -10150,6 +10315,18 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bApplyPreviewAdapterSQLiteEmptyPathShowsError
 		&& Result.bApplyPreviewAdapterProviderAutoInitPending
 		&& Result.bApplyPreviewAdapterRepeatedDisplayDeterministic
+		&& Result.bApplyPreviewPanelWidgetClassDerivedFromUserWidget
+		&& Result.bApplyPreviewPanelWidgetBlueprintDefaultRefreshFunctionCallable
+		&& Result.bApplyPreviewPanelWidgetBlueprintCurrentRefreshFunctionCallable
+		&& Result.bApplyPreviewPanelWidgetBlueprintBuildFunctionCallable
+		&& Result.bApplyPreviewPanelWidgetRefreshFunctionsNotBlueprintPure
+		&& Result.bApplyPreviewPanelWidgetCachedGetterFunctionsBlueprintPure
+		&& Result.bApplyPreviewPanelWidgetRowsPropertyBlueprintVisible
+		&& Result.bApplyPreviewPanelWidgetFormattedLinesPropertyBlueprintVisible
+		&& Result.bApplyPreviewPanelWidgetRefreshResultPropertyBlueprintVisible
+		&& Result.bApplyPreviewPanelWidgetSummaryTextPropertyBlueprintVisible
+		&& Result.bApplyPreviewPanelWidgetPreviewFlagsBlueprintVisible
+		&& Result.bApplyPreviewPanelWidgetContractValidatedWithoutAssetOrViewport
 		&& Result.bPanelWidgetClassDerivedFromUserWidget
 		&& Result.bPanelWidgetBlueprintDefaultRefreshFunctionCallable
 		&& Result.bPanelWidgetBlueprintCurrentRefreshFunctionCallable
