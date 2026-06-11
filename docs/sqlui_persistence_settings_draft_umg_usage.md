@@ -12,6 +12,7 @@ Related docs:
 - [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md) summarizes current SQLite runtime status and safety boundaries.
 - [`sqlui_repository_architecture.md`](sqlui_repository_architecture.md) describes repository and UI/storage ownership boundaries.
 - [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md) documents the focused apply-preview widget-shell binding recipe.
+- [`sqlui_persistence_settings_apply_contract_umg_usage.md`](sqlui_persistence_settings_apply_contract_umg_usage.md) documents the focused apply/cancel contract widget-shell binding recipe.
 - [`sqlui_smoke_test.md`](sqlui_smoke_test.md) lists the local smoke command that validates the draft model, apply preview, non-mutating apply/cancel contract, apply-preview display rows, validation display rows, sample presenters, and validation/apply-preview/apply-contract widget shells.
 
 ## Existing Draft Validation Stack
@@ -26,9 +27,10 @@ The current stack is intentionally validation/preview-only:
 - Apply/cancel contract display adapter: `USQLUISamplePersistenceSettingsApplyContractPresenter` is the SQLUISamples sample/dev adapter for non-mutating apply/cancel contract display rows; it stores rows, formatted lines, summary text, and contract flags for sample/dev and Blueprint-facing use without applying anything.
 - #109: `USQLUISamplePersistenceSettingsDraftPanelWidget` is the optional C++ `UUserWidget` shell over the #108 presenter/adapter.
 - Apply-preview panel shell: `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` is the optional C++ `UUserWidget` shell over the apply-preview presenter/adapter. It creates no visual layout, adds no widget blueprint asset, is not wired into startup/maps/config/viewport, and exposes only caller-invoked refresh/build plus cached display data.
-- Apply/cancel contract panel shell: `USQLUISamplePersistenceSettingsApplyContractPanelWidget` is the optional C++ `UUserWidget` shell over the apply/cancel contract presenter/adapter. It follows the same caller-invoked, no-asset, no-viewport, no-lifecycle-refresh pattern.
+- Apply/cancel contract panel shell: `USQLUISamplePersistenceSettingsApplyContractPanelWidget` is the optional C++ `UUserWidget` shell over the apply/cancel contract presenter/adapter. Its focused binding recipe is documented in [`sqlui_persistence_settings_apply_contract_umg_usage.md`](sqlui_persistence_settings_apply_contract_umg_usage.md).
 - #110: this guide documents safe future Blueprint subclassing and binding for the validation shell and the shared validation/preview-only boundaries.
 - Apply-preview usage guide: [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md) documents the focused safe binding recipe for `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget`.
+- Apply/cancel contract usage guide: [`sqlui_persistence_settings_apply_contract_umg_usage.md`](sqlui_persistence_settings_apply_contract_umg_usage.md) documents the focused safe binding recipe for `USQLUISamplePersistenceSettingsApplyContractPanelWidget`.
 
 The #109 shell is sample/dev-facing and delegates to the #108 SQLUISamples presenter/adapter, which consumes SQLUICore draft validation/display surfaces from #106 and #107. Future UI should consume the display rows, display summary, summary text, and validation flags only. It should not duplicate draft validation, path policy, backend policy, provider lifecycle policy, file checks, or persistence policy in Blueprint or widget code.
 
