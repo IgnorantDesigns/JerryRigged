@@ -13,6 +13,7 @@ For deeper reference, see:
 - [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) for the focused read-only UMG binding recipe.
 - [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) for the validation-only draft settings UMG binding recipe.
 - [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md) for the dry-run apply-preview UMG binding recipe.
+- [`sqlui_persistence_settings_apply_contract_umg_usage.md`](sqlui_persistence_settings_apply_contract_umg_usage.md) for the apply/cancel contract UMG binding recipe.
 - [`sqlui_smoke_test.md`](sqlui_smoke_test.md) for local editor smoke commands.
 - [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md) for packaged build and packaged runtime smoke validation.
 
@@ -50,6 +51,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - Optional SQLUISamples persistence settings draft presenter and C++ UMG widget shell surfaces now consume the SQLUICore validation display rows for sample/dev-facing display and future Blueprint binding without adding settings controls, apply/save behavior, DB creation, directory creation from display generation, migrations, seed copy, provider/repository initialization, widget blueprint assets, maps, startup wiring, viewport attachment, or destructive actions.
 - A focused validation-only draft UMG usage guide now records the safe future widget blueprint subclass/binding recipe, display semantics, refresh/build boundaries, and manual local checklist for the draft validation widget shell.
 - A focused #116 apply-preview UMG usage guide now records the safe future widget blueprint subclass/binding recipe, preview semantics, refresh/build boundaries, and manual local checklist for the dry-run apply-preview widget shell.
+- A focused apply/cancel contract UMG usage guide now records the safe future widget blueprint subclass/binding recipe, contract/cancel-preview semantics, refresh/build boundaries, and manual local checklist for the apply/cancel contract widget shell.
 - The draft validation sequence is: #106 validation-only draft model, #107 validation display rows/summary, #108 SQLUISamples draft presenter/adapter, #109 optional C++ draft validation UMG shell, and #110 docs-only safe usage/binding guide.
 - Schema initialization and database creation are repository-owned and opt-in.
 - The current known production migration set is only `001_initial_layout_schema`.

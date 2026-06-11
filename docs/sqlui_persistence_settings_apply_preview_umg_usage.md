@@ -7,6 +7,7 @@ PR #115 added `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` as a C++ 
 Related docs:
 
 - [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) documents the companion draft validation widget-shell binding recipe.
+- [`sqlui_persistence_settings_apply_contract_umg_usage.md`](sqlui_persistence_settings_apply_contract_umg_usage.md) documents the companion apply/cancel contract widget-shell binding recipe.
 - [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) defines the broader future persistence settings UX.
 - [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md) plans the future mutating settings editing, apply/cancel, backend selection, SQLite path, provider auto-init, and reset/delete UX phase.
 - [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) documents the read-only status-panel UMG binding recipe.
@@ -24,7 +25,7 @@ The current apply-preview stack is intentionally non-mutating:
 - #115: `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` is the optional SQLUISamples C++ `UUserWidget` shell over that presenter. It creates no visual layout, adds no widget Blueprint asset, and is not wired into startup, maps, config, timers, tick, polling, or the viewport.
 - The non-mutating apply/cancel contract in `USQLUIPersistenceSettingsDraftLibrary` reports future apply readiness, explicitly marks actual Apply execution unavailable/not implemented, and describes cancel/discard as value preview only.
 - `USQLUIPersistenceSettingsApplyContractDisplayLibrary` formats that apply/cancel contract into UI-safe rows/summary without running Apply, saving settings, writing config, or mutating live state.
-- `USQLUISamplePersistenceSettingsApplyContractPanelWidget` is the optional SQLUISamples C++ `UUserWidget` shell over the apply/cancel contract presenter. It follows the same caller-invoked, no-asset, no-viewport, no-lifecycle-refresh pattern as the apply-preview shell.
+- `USQLUISamplePersistenceSettingsApplyContractPanelWidget` is the optional SQLUISamples C++ `UUserWidget` shell over the apply/cancel contract presenter. Its dedicated safe binding recipe is [`sqlui_persistence_settings_apply_contract_umg_usage.md`](sqlui_persistence_settings_apply_contract_umg_usage.md).
 
 Future UI should consume the display rows, display summary, summary text, and preview flags only. It should not duplicate apply-preview logic, draft validation, path policy, backend policy, provider lifecycle policy, file checks, SQLite schema knowledge, migration policy, seed-copy policy, or persistence policy in Blueprint or widget code.
 
