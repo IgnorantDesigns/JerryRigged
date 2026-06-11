@@ -119,6 +119,77 @@ struct SQLUICORE_API FSQLUIPersistenceSettingsApplyPreviewDisplaySummary
 	TArray<FSQLUIPersistenceSettingsApplyPreviewDisplayRow> Rows;
 };
 
+USTRUCT(BlueprintType)
+struct SQLUICORE_API FSQLUIPersistenceSettingsApplyContractDisplayRow
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	FName FieldKey;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	FText Label;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	FText Value;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	ESQLUIPersistenceSettingsValidationDisplayState State =
+		ESQLUIPersistenceSettingsValidationDisplayState::Normal;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	FText DetailText;
+};
+
+USTRUCT(BlueprintType)
+struct SQLUICORE_API FSQLUIPersistenceSettingsApplyContractDisplaySummary
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bCanApplyInFuture = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bActualApplyImplemented = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bCanExecuteApplyNow = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bIsValid = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bHasChanges = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bHasErrors = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bHasWarnings = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bRequiresRestartOrReinitialize = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bWouldNeedProviderReinitialize = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bWouldNeedRepositoryReopen = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bWouldDiscardChangesOnCancel = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	ESQLUIPersistenceSettingsApplyAvailability Availability =
+		ESQLUIPersistenceSettingsApplyAvailability::NotImplemented;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	FText SummaryText;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	TArray<FSQLUIPersistenceSettingsApplyContractDisplayRow> Rows;
+};
+
 /**
  * UI-safe formatter for validation-only persistence settings drafts.
  *
@@ -180,4 +251,38 @@ public:
 	static TArray<FSQLUIPersistenceSettingsApplyPreviewDisplayRow>
 	MakePersistenceSettingsApplyPreviewDisplayRows(
 		const FSQLUIPersistenceSettingsApplyPreviewResult& PreviewResult);
+};
+
+/**
+ * UI-safe formatter for the non-mutating persistence settings apply/cancel
+ * contract.
+ *
+ * These helpers may call the non-mutating apply/cancel contract path, but they
+ * do not apply settings, write config, initialize providers or repositories,
+ * create directories or database files, open databases, run migrations, copy
+ * seed databases, reset databases, or delete files.
+ */
+UCLASS(BlueprintType)
+class SQLUICORE_API USQLUIPersistenceSettingsApplyContractDisplayLibrary
+	: public UBlueprintFunctionLibrary
+{
+	GENERATED_BODY()
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "SQLUI|Persistence Settings")
+	static FSQLUIPersistenceSettingsApplyContractDisplaySummary
+	BuildAndMakePersistenceSettingsApplyContractDisplay(
+		const FSQLUIPersistenceSettingsDraft& Draft);
+
+	UFUNCTION(BlueprintCallable, Category = "SQLUI|Persistence Settings")
+	static FSQLUIPersistenceSettingsApplyContractDisplaySummary
+	MakePersistenceSettingsApplyContractDisplay(
+		const FSQLUIPersistenceSettingsApplyContractResult& ContractResult,
+		const FSQLUIPersistenceSettingsCancelPreviewResult& CancelPreviewResult);
+
+	UFUNCTION(BlueprintCallable, Category = "SQLUI|Persistence Settings")
+	static TArray<FSQLUIPersistenceSettingsApplyContractDisplayRow>
+	MakePersistenceSettingsApplyContractDisplayRows(
+		const FSQLUIPersistenceSettingsApplyContractResult& ContractResult,
+		const FSQLUIPersistenceSettingsCancelPreviewResult& CancelPreviewResult);
 };

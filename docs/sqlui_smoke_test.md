@@ -296,7 +296,7 @@ This path proves the first optional SQLUISamples sample/dev presenter, panel ada
 
 ## Run The Persistence Settings Draft Probe
 
-The persistence settings draft probe keeps the same transient commandlet flow, exercises `USQLUIPersistenceSettingsDraftLibrary`, `USQLUIPersistenceSettingsDraftDisplayLibrary`, the SQLUISamples draft validation sample adapter, the SQLUISamples apply-preview sample adapter, and the optional validation/apply-preview C++ UMG widget shell contracts. It verifies the default/current `InMemory` draft validates safely, produces safe validation display rows, and reports no changes in the dry-run apply-intent preview, non-mutating apply/cancel contract, and apply-preview display rows/adapters; verifies an unknown backend is rejected with validation messages, a user-readable validation error row, a blocked apply preview, a blocked apply contract, and user-readable apply-preview error rows; verifies a pending SQLite draft/path can be represented and previewed without applying it or creating a database; verifies an empty SQLite path is rejected safely and previewed/displayed as blocked; verifies a pending provider auto-init value validates, displays, and previews/displays as pending without changing provider auto-init policy; verifies cancel preview reports pending changes as discardable value state only; verifies the widget shells derive from `UUserWidget`; verifies their caller-invoked refresh/build hooks are Blueprint-callable but not pure; verifies cached getters/properties are Blueprint-visible as intended; verifies the shell contracts by reflection without a widget blueprint asset, map, viewport instance, or startup wiring; verifies repeated validation/display/preview/apply-preview display/apply-contract/cancel-preview and adapter output is deterministic; verifies validation, preview, preview-display, apply-preview adapter, apply-contract, and cancel-preview generation do not delete a smoke-owned SQLite sidecar; removes all probe files; and then runs the same default runtime widget pipeline:
+The persistence settings draft probe keeps the same transient commandlet flow, exercises `USQLUIPersistenceSettingsDraftLibrary`, `USQLUIPersistenceSettingsDraftDisplayLibrary`, `USQLUIPersistenceSettingsApplyPreviewDisplayLibrary`, `USQLUIPersistenceSettingsApplyContractDisplayLibrary`, the SQLUISamples draft validation sample adapter, the SQLUISamples apply-preview sample adapter, and the optional validation/apply-preview C++ UMG widget shell contracts. It verifies the default/current `InMemory` draft validates safely, produces safe validation display rows, and reports no changes in the dry-run apply-intent preview, non-mutating apply/cancel contract, apply-preview display rows/adapters, and apply/cancel contract display rows; verifies an unknown backend is rejected with validation messages, a user-readable validation error row, a blocked apply preview, a blocked apply contract, user-readable apply-preview error rows, and user-readable apply/cancel contract display rows; verifies a pending SQLite draft/path can be represented and previewed without applying it or creating a database; verifies an empty SQLite path is rejected safely and previewed/displayed as blocked; verifies a pending provider auto-init value validates, displays, and previews/displays as pending without changing provider auto-init policy; verifies cancel preview reports pending changes as discardable value state only; verifies the widget shells derive from `UUserWidget`; verifies their caller-invoked refresh/build hooks are Blueprint-callable but not pure; verifies cached getters/properties are Blueprint-visible as intended; verifies the shell contracts by reflection without a widget blueprint asset, map, viewport instance, or startup wiring; verifies repeated validation/display/preview/apply-preview display/apply-contract display/apply-contract/cancel-preview and adapter output is deterministic; verifies validation, preview, preview-display, apply-preview adapter, apply-contract display, apply-contract, and cancel-preview generation do not delete a smoke-owned SQLite sidecar; removes all probe files; and then runs the same default runtime widget pipeline:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UsePersistenceSettingsDraftProbe
@@ -314,6 +314,7 @@ This same probe covers:
 - Non-mutating apply contract/readiness result.
 - Non-mutating cancel/discard preview result.
 - Apply-preview display rows/summary.
+- Apply/cancel contract display rows/summary.
 - SQLUISamples apply-preview adapter.
 - C++ apply-preview UMG widget shell contract.
 
@@ -364,6 +365,15 @@ SQLUI persistence settings draft probe SQLite apply preview display safe: true
 SQLUI persistence settings draft probe unknown backend apply preview display shows error: true
 SQLUI persistence settings draft probe SQLite empty path apply preview display shows error: true
 SQLUI persistence settings draft probe provider auto-init apply preview display pending: true
+SQLUI persistence settings draft probe default apply contract display safe: true
+SQLUI persistence settings draft probe current apply contract display no changes: true
+SQLUI persistence settings draft probe apply contract display execution unavailable: true
+SQLUI persistence settings draft probe backend change apply contract display detected: true
+SQLUI persistence settings draft probe SQLite apply contract display safe: true
+SQLUI persistence settings draft probe unknown backend apply contract display shows error: true
+SQLUI persistence settings draft probe SQLite empty path apply contract display shows error: true
+SQLUI persistence settings draft probe provider auto-init apply contract display pending: true
+SQLUI persistence settings draft probe cancel preview display would discard changes: true
 SQLUI persistence settings draft probe sample adapter default display generated: true
 SQLUI persistence settings draft probe sample adapter default display safe: true
 SQLUI persistence settings draft probe sample adapter unknown backend display shows error: true
@@ -398,19 +408,21 @@ SQLUI persistence settings draft probe repeated validation deterministic: true
 SQLUI persistence settings draft probe repeated display deterministic: true
 SQLUI persistence settings draft probe repeated apply preview deterministic: true
 SQLUI persistence settings draft probe repeated apply preview display deterministic: true
+SQLUI persistence settings draft probe repeated apply contract display deterministic: true
 SQLUI persistence settings draft probe repeated apply contract deterministic: true
 SQLUI persistence settings draft probe repeated cancel preview deterministic: true
 SQLUI persistence settings draft probe sidecar preserved during validation: true
 SQLUI persistence settings draft probe sidecar preserved during apply preview: true
 SQLUI persistence settings draft probe sidecar preserved during apply preview display: true
 SQLUI persistence settings draft probe sidecar preserved during apply preview adapter: true
+SQLUI persistence settings draft probe sidecar preserved during apply contract display: true
 SQLUI persistence settings draft probe sidecar preserved during apply contract: true
 SQLUI persistence settings draft probe sidecar preserved during cancel preview: true
 SQLUI persistence settings draft probe database files removed: true
 SQLUI persistence settings draft probe succeeded.
 ```
 
-This path proves validation/preview-only draft behavior, non-mutating apply/cancel contract reporting, UI-safe validation display-row formatting and summary generation, UI-safe apply-preview display-row formatting and summary generation, SQLUISamples sample adapter consumption of validation and apply-preview rows, and the optional validation/apply-preview C++ UMG widget shell binding contracts. The future Blueprint/UMG binding recipes for these shells live in [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) and [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md). It does not require widget blueprint assets or maps, does not attach anything to the viewport, does not alter startup/config behavior, does not apply settings, write config, add settings editing UI controls, add backend selector controls, add SQLite path editor controls, add provider auto-init toggle controls, add reset/delete behavior, add widget blueprint assets, add visual layout, initialize providers or repositories, create database files, create directories from adapter/display/widget/preview/contract generation, open databases for writing, run migrations, copy seed databases, delete files outside smoke-owned cleanup, change startup behavior, edit Content or maps, or leave persistent database files behind. The only directory/file creation in this smoke path is the explicit smoke-owned sidecar fixture used to verify cleanup and non-deletion behavior.
+This path proves validation/preview-only draft behavior, non-mutating apply/cancel contract reporting, UI-safe validation display-row formatting and summary generation, UI-safe apply-preview display-row formatting and summary generation, UI-safe apply/cancel contract display-row formatting and summary generation, SQLUISamples sample adapter consumption of validation and apply-preview rows, and the optional validation/apply-preview C++ UMG widget shell binding contracts. The future Blueprint/UMG binding recipes for these shells live in [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) and [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md). It does not require widget blueprint assets or maps, does not attach anything to the viewport, does not alter startup/config behavior, does not apply settings, write config, add settings editing UI controls, add backend selector controls, add SQLite path editor controls, add provider auto-init toggle controls, add reset/delete behavior, add widget blueprint assets, add visual layout, initialize providers or repositories, create database files, create directories from adapter/display/widget/preview/contract generation, open databases for writing, run migrations, copy seed databases, delete files outside smoke-owned cleanup, change startup behavior, edit Content or maps, or leave persistent database files behind. The only directory/file creation in this smoke path is the explicit smoke-owned sidecar fixture used to verify cleanup and non-deletion behavior.
 
 After the probe succeeds, database files under `Saved\SQLUI\SmokeTests\PersistenceSettingsDraft` should not exist. A full checkpoint cleanup check should also confirm that the related read-only status paths used by this phase, such as `Saved\SQLUI\SmokeTests\PersistenceStatusSampleSurface` and `Saved\SQLUI\SmokeTests\PersistenceStatusDisplayRows`, contain no smoke-owned `.db`, `.db-journal`, `.db-wal`, or `.db-shm` files.
 
