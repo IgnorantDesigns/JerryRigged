@@ -86,9 +86,9 @@ Result: exit code `0`; no persistence status/settings probe database or SQLite s
 & "C:\Program Files\Epic Games\UE_5.7\Engine\Binaries\Win64\UnrealEditor.exe" "C:\Users\Dayton Brown\Documents\Unreal Projects\JerryRigged-fresh\JerryRigged.uproject" -unattended -nop4 -nosplash -nullrhi -NoSound -ExecCmds="QUIT_EDITOR"
 ```
 
-Result: exit code `0`; the Unreal Editor executable opened the project and exited cleanly.
+Result: exit code `0`; the Unreal Editor executable opened the project and exited cleanly. This confirmed that the project and loaded SQLUI/SQLUISamples modules were sufficient for the editor process to start, mount plugins, load the project, execute the quit command, and shut down.
 
-This editor launch is intentionally narrow. It validates that the current project/editor/plugin state can open under UE 5.7 in an unattended local checkpoint, but it is not a manual UI review, packaged runtime test, map validation, viewport validation, or packaged SQLite lifecycle test.
+This editor launch is intentionally narrow. It validates that the current project/editor/plugin state can open under UE 5.7 in an unattended local checkpoint, but it is not a manual UI review, PIE test, packaged runtime test, map validation, viewport validation, widget Blueprint subclass test, settings apply/reset flow test, or packaged SQLite lifecycle test.
 
 ## Confirmed Boundaries
 
@@ -99,6 +99,11 @@ This editor launch is intentionally narrow. It validates that the current projec
 - `InMemory` remains the default backend.
 - The sample/status display paths remain optional and dev-facing.
 - The sample/status display paths are not wired into startup, maps, viewport attachment, or default config.
+- No maps were saved.
+- No assets were saved.
+- No widget Blueprint assets were created or committed.
+- No generated editor/session/build files were committed.
+- No backend selector UI, SQLite path editor UI, provider auto-init control, settings apply/save/config-write behavior, reset/delete UX, polling, ticking, timer, or auto-refresh behavior was added.
 - The sample/status display paths remain read-only:
   - no database creation
   - no migrations
@@ -109,6 +114,19 @@ This editor launch is intentionally narrow. It validates that the current projec
   - no reset/delete behavior
   - no destructive actions
 - No maps, Content assets, widget Blueprint assets, packaged outputs, database files, or generated files were intentionally changed.
+
+## Future Validation Guidance
+
+This checkpoint is stronger than build/commandlet-only validation because the full Unreal Editor executable launched and exited successfully. It is still not a replacement for future interactive editor, PIE, or packaged runtime validation when later PRs add real UI assets or runtime wiring.
+
+Future slices should add stronger validation when they introduce stronger behavior:
+
+- Interactive editor/manual validation when widget Blueprint assets, visible UI controls, or real settings screens are introduced.
+- PIE validation when runtime UI behavior is wired into maps, viewport flow, startup, provider lifecycle, or game execution.
+- Packaged validation when startup behavior, default maps, config wiring, provider lifecycle, packaged runtime behavior, or actual config writes are introduced.
+- Reset/delete validation when reset UX or destructive maintenance actions are introduced.
+
+The local packaging/toolchain caveat remains separate from SQLUI persistence correctness. Packaged-build validation depends on Unreal selecting a compatible Visual Studio/MSVC toolchain; known local toolchain issues are documented in [`sqlui_packaged_build_validation.md`](sqlui_packaged_build_validation.md).
 
 ## Packaged Validation
 
