@@ -23,6 +23,17 @@ enum class ESQLUIPersistenceSettingsApplyAvailability : uint8
 	PreviewOnlyReady
 };
 
+UENUM(BlueprintType)
+enum class ESQLUIPersistenceSettingsApplyStatus : uint8
+{
+	NotImplemented,
+	BlockedByValidation,
+	NoChanges,
+	PreviewOnly,
+	Failed,
+	Succeeded
+};
+
 USTRUCT(BlueprintType)
 struct SQLUICORE_API FSQLUIPersistenceSettingsValidationMessage
 {
@@ -229,6 +240,73 @@ struct SQLUICORE_API FSQLUIPersistenceSettingsCancelPreviewResult
 	FString SummaryText;
 };
 
+USTRUCT(BlueprintType)
+struct SQLUICORE_API FSQLUIPersistenceSettingsApplyRequest
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	FSQLUIPersistenceSettingsDraft Draft;
+};
+
+USTRUCT(BlueprintType)
+struct SQLUICORE_API FSQLUIPersistenceSettingsApplyResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bActualApplyImplemented = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bDidWriteConfig = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bDidChangeSettings = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bDidInitializeProvider = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bDidInitializeRepository = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bDidCreateDatabaseFiles = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bDidCreateDirectories = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bDidOpenDatabaseForWriting = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bDidRunMigrations = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bDidCopySeedDatabase = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bDidDeleteFiles = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bRequiresRestartOrReinitialize = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	ESQLUIPersistenceSettingsApplyStatus Status =
+		ESQLUIPersistenceSettingsApplyStatus::NotImplemented;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	FSQLUIPersistenceSettingsApplyContractResult ApplyContract;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	TArray<FSQLUIPersistenceSettingsValidationMessage> Messages;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	FString SummaryText;
+};
+
 /**
  * Non-mutating draft/pending settings helper for future persistence UI.
  *
@@ -272,4 +350,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "SQLUI|Persistence Settings")
 	static FSQLUIPersistenceSettingsCancelPreviewResult BuildPersistenceSettingsCancelPreview(
 		const FSQLUIPersistenceSettingsDraft& Draft);
+
+	UFUNCTION(BlueprintCallable, Category = "SQLUI|Persistence Settings")
+	static FSQLUIPersistenceSettingsApplyResult RequestPersistenceSettingsApply(
+		const FSQLUIPersistenceSettingsApplyRequest& Request);
 };
