@@ -12,7 +12,7 @@ Related docs:
 - [`sqlui_sqlite_runtime_status.md`](sqlui_sqlite_runtime_status.md) summarizes current SQLite runtime status and safety boundaries.
 - [`sqlui_repository_architecture.md`](sqlui_repository_architecture.md) describes repository and UI/storage ownership boundaries.
 - [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md) documents the focused apply-preview widget-shell binding recipe.
-- [`sqlui_smoke_test.md`](sqlui_smoke_test.md) lists the local smoke command that validates the draft model, apply preview, apply-preview display rows, validation display rows, sample presenters, and widget shell.
+- [`sqlui_smoke_test.md`](sqlui_smoke_test.md) lists the local smoke command that validates the draft model, apply preview, non-mutating apply/cancel contract, apply-preview display rows, validation display rows, sample presenters, and widget shell.
 
 ## Existing Draft Validation Stack
 
@@ -51,7 +51,7 @@ The shell exposes cached data through Blueprint-readable properties and pure get
 
 ## Foundation Checkpoint
 
-The persistence settings draft validation UMG foundation is complete as a binding scaffold. It includes the #105 settings editing/reset UX plan, the #106 SQLUICore draft model and validation result, the #107 SQLUICore display rows and summary, the #108 optional SQLUISamples validation presenter/adapter, the #109 optional C++ UMG widget shell, this #110 usage guide, and the #111 final checkpoint. The follow-up apply-preview UI foundation is complete through #112 dry-run apply-intent preview, #113 UI-safe apply-preview display rows/summary, #114 optional SQLUISamples apply-preview presenter/adapter, #115 optional SQLUISamples apply-preview C++ UMG widget shell, #116 apply-preview usage guide, the #117 final checkpoint, and `-UsePersistenceSettingsDraftProbe` non-asset smoke coverage for the draft model, apply preview, apply-preview display rows, validation display rows, presenters/adapters, and widget-shell contracts.
+The persistence settings draft validation UMG foundation is complete as a binding scaffold. It includes the #105 settings editing/reset UX plan, the #106 SQLUICore draft model and validation result, the #107 SQLUICore display rows and summary, the #108 optional SQLUISamples validation presenter/adapter, the #109 optional C++ UMG widget shell, this #110 usage guide, and the #111 final checkpoint. The follow-up apply-preview UI foundation is complete through #112 dry-run apply-intent preview, #113 UI-safe apply-preview display rows/summary, #114 optional SQLUISamples apply-preview presenter/adapter, #115 optional SQLUISamples apply-preview C++ UMG widget shell, #116 apply-preview usage guide, the #117 final checkpoint, the non-mutating apply/cancel contract, and `-UsePersistenceSettingsDraftProbe` non-asset smoke coverage for the draft model, apply preview, apply/cancel contract, apply-preview display rows, validation display rows, presenters/adapters, and widget-shell contracts.
 
 This remains sample/dev-facing and validation/preview-only. It is not a full settings screen and does not add settings editing controls, backend selector controls, SQLite path editing controls, provider auto-init toggles, actual Apply/Cancel behavior, settings save behavior, config writes, reset/delete actions, migration controls, seed-copy controls, provider/repository initialization, database creation, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, or auto-refresh.
 

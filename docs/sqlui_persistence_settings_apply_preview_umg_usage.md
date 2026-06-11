@@ -22,6 +22,7 @@ The current apply-preview stack is intentionally non-mutating:
 - #113: `USQLUIPersistenceSettingsApplyPreviewDisplayLibrary` converts dry-run preview results into `FSQLUIPersistenceSettingsApplyPreviewDisplayRow` values and a `FSQLUIPersistenceSettingsApplyPreviewDisplaySummary`.
 - #114: `USQLUISamplePersistenceSettingsApplyPreviewPresenter` is the optional SQLUISamples sample/dev-facing adapter. It delegates to SQLUICore display helpers and caches rows, formatted lines, summary text, and preview flags for simple sample or Blueprint consumption.
 - #115: `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` is the optional SQLUISamples C++ `UUserWidget` shell over that presenter. It creates no visual layout, adds no widget Blueprint asset, and is not wired into startup, maps, config, timers, tick, polling, or the viewport.
+- The non-mutating apply/cancel contract in `USQLUIPersistenceSettingsDraftLibrary` reports future apply readiness, explicitly marks actual Apply execution unavailable/not implemented, and describes cancel/discard as value preview only.
 
 Future UI should consume the display rows, display summary, summary text, and preview flags only. It should not duplicate apply-preview logic, draft validation, path policy, backend policy, provider lifecycle policy, file checks, SQLite schema knowledge, migration policy, seed-copy policy, or persistence policy in Blueprint or widget code.
 
@@ -29,7 +30,7 @@ The apply-preview shell is sample/dev-facing. It is not a full settings screen a
 
 ## Foundation Checkpoint
 
-The non-mutating apply-preview UI foundation is complete through #112 dry-run apply-intent preview, #113 apply-preview display rows/summary, #114 optional SQLUISamples apply-preview presenter, #115 optional C++ apply-preview UMG widget shell, this #116 usage guide, the #117 final foundation checkpoint, and `-UsePersistenceSettingsDraftProbe` smoke coverage. That checkpoint builds on the #105-#111 validation-only draft foundation, but it still adds no settings editing, actual Apply/Cancel behavior, config writes, backend selector controls, SQLite path editor controls, provider auto-init controls, reset/delete UX, widget blueprint assets, maps, startup wiring, viewport attachment, polling, ticking, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, directory creation, database file creation, or default policy changes.
+The non-mutating apply-preview UI foundation is complete through #112 dry-run apply-intent preview, #113 apply-preview display rows/summary, #114 optional SQLUISamples apply-preview presenter, #115 optional C++ apply-preview UMG widget shell, this #116 usage guide, the #117 final foundation checkpoint, the non-mutating apply/cancel contract, and `-UsePersistenceSettingsDraftProbe` smoke coverage. That checkpoint builds on the #105-#111 validation-only draft foundation, but it still adds no settings editing, actual Apply/Cancel execution, config writes, backend selector controls, SQLite path editor controls, provider auto-init controls, reset/delete UX, widget blueprint assets, maps, startup wiring, viewport attachment, polling, ticking, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, directory creation, database file creation, or default policy changes.
 
 ## Shell API Shape
 
@@ -158,11 +159,11 @@ For a future local/manual Blueprint exploration, keep the asset local unless a l
 
 ## Smoke Coverage
 
-The existing `-UsePersistenceSettingsDraftProbe` smoke path validates the SQLUICore draft model, dry-run apply preview, apply-preview display-row formatting, `USQLUISamplePersistenceSettingsApplyPreviewPresenter`, and `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` contract by reflection.
+The existing `-UsePersistenceSettingsDraftProbe` smoke path validates the SQLUICore draft model, dry-run apply preview, non-mutating apply/cancel contract, apply-preview display-row formatting, `USQLUISamplePersistenceSettingsApplyPreviewPresenter`, and `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget` contract by reflection.
 
 It verifies the apply-preview shell derives from `UUserWidget`, that refresh/build functions are Blueprint-callable and not `BlueprintPure`, that cached getters are `BlueprintPure`, and that cached row/formatted-line/result/summary/flag properties are Blueprint-visible. It does this without a widget Blueprint asset, map, viewport instance, startup wiring, polling, or automatic refresh.
 
-The same probe verifies default/current `InMemory` previews are safe, unknown backends and empty SQLite paths are shown as blocked/error preview rows, pending SQLite paths can be previewed without database creation, provider auto-init changes remain pending policy, repeated preview/display/adapter output is deterministic, and a smoke-owned sidecar is not deleted by preview/display/adapter generation.
+The same probe verifies default/current `InMemory` previews and contracts are safe, actual Apply execution is reported as unavailable/not implemented, unknown backends and empty SQLite paths are shown as blocked/error preview rows and blocked apply contracts, pending SQLite paths can be previewed without database creation, provider auto-init changes remain pending policy, cancel/discard is represented as value preview only, repeated preview/contract/display/adapter output is deterministic, and a smoke-owned sidecar is not deleted by preview/contract/display/adapter generation.
 
 This guide adds no new smoke flag. Cleanup expectations remain unchanged: the probe removes only smoke-owned database and sidecar files under `Saved/SQLUI/SmokeTests/PersistenceSettingsDraft`.
 
