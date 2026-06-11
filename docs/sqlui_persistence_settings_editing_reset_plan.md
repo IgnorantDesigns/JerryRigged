@@ -136,6 +136,8 @@ The next actual apply/cancel phase must remain SQLUICore-first. Future implement
 
 ## Actual Apply Implementation Gate
 
+PR #125 is documentation-only: it records this actual apply implementation gate and adds no runtime code, scripts, config changes, smoke flags, UI controls, settings editing, or apply/save/config-write behavior.
+
 Actual apply/save/config-write behavior has not been implemented yet. The current `PreviewPersistenceSettingsDraftApply`, `BuildPersistenceSettingsApplyContract`, and `BuildPersistenceSettingsCancelPreview` helpers remain non-mutating report/preview paths. They can validate and describe a future apply, but they do not save settings, write config, initialize provider or repository state, create directories, create database files, run migrations, copy seed databases, delete files, or change startup behavior.
 
 The first actual apply implementation must be SQLUICore-first. Widgets and SQLUISamples must keep acting as presentation and intent-capture layers; they must not write config, mutate `USQLUILayoutRepositoryRuntimeSettings`, initialize providers/repositories, call repository factory behavior directly for apply, or perform database/file lifecycle work. A future mutating entrypoint should validate an `FSQLUIPersistenceSettingsDraft`, refuse invalid drafts without mutation, write only explicitly scoped persistence settings, and return user-readable success/failure/no-op/restart/reopen/reinitialize messaging.

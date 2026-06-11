@@ -105,6 +105,8 @@ The resolver can also map explicit seed-copy options into `FSQLUISQLiteSeedDatab
 
 ## Persistence Settings Actual Apply Implementation Gate
 
+PR #125 records this gate as documentation only; it adds no runtime code, scripts, config changes, smoke flags, UI controls, settings editing, or apply/save/config-write behavior.
+
 Actual apply/save/config-write behavior remains future work. The runtime currently has only non-mutating draft validation, dry-run apply preview, apply/cancel contract, display rows, SQLUISamples adapters, and C++ widget shells.
 
 The first mutating apply path must be implemented through SQLUICore helper/policy surfaces, not through widgets or SQLUISamples. It must validate the pending `FSQLUIPersistenceSettingsDraft`, refuse invalid drafts without mutation, write only explicitly scoped persistence settings, and return clear user-readable result messages. If no safe write target exists, the implementation should keep reporting not-implemented or dry-run-only rather than writing broad or committed config.
