@@ -148,9 +148,9 @@ Parameters:
       and validation display-row probe, including the dry-run apply-intent preview,
       non-mutating apply/cancel contract, apply preview display rows, apply/cancel
       contract display rows, the unavailable/non-mutating actual apply entrypoint
-      skeleton, SQLUISamples validation/apply-preview/apply-contract sample
-      adapters, and validation/apply-preview/apply-contract C++ UMG widget shell
-      contracts.
+      skeleton, UI-safe apply result display rows, SQLUISamples
+      validation/apply-preview/apply-contract sample adapters, and
+      validation/apply-preview/apply-contract C++ UMG widget shell contracts.
 
   -UseSQLiteMigrationProbe
       Run the optional SQLUICore SQLite migration-runner probe.

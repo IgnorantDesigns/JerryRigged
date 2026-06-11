@@ -121,6 +121,21 @@ const TCHAR* MakeSQLUIPersistenceSettingsApplyContractDisplayLabelForSeverity(
 	}
 }
 
+const TCHAR* MakeSQLUIPersistenceSettingsApplyResultDisplayLabelForSeverity(
+	const ESQLUIPersistenceSettingsValidationMessageSeverity Severity)
+{
+	switch (Severity)
+	{
+	case ESQLUIPersistenceSettingsValidationMessageSeverity::Error:
+		return TEXT("Apply result error");
+	case ESQLUIPersistenceSettingsValidationMessageSeverity::Warning:
+		return TEXT("Apply result warning");
+	case ESQLUIPersistenceSettingsValidationMessageSeverity::Info:
+	default:
+		return TEXT("Apply result info");
+	}
+}
+
 bool DoesSQLUIPersistenceSettingsValidationHaveSeverity(
 	const FSQLUIPersistenceSettingsValidationResult& ValidationResult,
 	const ESQLUIPersistenceSettingsValidationMessageSeverity Severity)
@@ -158,6 +173,22 @@ bool DoesSQLUIPersistenceSettingsApplyContractHaveSeverity(
 {
 	for (const FSQLUIPersistenceSettingsValidationMessage& Message :
 		ContractResult.Messages)
+	{
+		if (Message.Severity == Severity)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DoesSQLUIPersistenceSettingsApplyResultHaveSeverity(
+	const FSQLUIPersistenceSettingsApplyResult& ApplyResult,
+	const ESQLUIPersistenceSettingsValidationMessageSeverity Severity)
+{
+	for (const FSQLUIPersistenceSettingsValidationMessage& Message :
+		ApplyResult.Messages)
 	{
 		if (Message.Severity == Severity)
 		{
@@ -243,6 +274,57 @@ MakeSQLUIPersistenceSettingsApplyContractDisplaySummaryState(
 		: ESQLUIPersistenceSettingsValidationDisplayState::Normal;
 }
 
+ESQLUIPersistenceSettingsValidationDisplayState
+MakeSQLUIPersistenceSettingsApplyResultDisplayStatusState(
+	const ESQLUIPersistenceSettingsApplyStatus Status)
+{
+	switch (Status)
+	{
+	case ESQLUIPersistenceSettingsApplyStatus::Succeeded:
+		return ESQLUIPersistenceSettingsValidationDisplayState::Good;
+	case ESQLUIPersistenceSettingsApplyStatus::NoChanges:
+		return ESQLUIPersistenceSettingsValidationDisplayState::Good;
+	case ESQLUIPersistenceSettingsApplyStatus::BlockedByValidation:
+	case ESQLUIPersistenceSettingsApplyStatus::Failed:
+		return ESQLUIPersistenceSettingsValidationDisplayState::Error;
+	case ESQLUIPersistenceSettingsApplyStatus::PreviewOnly:
+	case ESQLUIPersistenceSettingsApplyStatus::NotImplemented:
+	default:
+		return ESQLUIPersistenceSettingsValidationDisplayState::Warning;
+	}
+}
+
+ESQLUIPersistenceSettingsValidationDisplayState
+MakeSQLUIPersistenceSettingsApplyResultDisplaySummaryState(
+	const FSQLUIPersistenceSettingsApplyResult& ApplyResult)
+{
+	if (ApplyResult.Status == ESQLUIPersistenceSettingsApplyStatus::Failed
+		|| ApplyResult.Status
+			== ESQLUIPersistenceSettingsApplyStatus::BlockedByValidation
+		|| DoesSQLUIPersistenceSettingsApplyResultHaveSeverity(
+			ApplyResult,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error))
+	{
+		return ESQLUIPersistenceSettingsValidationDisplayState::Error;
+	}
+
+	if (ApplyResult.Status == ESQLUIPersistenceSettingsApplyStatus::PreviewOnly
+		|| ApplyResult.Status
+			== ESQLUIPersistenceSettingsApplyStatus::NotImplemented
+		|| ApplyResult.bRequiresRestartOrReinitialize
+		|| DoesSQLUIPersistenceSettingsApplyResultHaveSeverity(
+			ApplyResult,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Warning))
+	{
+		return ESQLUIPersistenceSettingsValidationDisplayState::Warning;
+	}
+
+	return ApplyResult.Status == ESQLUIPersistenceSettingsApplyStatus::Succeeded
+			|| ApplyResult.Status == ESQLUIPersistenceSettingsApplyStatus::NoChanges
+		? ESQLUIPersistenceSettingsValidationDisplayState::Good
+		: ESQLUIPersistenceSettingsValidationDisplayState::Normal;
+}
+
 void AddSQLUIPersistenceSettingsValidationDisplayRow(
 	TArray<FSQLUIPersistenceSettingsValidationDisplayRow>& Rows,
 	const FName FieldKey,
@@ -253,6 +335,24 @@ void AddSQLUIPersistenceSettingsValidationDisplayRow(
 	const TCHAR* DetailText = TEXT(""))
 {
 	FSQLUIPersistenceSettingsValidationDisplayRow Row;
+	Row.FieldKey = FieldKey;
+	Row.Label = SQLUIPersistenceSettingsDisplayText(Label);
+	Row.Value = Value;
+	Row.State = State;
+	Row.DetailText = SQLUIPersistenceSettingsDisplayText(DetailText);
+	Rows.Add(Row);
+}
+
+void AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+	TArray<FSQLUIPersistenceSettingsApplyResultDisplayRow>& Rows,
+	const FName FieldKey,
+	const TCHAR* Label,
+	const FText& Value,
+	const ESQLUIPersistenceSettingsValidationDisplayState State =
+		ESQLUIPersistenceSettingsValidationDisplayState::Normal,
+	const TCHAR* DetailText = TEXT(""))
+{
+	FSQLUIPersistenceSettingsApplyResultDisplayRow Row;
 	Row.FieldKey = FieldKey;
 	Row.Label = SQLUIPersistenceSettingsDisplayText(Label);
 	Row.Value = Value;
@@ -367,6 +467,46 @@ FText MakeSQLUIPersistenceSettingsApplyContractDisplayCancelValue(
 
 	return SQLUIPersistenceSettingsDisplayText(
 		TEXT("No pending changes to discard"));
+}
+
+FText MakeSQLUIPersistenceSettingsApplyResultDisplayStatusValue(
+	const ESQLUIPersistenceSettingsApplyStatus Status)
+{
+	switch (Status)
+	{
+	case ESQLUIPersistenceSettingsApplyStatus::BlockedByValidation:
+		return SQLUIPersistenceSettingsDisplayText(TEXT("Blocked by validation"));
+	case ESQLUIPersistenceSettingsApplyStatus::NoChanges:
+		return SQLUIPersistenceSettingsDisplayText(TEXT("No changes, not saved"));
+	case ESQLUIPersistenceSettingsApplyStatus::PreviewOnly:
+		return SQLUIPersistenceSettingsDisplayText(TEXT("Preview only, not applied"));
+	case ESQLUIPersistenceSettingsApplyStatus::Failed:
+		return SQLUIPersistenceSettingsDisplayText(TEXT("Failed, not applied"));
+	case ESQLUIPersistenceSettingsApplyStatus::Succeeded:
+		return SQLUIPersistenceSettingsDisplayText(TEXT("Succeeded"));
+	case ESQLUIPersistenceSettingsApplyStatus::NotImplemented:
+	default:
+		return SQLUIPersistenceSettingsDisplayText(
+			TEXT("Apply unavailable, not implemented"));
+	}
+}
+
+FText MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectValue(
+	const bool bDidSideEffect,
+	const TCHAR* DidText,
+	const TCHAR* DidNotText)
+{
+	return SQLUIPersistenceSettingsDisplayText(
+		bDidSideEffect ? DidText : DidNotText);
+}
+
+ESQLUIPersistenceSettingsValidationDisplayState
+MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectState(
+	const bool bDidSideEffect)
+{
+	return bDidSideEffect
+		? ESQLUIPersistenceSettingsValidationDisplayState::Warning
+		: ESQLUIPersistenceSettingsValidationDisplayState::Good;
 }
 
 bool IsSQLUIPersistenceSettingsDisplaySQLite(
@@ -904,6 +1044,244 @@ USQLUIPersistenceSettingsApplyContractDisplayLibrary::
 			Rows,
 			TEXT("CancelPreviewMessage"),
 			MakeSQLUIPersistenceSettingsApplyContractDisplayLabelForSeverity(
+				Message.Severity),
+			SQLUIPersistenceSettingsDisplayString(Message.Message),
+			MakeSQLUIPersistenceSettingsDisplayStateForSeverity(Message.Severity),
+			*Message.DetailText);
+	}
+
+	return Rows;
+}
+
+FSQLUIPersistenceSettingsApplyResultDisplaySummary
+USQLUIPersistenceSettingsApplyResultDisplayLibrary::
+	RequestAndMakePersistenceSettingsApplyResultDisplay(
+		const FSQLUIPersistenceSettingsDraft& Draft)
+{
+	FSQLUIPersistenceSettingsApplyRequest Request;
+	Request.Draft = Draft;
+	return MakePersistenceSettingsApplyResultDisplay(
+		USQLUIPersistenceSettingsDraftLibrary::RequestPersistenceSettingsApply(
+			Request));
+}
+
+FSQLUIPersistenceSettingsApplyResultDisplaySummary
+USQLUIPersistenceSettingsApplyResultDisplayLibrary::
+	MakePersistenceSettingsApplyResultDisplay(
+		const FSQLUIPersistenceSettingsApplyResult& ApplyResult)
+{
+	FSQLUIPersistenceSettingsApplyResultDisplaySummary Summary;
+	Summary.bSucceeded = ApplyResult.bSucceeded;
+	Summary.bActualApplyImplemented = ApplyResult.bActualApplyImplemented;
+	Summary.bDidWriteConfig = ApplyResult.bDidWriteConfig;
+	Summary.bDidChangeSettings = ApplyResult.bDidChangeSettings;
+	Summary.bDidInitializeProvider = ApplyResult.bDidInitializeProvider;
+	Summary.bDidInitializeRepository = ApplyResult.bDidInitializeRepository;
+	Summary.bDidCreateDatabaseFiles = ApplyResult.bDidCreateDatabaseFiles;
+	Summary.bDidCreateDirectories = ApplyResult.bDidCreateDirectories;
+	Summary.bDidOpenDatabaseForWriting = ApplyResult.bDidOpenDatabaseForWriting;
+	Summary.bDidRunMigrations = ApplyResult.bDidRunMigrations;
+	Summary.bDidCopySeedDatabase = ApplyResult.bDidCopySeedDatabase;
+	Summary.bDidDeleteFiles = ApplyResult.bDidDeleteFiles;
+	Summary.bRequiresRestartOrReinitialize =
+		ApplyResult.bRequiresRestartOrReinitialize;
+	Summary.bHasErrors =
+		ApplyResult.Status == ESQLUIPersistenceSettingsApplyStatus::Failed
+		|| ApplyResult.Status
+			== ESQLUIPersistenceSettingsApplyStatus::BlockedByValidation
+		|| DoesSQLUIPersistenceSettingsApplyResultHaveSeverity(
+			ApplyResult,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error);
+	Summary.bHasWarnings =
+		ApplyResult.Status == ESQLUIPersistenceSettingsApplyStatus::PreviewOnly
+		|| ApplyResult.Status
+			== ESQLUIPersistenceSettingsApplyStatus::NotImplemented
+		|| ApplyResult.bRequiresRestartOrReinitialize
+		|| DoesSQLUIPersistenceSettingsApplyResultHaveSeverity(
+			ApplyResult,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Warning);
+	Summary.Status = ApplyResult.Status;
+	Summary.SummaryText = SQLUIPersistenceSettingsDisplayString(
+		ApplyResult.SummaryText);
+	Summary.Rows = MakePersistenceSettingsApplyResultDisplayRows(ApplyResult);
+	return Summary;
+}
+
+TArray<FSQLUIPersistenceSettingsApplyResultDisplayRow>
+USQLUIPersistenceSettingsApplyResultDisplayLibrary::
+	MakePersistenceSettingsApplyResultDisplayRows(
+		const FSQLUIPersistenceSettingsApplyResult& ApplyResult)
+{
+	TArray<FSQLUIPersistenceSettingsApplyResultDisplayRow> Rows;
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("ApplyResultSummary"),
+		TEXT("Apply result summary"),
+		SQLUIPersistenceSettingsDisplayString(ApplyResult.SummaryText),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySummaryState(
+			ApplyResult),
+		TEXT("Display only. No settings are applied, saved, or written to config by display generation."));
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("ApplyStatus"),
+		TEXT("Apply status"),
+		MakeSQLUIPersistenceSettingsApplyResultDisplayStatusValue(
+			ApplyResult.Status),
+		MakeSQLUIPersistenceSettingsApplyResultDisplayStatusState(
+			ApplyResult.Status),
+		TEXT("Reports the apply entrypoint result without running any additional side effects."));
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("ActualApplyImplemented"),
+		TEXT("Actual apply implemented"),
+		SQLUIPersistenceSettingsDisplayYesNo(
+			ApplyResult.bActualApplyImplemented),
+		ApplyResult.bActualApplyImplemented
+			? ESQLUIPersistenceSettingsValidationDisplayState::Good
+			: ESQLUIPersistenceSettingsValidationDisplayState::Warning,
+		TEXT("Actual Apply execution remains unavailable in this implementation slice."));
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("ConfigWritten"),
+		TEXT("Config written"),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectValue(
+			ApplyResult.bDidWriteConfig,
+			TEXT("Config written"),
+			TEXT("Config not written")),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectState(
+			ApplyResult.bDidWriteConfig),
+		TEXT("The apply result skeleton does not write config."));
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("SettingsChanged"),
+		TEXT("Settings changed"),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectValue(
+			ApplyResult.bDidChangeSettings,
+			TEXT("Settings changed"),
+			TEXT("Settings not changed")),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectState(
+			ApplyResult.bDidChangeSettings),
+		TEXT("The apply result skeleton does not change runtime settings."));
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("ProviderInitialized"),
+		TEXT("Provider initialized"),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectValue(
+			ApplyResult.bDidInitializeProvider,
+			TEXT("Provider initialized"),
+			TEXT("Provider not initialized")),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectState(
+			ApplyResult.bDidInitializeProvider),
+		TEXT("Display generation does not initialize or reinitialize providers."));
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("RepositoryInitialized"),
+		TEXT("Repository initialized"),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectValue(
+			ApplyResult.bDidInitializeRepository,
+			TEXT("Repository initialized"),
+			TEXT("Repository not initialized")),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectState(
+			ApplyResult.bDidInitializeRepository),
+		TEXT("Display generation does not initialize, open, reopen, or replace repositories."));
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("DatabaseFilesCreated"),
+		TEXT("Database files created"),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectValue(
+			ApplyResult.bDidCreateDatabaseFiles,
+			TEXT("Database files created"),
+			TEXT("Database files not created")),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectState(
+			ApplyResult.bDidCreateDatabaseFiles),
+		TEXT("SQLite remains opt-in. Display generation does not create database files."));
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("DirectoriesCreated"),
+		TEXT("Directories created"),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectValue(
+			ApplyResult.bDidCreateDirectories,
+			TEXT("Directories created"),
+			TEXT("Directories not created")),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectState(
+			ApplyResult.bDidCreateDirectories),
+		TEXT("Display generation does not create directories."));
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("DatabaseOpenedForWriting"),
+		TEXT("Database opened for writing"),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectValue(
+			ApplyResult.bDidOpenDatabaseForWriting,
+			TEXT("Database opened for writing"),
+			TEXT("Database not opened for writing")),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectState(
+			ApplyResult.bDidOpenDatabaseForWriting),
+		TEXT("Display generation does not open SQLite databases for writing."));
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("MigrationsRun"),
+		TEXT("Migrations run"),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectValue(
+			ApplyResult.bDidRunMigrations,
+			TEXT("Migrations run"),
+			TEXT("Migrations not run")),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectState(
+			ApplyResult.bDidRunMigrations),
+		TEXT("Display generation does not run schema migrations."));
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("SeedCopied"),
+		TEXT("Seed copied"),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectValue(
+			ApplyResult.bDidCopySeedDatabase,
+			TEXT("Seed copied"),
+			TEXT("Seed not copied")),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectState(
+			ApplyResult.bDidCopySeedDatabase),
+		TEXT("Display generation does not copy seed databases."));
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("FilesDeleted"),
+		TEXT("Files deleted"),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectValue(
+			ApplyResult.bDidDeleteFiles,
+			TEXT("Files deleted"),
+			TEXT("Files not deleted")),
+		MakeSQLUIPersistenceSettingsApplyResultDisplaySideEffectState(
+			ApplyResult.bDidDeleteFiles),
+		TEXT("Display generation does not delete files."));
+
+	AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+		Rows,
+		TEXT("RestartOrReinitialize"),
+		TEXT("Restart/reinitialize required"),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayWouldRequireValue(
+			ApplyResult.bRequiresRestartOrReinitialize,
+			TEXT("Would require restart or reinitialize")),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayChangeState(
+			ApplyResult.bRequiresRestartOrReinitialize),
+		TEXT("Informational only. No lifecycle action is taken by display generation."));
+
+	for (const FSQLUIPersistenceSettingsValidationMessage& Message :
+		ApplyResult.Messages)
+	{
+		AddSQLUIPersistenceSettingsApplyResultDisplayRow(
+			Rows,
+			TEXT("ApplyResultMessage"),
+			MakeSQLUIPersistenceSettingsApplyResultDisplayLabelForSeverity(
 				Message.Severity),
 			SQLUIPersistenceSettingsDisplayString(Message.Message),
 			MakeSQLUIPersistenceSettingsDisplayStateForSeverity(Message.Severity),

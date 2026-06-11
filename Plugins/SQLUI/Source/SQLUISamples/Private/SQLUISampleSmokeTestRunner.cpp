@@ -9441,6 +9441,108 @@ bool AreSQLUIPersistenceSettingsApplyContractDisplaysEquivalent(
 	return true;
 }
 
+bool DoesSQLUIPersistenceSettingsApplyResultDisplayContainField(
+	const FSQLUIPersistenceSettingsApplyResultDisplaySummary& Display,
+	const FName FieldKey)
+{
+	for (const FSQLUIPersistenceSettingsApplyResultDisplayRow& Row :
+		Display.Rows)
+	{
+		if (Row.FieldKey == FieldKey)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DoesSQLUIPersistenceSettingsApplyResultDisplayContainState(
+	const FSQLUIPersistenceSettingsApplyResultDisplaySummary& Display,
+	const ESQLUIPersistenceSettingsValidationDisplayState State)
+{
+	for (const FSQLUIPersistenceSettingsApplyResultDisplayRow& Row :
+		Display.Rows)
+	{
+		if (Row.State == State)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DoesSQLUIPersistenceSettingsApplyResultDisplayContainText(
+	const FSQLUIPersistenceSettingsApplyResultDisplaySummary& Display,
+	const FString& ExpectedText)
+{
+	for (const FSQLUIPersistenceSettingsApplyResultDisplayRow& Row :
+		Display.Rows)
+	{
+		if (Row.Label.ToString().Contains(ExpectedText)
+			|| Row.Value.ToString().Contains(ExpectedText)
+			|| Row.DetailText.ToString().Contains(ExpectedText))
+		{
+			return true;
+		}
+	}
+
+	return Display.SummaryText.ToString().Contains(ExpectedText);
+}
+
+bool AreSQLUIPersistenceSettingsApplyResultDisplayRowsEquivalent(
+	const FSQLUIPersistenceSettingsApplyResultDisplayRow& First,
+	const FSQLUIPersistenceSettingsApplyResultDisplayRow& Second)
+{
+	return First.FieldKey == Second.FieldKey
+		&& First.Label.ToString() == Second.Label.ToString()
+		&& First.Value.ToString() == Second.Value.ToString()
+		&& First.State == Second.State
+		&& First.DetailText.ToString() == Second.DetailText.ToString();
+}
+
+bool AreSQLUIPersistenceSettingsApplyResultDisplaysEquivalent(
+	const FSQLUIPersistenceSettingsApplyResultDisplaySummary& First,
+	const FSQLUIPersistenceSettingsApplyResultDisplaySummary& Second)
+{
+	if (First.bSucceeded != Second.bSucceeded
+		|| First.bActualApplyImplemented != Second.bActualApplyImplemented
+		|| First.bDidWriteConfig != Second.bDidWriteConfig
+		|| First.bDidChangeSettings != Second.bDidChangeSettings
+		|| First.bDidInitializeProvider != Second.bDidInitializeProvider
+		|| First.bDidInitializeRepository != Second.bDidInitializeRepository
+		|| First.bDidCreateDatabaseFiles != Second.bDidCreateDatabaseFiles
+		|| First.bDidCreateDirectories != Second.bDidCreateDirectories
+		|| First.bDidOpenDatabaseForWriting
+			!= Second.bDidOpenDatabaseForWriting
+		|| First.bDidRunMigrations != Second.bDidRunMigrations
+		|| First.bDidCopySeedDatabase != Second.bDidCopySeedDatabase
+		|| First.bDidDeleteFiles != Second.bDidDeleteFiles
+		|| First.bRequiresRestartOrReinitialize
+			!= Second.bRequiresRestartOrReinitialize
+		|| First.bHasErrors != Second.bHasErrors
+		|| First.bHasWarnings != Second.bHasWarnings
+		|| First.Status != Second.Status
+		|| First.SummaryText.ToString() != Second.SummaryText.ToString()
+		|| First.Rows.Num() != Second.Rows.Num())
+	{
+		return false;
+	}
+
+	for (int32 Index = 0; Index < First.Rows.Num(); ++Index)
+	{
+		if (!AreSQLUIPersistenceSettingsApplyResultDisplayRowsEquivalent(
+			First.Rows[Index],
+			Second.Rows[Index]))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 FSQLUISamplePersistenceSettingsDraftProbeResult
 RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 {
@@ -10306,6 +10408,41 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 	const FSQLUIPersistenceSettingsApplyResult RepeatedSQLiteApplyRequestResult =
 		USQLUIPersistenceSettingsDraftLibrary::RequestPersistenceSettingsApply(
 			MakeApplyRequest(SQLiteDraft));
+	const FSQLUIPersistenceSettingsApplyResultDisplaySummary
+		DefaultApplyResultDisplay =
+			USQLUIPersistenceSettingsApplyResultDisplayLibrary::
+				MakePersistenceSettingsApplyResultDisplay(
+					DefaultApplyRequestResult);
+	const FSQLUIPersistenceSettingsApplyResultDisplaySummary
+		DefaultRequestedApplyResultDisplay =
+			USQLUIPersistenceSettingsApplyResultDisplayLibrary::
+				RequestAndMakePersistenceSettingsApplyResultDisplay(
+					DefaultDraft);
+	const FSQLUIPersistenceSettingsApplyResultDisplaySummary
+		UnknownBackendApplyResultDisplay =
+			USQLUIPersistenceSettingsApplyResultDisplayLibrary::
+				MakePersistenceSettingsApplyResultDisplay(
+					UnknownBackendApplyRequestResult);
+	const FSQLUIPersistenceSettingsApplyResultDisplaySummary
+		SQLiteApplyResultDisplay =
+			USQLUIPersistenceSettingsApplyResultDisplayLibrary::
+				MakePersistenceSettingsApplyResultDisplay(
+					SQLiteApplyRequestResult);
+	const FSQLUIPersistenceSettingsApplyResultDisplaySummary
+		ProviderAutoInitApplyResultDisplay =
+			USQLUIPersistenceSettingsApplyResultDisplayLibrary::
+				MakePersistenceSettingsApplyResultDisplay(
+					ProviderAutoInitApplyRequestResult);
+	const FSQLUIPersistenceSettingsApplyResultDisplaySummary
+		NoCreateDirectoryApplyResultDisplay =
+			USQLUIPersistenceSettingsApplyResultDisplayLibrary::
+				MakePersistenceSettingsApplyResultDisplay(
+					NoCreateDirectoryApplyRequestResult);
+	const FSQLUIPersistenceSettingsApplyResultDisplaySummary
+		RepeatedSQLiteApplyResultDisplay =
+			USQLUIPersistenceSettingsApplyResultDisplayLibrary::
+				MakePersistenceSettingsApplyResultDisplay(
+					RepeatedSQLiteApplyRequestResult);
 	const TArray<FSQLUISampleFileSnapshot> ApplyConfigAfter =
 		CaptureSQLUISampleFileSnapshots(ApplyConfigPaths);
 
@@ -10384,6 +10521,124 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& !NoCreateDirectoryApplyRequestResult.bDidCreateDatabaseFiles
 		&& !FPaths::FileExists(ApplyNoCreateDatabasePath)
 		&& !IFileManager::Get().DirectoryExists(*ApplyNoCreateDirectoryPath);
+	Result.bDefaultApplyResultDisplaySafe =
+		!DefaultApplyResultDisplay.bSucceeded
+		&& !DefaultApplyResultDisplay.bActualApplyImplemented
+		&& !DefaultApplyResultDisplay.bHasErrors
+		&& !DefaultApplyResultDisplay.bHasWarnings
+		&& !DefaultApplyResultDisplay.bDidWriteConfig
+		&& !DefaultApplyResultDisplay.bDidChangeSettings
+		&& !DefaultApplyResultDisplay.bDidInitializeProvider
+		&& !DefaultApplyResultDisplay.bDidInitializeRepository
+		&& !DefaultApplyResultDisplay.bDidCreateDatabaseFiles
+		&& !DefaultApplyResultDisplay.bDidCreateDirectories
+		&& !DefaultApplyResultDisplay.bDidOpenDatabaseForWriting
+		&& !DefaultApplyResultDisplay.bDidRunMigrations
+		&& !DefaultApplyResultDisplay.bDidCopySeedDatabase
+		&& !DefaultApplyResultDisplay.bDidDeleteFiles
+		&& AreSQLUIPersistenceSettingsApplyResultDisplaysEquivalent(
+			DefaultApplyResultDisplay,
+			DefaultRequestedApplyResultDisplay)
+		&& DefaultApplyResultDisplay.Status
+			== ESQLUIPersistenceSettingsApplyStatus::NoChanges
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainField(
+			DefaultApplyResultDisplay,
+			TEXT("ApplyStatus"))
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainField(
+			DefaultApplyResultDisplay,
+			TEXT("ConfigWritten"))
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainField(
+			DefaultApplyResultDisplay,
+			TEXT("SettingsChanged"))
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainText(
+			DefaultApplyResultDisplay,
+			TEXT("No changes"))
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainText(
+			DefaultApplyResultDisplay,
+			TEXT("Config not written"))
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainText(
+			DefaultApplyResultDisplay,
+			TEXT("Settings not changed"))
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bUnknownBackendApplyResultDisplayBlocked =
+		!UnknownBackendApplyResultDisplay.bSucceeded
+		&& UnknownBackendApplyResultDisplay.bHasErrors
+		&& UnknownBackendApplyResultDisplay.Status
+			== ESQLUIPersistenceSettingsApplyStatus::BlockedByValidation
+		&& !UnknownBackendApplyResultDisplay.bActualApplyImplemented
+		&& !UnknownBackendApplyResultDisplay.bDidWriteConfig
+		&& !UnknownBackendApplyResultDisplay.bDidChangeSettings
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainState(
+			UnknownBackendApplyResultDisplay,
+			ESQLUIPersistenceSettingsValidationDisplayState::Error)
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainText(
+			UnknownBackendApplyResultDisplay,
+			TEXT("Blocked by validation"))
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainText(
+			UnknownBackendApplyResultDisplay,
+			TEXT("Config not written"))
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bSQLiteApplyResultDisplayPreviewOnly =
+		!SQLiteApplyResultDisplay.bSucceeded
+		&& SQLiteApplyResultDisplay.bHasWarnings
+		&& SQLiteApplyResultDisplay.Status
+			== ESQLUIPersistenceSettingsApplyStatus::PreviewOnly
+		&& !SQLiteApplyResultDisplay.bActualApplyImplemented
+		&& SQLiteApplyResultDisplay.bRequiresRestartOrReinitialize
+		&& !SQLiteApplyResultDisplay.bDidCreateDatabaseFiles
+		&& !SQLiteApplyResultDisplay.bDidCreateDirectories
+		&& !SQLiteApplyResultDisplay.bDidOpenDatabaseForWriting
+		&& !SQLiteApplyResultDisplay.bDidRunMigrations
+		&& !SQLiteApplyResultDisplay.bDidCopySeedDatabase
+		&& !SQLiteApplyResultDisplay.bDidDeleteFiles
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainField(
+			SQLiteApplyResultDisplay,
+			TEXT("DatabaseFilesCreated"))
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainText(
+			SQLiteApplyResultDisplay,
+			TEXT("Preview only"))
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainText(
+			SQLiteApplyResultDisplay,
+			TEXT("Database files not created"))
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainText(
+			SQLiteApplyResultDisplay,
+			TEXT("Database not opened for writing"))
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bProviderAutoInitApplyResultDisplayPending =
+		!ProviderAutoInitApplyResultDisplay.bSucceeded
+		&& ProviderAutoInitApplyResultDisplay.bHasWarnings
+		&& ProviderAutoInitApplyResultDisplay.Status
+			== ESQLUIPersistenceSettingsApplyStatus::PreviewOnly
+		&& !ProviderAutoInitApplyResultDisplay.bDidWriteConfig
+		&& !ProviderAutoInitApplyResultDisplay.bDidChangeSettings
+		&& !ProviderAutoInitApplyResultDisplay.bDidInitializeProvider
+		&& !ProviderAutoInitApplyResultDisplay.bDidInitializeRepository
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainText(
+			ProviderAutoInitApplyResultDisplay,
+			TEXT("Provider not initialized"))
+		&& DoesSQLUIPersistenceSettingsApplyResultDisplayContainText(
+			ProviderAutoInitApplyResultDisplay,
+			TEXT("Repository not initialized"))
+		&& !FSQLUILayoutRepositoryRuntimeSettingsPolicy::ShouldAutoInitializeProvider(
+			DefaultSettings,
+			TEXT(""))
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bRepeatedApplyResultDisplayDeterministic =
+		AreSQLUIPersistenceSettingsApplyResultDisplaysEquivalent(
+			SQLiteApplyResultDisplay,
+			RepeatedSQLiteApplyResultDisplay)
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bApplyResultDisplayPreservedConfigFiles =
+		AreSQLUISampleFileSnapshotsUnchanged(ApplyConfigBefore, ApplyConfigAfter);
+	Result.bApplyResultDisplayDidNotCreateDirectory =
+		!NoCreateDirectoryApplyResultDisplay.bDidCreateDirectories
+		&& !NoCreateDirectoryApplyResultDisplay.bDidCreateDatabaseFiles
+		&& !NoCreateDirectoryApplyResultDisplay.bDidOpenDatabaseForWriting
+		&& !NoCreateDirectoryApplyResultDisplay.bDidRunMigrations
+		&& !NoCreateDirectoryApplyResultDisplay.bDidCopySeedDatabase
+		&& !NoCreateDirectoryApplyResultDisplay.bDidDeleteFiles
+		&& !FPaths::FileExists(ApplyNoCreateDatabasePath)
+		&& !IFileManager::Get().DirectoryExists(*ApplyNoCreateDirectoryPath);
 	if (IFileManager::Get().DirectoryExists(*ApplyNoCreateDirectoryPath))
 	{
 		IFileManager::Get().DeleteDirectory(
@@ -10399,11 +10654,18 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		|| !Result.bProviderAutoInitApplyRequestDidNotChangePolicy
 		|| !Result.bRepeatedApplyRequestDeterministic
 		|| !Result.bApplyRequestPreservedConfigFiles
-		|| !Result.bApplyRequestDidNotCreateDirectory)
+		|| !Result.bApplyRequestDidNotCreateDirectory
+		|| !Result.bDefaultApplyResultDisplaySafe
+		|| !Result.bUnknownBackendApplyResultDisplayBlocked
+		|| !Result.bSQLiteApplyResultDisplayPreviewOnly
+		|| !Result.bProviderAutoInitApplyResultDisplayPending
+		|| !Result.bRepeatedApplyResultDisplayDeterministic
+		|| !Result.bApplyResultDisplayPreservedConfigFiles
+		|| !Result.bApplyResultDisplayDidNotCreateDirectory)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
-			TEXT("SQLUI persistence settings draft probe failed: apply request skeleton did not remain unavailable and non-mutating."));
+			TEXT("SQLUI persistence settings draft probe failed: apply request/result display skeleton did not remain unavailable and non-mutating."));
 	}
 	Result.bProviderAutoInitApplyPreviewDisplayPending =
 		ProviderAutoInitApplyPreviewDisplay.bIsValid
@@ -11548,8 +11810,11 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		SidecarDraft);
 	USQLUIPersistenceSettingsDraftLibrary::BuildPersistenceSettingsApplyContract(
 		SidecarDraft);
-	USQLUIPersistenceSettingsDraftLibrary::RequestPersistenceSettingsApply(
+	const FSQLUIPersistenceSettingsApplyResult SidecarApplyResult =
+		USQLUIPersistenceSettingsDraftLibrary::RequestPersistenceSettingsApply(
 		MakeApplyRequest(SidecarDraft));
+	USQLUIPersistenceSettingsApplyResultDisplayLibrary::
+		MakePersistenceSettingsApplyResultDisplay(SidecarApplyResult);
 	USQLUIPersistenceSettingsDraftLibrary::BuildPersistenceSettingsCancelPreview(
 		SidecarDraft);
 	USQLUIPersistenceSettingsApplyPreviewDisplayLibrary::
@@ -11596,6 +11861,9 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 	Result.bSidecarPreservedDuringApplyRequest =
 		bSidecarCreated
 		&& FPaths::FileExists(SidecarPath);
+	Result.bSidecarPreservedDuringApplyResultDisplay =
+		bSidecarCreated
+		&& FPaths::FileExists(SidecarPath);
 	Result.bSidecarPreservedDuringCancelPreview =
 		bSidecarCreated
 		&& FPaths::FileExists(SidecarPath);
@@ -11607,11 +11875,12 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		|| !Result.bSidecarPreservedDuringApplyContractDisplay
 		|| !Result.bSidecarPreservedDuringApplyContract
 		|| !Result.bSidecarPreservedDuringApplyRequest
+		|| !Result.bSidecarPreservedDuringApplyResultDisplay
 		|| !Result.bSidecarPreservedDuringCancelPreview)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
-			TEXT("SQLUI persistence settings draft probe failed: validation, apply preview, apply preview display, apply preview adapter, apply contract adapter, apply contract display, apply contract, apply request, or cancel preview deleted a smoke-owned sidecar file."));
+			TEXT("SQLUI persistence settings draft probe failed: validation, apply preview, apply preview display, apply preview adapter, apply contract adapter, apply contract display, apply contract, apply request, apply result display, or cancel preview deleted a smoke-owned sidecar file."));
 	}
 
 	Result.bDatabaseFilesRemoved =
@@ -11659,6 +11928,13 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bRepeatedApplyRequestDeterministic
 		&& Result.bApplyRequestPreservedConfigFiles
 		&& Result.bApplyRequestDidNotCreateDirectory
+		&& Result.bDefaultApplyResultDisplaySafe
+		&& Result.bUnknownBackendApplyResultDisplayBlocked
+		&& Result.bSQLiteApplyResultDisplayPreviewOnly
+		&& Result.bProviderAutoInitApplyResultDisplayPending
+		&& Result.bRepeatedApplyResultDisplayDeterministic
+		&& Result.bApplyResultDisplayPreservedConfigFiles
+		&& Result.bApplyResultDisplayDidNotCreateDirectory
 		&& Result.bBackendChangeApplyContractDetected
 		&& Result.bSQLiteApplyContractSafe
 		&& Result.bUnknownBackendApplyContractBlocked
@@ -11763,6 +12039,7 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bSidecarPreservedDuringApplyContractDisplay
 		&& Result.bSidecarPreservedDuringApplyContract
 		&& Result.bSidecarPreservedDuringApplyRequest
+		&& Result.bSidecarPreservedDuringApplyResultDisplay
 		&& Result.bSidecarPreservedDuringCancelPreview
 		&& Result.bDatabaseFilesRemoved;
 
