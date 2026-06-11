@@ -145,9 +145,13 @@ The non-mutating persistence settings draft validation UI foundation is now comp
 - #115 optional SQLUISamples apply-preview C++ `UUserWidget` shell for sample/dev-facing dry-run preview display.
 - #116 focused apply-preview UMG usage and binding guide.
 - #117 final non-mutating apply-preview foundation checkpoint.
-- Non-mutating apply/cancel contract reporting for future apply readiness and cancel/discard value preview.
-- UI-safe apply/cancel contract display rows/summary for future settings panels.
-- Focused apply/cancel contract UMG usage and binding guide.
+- #118 non-mutating apply/cancel contract reporting for future apply readiness and cancel/discard value preview.
+- #119 UI-safe apply/cancel contract display rows/summary for future settings panels.
+- #120 Unreal Editor null-RHI validation checkpoint.
+- #121 optional SQLUISamples apply/cancel contract presenter/adapter.
+- #122 optional SQLUISamples apply/cancel contract C++ `UUserWidget` shell.
+- #123 focused apply/cancel contract UMG usage and binding guide.
+- #124 final docs-only non-mutating apply/cancel contract UI foundation checkpoint.
 - `-UsePersistenceSettingsDraftProbe` smoke coverage for the draft model, apply preview, apply/cancel contract, apply-preview display rows, apply/cancel contract display rows, validation display rows, validation/apply-preview/apply-contract sample adapters, and validation/apply-preview/apply-contract widget-shell contracts.
 
 This foundation is not settings editing. It does not add settings controls, backend selector UI, SQLite path editor UI, provider auto-init controls, actual Apply/Cancel execution, settings save/config-write behavior, reset/delete actions, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, or default config changes.
@@ -163,6 +167,16 @@ The non-mutating persistence settings apply-preview UI foundation is now complet
 This foundation is still not a product settings screen. It adds no actual apply/save/config-write behavior, settings editing controls, backend selector UI, SQLite path editor UI, provider auto-init controls, reset/delete UX, widget blueprint assets, maps, startup wiring, viewport attachment, timers, tick, polling, auto-refresh, provider/repository initialization, migrations, seed-copy behavior, or default config changes. Refresh/build/validation/preview/contract generation remains caller-invoked only.
 
 Future mutating apply/cancel work must continue to route storage policy through SQLUICore. Widgets should not know SQL, schema, migration ids, seed-copy policy, SQLite sidecar internals, direct deletion behavior, or provider/repository lifecycle details. Widgets should not write config, initialize providers/repositories, create directories or databases, run migrations, copy seeds, or delete files directly. Apply/cancel work should use explicit pending/apply/cancel semantics, keep validation failures user-readable and non-destructive, avoid silently initializing providers/repositories during apply, and show restart/reopen/reinitialize-required messaging instead of forcing lifecycle changes from widget code. Any reset/delete behavior must route through SQLUICore database management helper/policy surfaces.
+
+## Persistence Settings Apply/Cancel Contract UI Foundation
+
+The non-mutating apply/cancel contract UI foundation is complete as a checkpoint only. It closes the #105-#124 settings display chain before any actual settings apply/save/config-write behavior, settings controls, backend selector, SQLite path editor, provider auto-init control, reset/delete UX, widget blueprint asset, map, startup wiring, viewport attachment, polling, ticking, auto-refresh, provider/repository initialization, migration, seed-copy behavior, or default config change is added.
+
+The checkpoint includes the #105 editing/reset UX plan, #106 validation-only draft model, #107 validation display rows, #108 draft validation adapter, #109 draft validation C++ UMG shell, #110 draft validation usage guide, #111 draft validation checkpoint, #112 dry-run apply preview, #113 apply-preview display rows, #114 apply-preview adapter, #115 apply-preview C++ UMG shell, #116 apply-preview usage guide, #117 apply-preview checkpoint, #118 non-mutating apply/cancel contract, #119 apply/cancel contract display rows, #120 editor launch validation checkpoint, #121 apply/cancel contract adapter, #122 apply/cancel contract C++ UMG shell, #123 apply/cancel contract usage guide, #124 final docs-only foundation checkpoint, and `-UsePersistenceSettingsDraftProbe` smoke coverage for the validation/apply-preview/apply-contract model, display rows, sample adapters, and widget-shell contracts.
+
+The contract path remains non-mutating. It reports whether a future Apply would be available, why it may be blocked, that actual Apply execution is unavailable/not implemented, and what cancel/discard would mean as pure value state. It does not write config, change live runtime settings, create databases or directories, open databases for writing, run migrations, copy seed databases, initialize providers/repositories, delete files, change startup behavior, or make SQLite active just because a draft/contract display was built. `InMemory` remains the safe default backend, SQLite remains opt-in, provider auto-init remains off by default, and no default config creates SQLite database files.
+
+Future actual apply/cancel work should use SQLUICore helper/policy surfaces and stay split into small PRs: first SQLUICore-only design or implementation skeleton, then config-write behavior only after validation and contract surfaces remain stable, and then UI controls after SQLUICore behavior has focused smoke coverage. Widgets should remain presentation/intent-capture only: no direct SQL/schema/migration/seed/sidecar knowledge, no direct config writes, no direct provider/repository initialization, and no direct file deletion. Reset/delete behavior must route through SQLUICore database management helper/policy surfaces, and startup/config/default-map/provider lifecycle changes need packaged validation.
 
 The packaged runtime provider startup smoke proves this holder can be intentionally created from packaged startup/runtime code and initialized from command-line repository settings. That proof runs only with `-SQLUIRuntimeProviderStartupSmoke`; normal startup still does not auto-initialize a provider or SQLite.
 
