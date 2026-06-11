@@ -112,6 +112,19 @@ void AddSQLUIPersistenceSettingsContractMessage(
 	Messages.Add(MoveTemp(ContractMessage));
 }
 
+void AddSQLUIPersistenceSettingsApplyResultMessage(
+	FSQLUIPersistenceSettingsApplyResult& Result,
+	const ESQLUIPersistenceSettingsValidationMessageSeverity Severity,
+	const FString& Message,
+	const FString& DetailText = FString())
+{
+	FSQLUIPersistenceSettingsValidationMessage ApplyMessage;
+	ApplyMessage.Severity = Severity;
+	ApplyMessage.Message = Message;
+	ApplyMessage.DetailText = DetailText;
+	Result.Messages.Add(MoveTemp(ApplyMessage));
+}
+
 bool DoesSQLUIPersistenceSettingsMessageListHaveSeverity(
 	const TArray<FSQLUIPersistenceSettingsValidationMessage>& Messages,
 	const ESQLUIPersistenceSettingsValidationMessageSeverity Severity)
@@ -706,5 +719,78 @@ USQLUIPersistenceSettingsDraftLibrary::BuildPersistenceSettingsCancelPreview(
 			TEXT("SQLUI persistence settings cancel preview found no pending changes to discard. Not applied or saved.");
 	}
 
+	return Result;
+}
+
+FSQLUIPersistenceSettingsApplyResult
+USQLUIPersistenceSettingsDraftLibrary::RequestPersistenceSettingsApply(
+	const FSQLUIPersistenceSettingsApplyRequest& Request)
+{
+	FSQLUIPersistenceSettingsApplyResult Result;
+	Result.ApplyContract = BuildPersistenceSettingsApplyContract(Request.Draft);
+	Result.bActualApplyImplemented = false;
+	Result.bSucceeded = false;
+	Result.bDidWriteConfig = false;
+	Result.bDidChangeSettings = false;
+	Result.bDidInitializeProvider = false;
+	Result.bDidInitializeRepository = false;
+	Result.bDidCreateDatabaseFiles = false;
+	Result.bDidCreateDirectories = false;
+	Result.bDidOpenDatabaseForWriting = false;
+	Result.bDidRunMigrations = false;
+	Result.bDidCopySeedDatabase = false;
+	Result.bDidDeleteFiles = false;
+	Result.bRequiresRestartOrReinitialize =
+		Result.ApplyContract.bRequiresRestartOrReinitialize;
+	Result.Messages = Result.ApplyContract.Messages;
+
+	if (!Result.ApplyContract.bIsValid)
+	{
+		Result.Status =
+			ESQLUIPersistenceSettingsApplyStatus::BlockedByValidation;
+		AddSQLUIPersistenceSettingsApplyResultMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error,
+			TEXT("SQLUI persistence settings Apply request was blocked by validation."),
+			TEXT("Actual Apply is not implemented. No settings were applied, saved, or written to config."));
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings Apply is blocked by validation. Actual Apply is not implemented. Not applied or saved.");
+		return Result;
+	}
+
+	if (!Result.ApplyContract.bHasChanges)
+	{
+		Result.Status = ESQLUIPersistenceSettingsApplyStatus::NoChanges;
+		AddSQLUIPersistenceSettingsApplyResultMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
+			TEXT("SQLUI persistence settings Apply request found no changes."),
+			TEXT("Actual Apply is not implemented. No config was written and no settings changed."));
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings Apply found no changes. Actual Apply is not implemented. Not saved.");
+		return Result;
+	}
+
+	if (Result.ApplyContract.bCanApplyInFuture)
+	{
+		Result.Status = ESQLUIPersistenceSettingsApplyStatus::PreviewOnly;
+		AddSQLUIPersistenceSettingsApplyResultMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Warning,
+			TEXT("SQLUI persistence settings Apply request is preview-only."),
+			TEXT("The draft is valid for a future Apply, but actual Apply is not implemented. No config was written, no provider or repository was initialized, and no database files were created."));
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings Apply is preview-only. Actual Apply is not implemented. Not applied or saved.");
+		return Result;
+	}
+
+	Result.Status = ESQLUIPersistenceSettingsApplyStatus::NotImplemented;
+	AddSQLUIPersistenceSettingsApplyResultMessage(
+		Result,
+		ESQLUIPersistenceSettingsValidationMessageSeverity::Warning,
+		TEXT("SQLUI persistence settings Apply execution is unavailable."),
+		TEXT("Actual Apply is not implemented. No config, settings, provider, repository, database, migration, seed-copy, or file-delete side effects were performed."));
+	Result.SummaryText =
+		TEXT("SQLUI persistence settings Apply execution is unavailable. Actual Apply is not implemented. Not applied or saved.");
 	return Result;
 }
