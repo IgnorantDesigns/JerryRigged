@@ -134,6 +134,74 @@ This checkpoint is still not settings editing. It adds no backend selector UI, S
 
 The next actual apply/cancel phase must remain SQLUICore-first. Future implementation should be split into small PRs: first a SQLUICore-only apply/cancel implementation design or implementation skeleton, then config-write behavior only after validation/preview/contract surfaces are stable, then UI controls only after SQLUICore behavior has focused smoke coverage. Widgets should keep consuming SQLUICore display/status/contract data and should not write config, initialize providers/repositories, create databases or directories, run migrations, copy seeds, or delete files directly. Any startup/default map/config/provider lifecycle change needs packaged validation.
 
+## Actual Apply Implementation Gate
+
+PR #125 is documentation-only: it records this actual apply implementation gate and adds no runtime code, scripts, config changes, smoke flags, UI controls, settings editing, or apply/save/config-write behavior.
+
+Actual apply/save/config-write behavior has not been implemented yet. The current `PreviewPersistenceSettingsDraftApply`, `BuildPersistenceSettingsApplyContract`, and `BuildPersistenceSettingsCancelPreview` helpers remain non-mutating report/preview paths. They can validate and describe a future apply, but they do not save settings, write config, initialize provider or repository state, create directories, create database files, run migrations, copy seed databases, delete files, or change startup behavior.
+
+The first actual apply implementation must be SQLUICore-first. Widgets and SQLUISamples must keep acting as presentation and intent-capture layers; they must not write config, mutate `USQLUILayoutRepositoryRuntimeSettings`, initialize providers/repositories, call repository factory behavior directly for apply, or perform database/file lifecycle work. A future mutating entrypoint should validate an `FSQLUIPersistenceSettingsDraft`, refuse invalid drafts without mutation, write only explicitly scoped persistence settings, and return user-readable success/failure/no-op/restart/reopen/reinitialize messaging.
+
+If the current architecture does not yet provide a safe write target, the first implementation PR must stop at a clear not-implemented or dry-run-only result instead of inventing unsafe config writes.
+
+### Config-Write Boundaries
+
+Future config writes must be explicit and narrow. They should use SQLUICore runtime settings/config policy surfaces already used by the resolver and settings policy where practical, and they must not mutate committed defaults such as `DefaultEngine.ini` in normal runtime/user apply paths.
+
+Smoke coverage for config writes must use a smoke-owned config context or another explicitly isolated test surface, then clean up or restore any temporary artifacts. Smoke must also prove the repo default config remains safe after the test: `InMemory` remains the default backend, SQLite is not enabled by default, provider auto-init is not enabled by default, and no committed config creates SQLite database files.
+
+Actual apply code must never write user/global editor settings unexpectedly. If the intended target is unclear, the implementation must report that apply is unavailable rather than choosing a broad or persistent write location.
+
+### Lifecycle Boundaries
+
+Actual apply/save/config-write behavior must not initialize or reinitialize the runtime provider/repository by default. It must not create SQLite database files or directories, open database files for writing, run migrations, copy seed databases, delete DB files or sidecars, or change the currently active repository as a hidden side effect.
+
+When a settings change requires a restart, editor reopen, provider reset, or provider reinitialization, apply should return clear messaging instead of forcing lifecycle work from the apply path. Any future lifecycle-changing apply path needs a separately scoped PR, focused smoke coverage, and packaged validation if startup/config/default-map/provider lifecycle or packaged runtime behavior changes.
+
+### Reset/Delete Separation
+
+Reset/delete UX remains separate from settings apply/save. Reset/delete must use `FSQLUILayoutRepositoryDatabaseManagement` or another SQLUICore-owned policy surface, never widget-owned file deletion. Apply/save must not reset, clear, delete, or overwrite database files as a side effect.
+
+`RemoveLayout`, `ClearLayouts`, and database reset are still distinct concepts. Apply/save changes configuration intent; it must not perform repository row cleanup or database file maintenance unless a future PR explicitly scopes and validates a separate maintenance action.
+
+### First Mutating PR Sequence
+
+Recommended sequence for the first actual apply implementation work:
+
+1. Add a SQLUICore actual-apply result type and policy entrypoint skeleton. It may still return not-implemented or dry-run-only if no safe write target is ready.
+2. Add validation-gated config write for a narrow subset only when the target is explicit and safe, such as backend/provider-auto-init fields if the current settings policy supports smoke-owned writes.
+3. Add smoke coverage for a successful apply into a smoke-owned temporary config context with cleanup/restore.
+4. Add failed validation, no-change, and no-op smoke paths.
+5. Add restart/reopen/reinitialize-required result messaging without forcing lifecycle changes.
+6. Add SQLUISamples sample adapter or UI-shell consumption only after SQLUICore apply behavior is tested.
+7. Add actual UI controls only after the SQLUICore apply path and sample consumption path are stable.
+8. Run packaged validation for any PR that changes startup behavior, default maps, config wiring, provider lifecycle, packaged runtime behavior, or actual config writes that can affect packaged startup.
+
+### Required Validation For First Mutating Apply PRs
+
+Future mutating apply PRs should include focused validation for both success and refusal paths:
+
+- `Build.bat JerryRiggedEditor Win64 Development`.
+- `RunSQLUISmokeTest.ps1 -Help`.
+- Default SQLUI smoke.
+- `-UsePersistenceStatusSampleSurfaceProbe`.
+- `-UsePersistenceSettingsDraftProbe`.
+- A new or extended apply/config-write smoke probe.
+- Valid apply in a smoke-owned config context.
+- Invalid draft refusal with no mutation.
+- No-change/no-op apply behavior.
+- No SQLite database files or directories created by config write alone.
+- No migrations, seed copy, provider initialization, repository initialization, or repository reinitialization from config write alone.
+- Smoke-owned config cleanup/restore.
+- Proof that repo default config still keeps `InMemory` default, SQLite disabled by default, and provider auto-init disabled by default.
+- Packaged validation if startup behavior, default maps, config wiring, provider lifecycle, or packaged runtime behavior changes.
+
+### Manual Editor Validation Recommendation
+
+Before the first real config-write PR merges, a human should perform a manual editor inspection from clean `main` if practical. That inspection should verify the future UI or sample flow does not save maps/assets/config unintentionally and does not create database files from display, validation, preview, contract, or apply refusal paths.
+
+Local throwaway widget Blueprints are acceptable for manual inspection only when they are not committed. Do not claim manual validation happened unless it actually did.
+
 ## Dry-Run Apply-Intent Preview Slice
 
 The first apply/cancel phase code slices are non-mutating only. `USQLUIPersistenceSettingsDraftLibrary::PreviewPersistenceSettingsDraftApply` evaluates a validated draft and reports whether a future Apply would have changes, whether backend/SQLite/provider-auto-init policy would change, and whether restart/reopen/reinitialize messaging should be shown. `BuildPersistenceSettingsApplyContract` wraps that preview with an explicit availability/readiness contract and reports that actual Apply execution is not implemented. `BuildPersistenceSettingsCancelPreview` reports whether cancel would discard pending values and returns the draft value that would result, without touching live settings.
@@ -256,7 +324,7 @@ Packaged validation should be included when a PR changes startup behavior, defau
 
 Recommended future sequence:
 
-1. Add this docs-only plan.
+1. Add this docs-only plan and the actual apply implementation gate.
 2. Add a non-mutating pending settings model or view-model. Complete as the SQLUICore persistence settings draft model.
 3. Add validation-only SQLUICore policy helpers for editable settings. Complete for the first backend/path/provider-auto-init draft checks.
 4. Add UI-safe validation display rows for draft validation results. Complete as `USQLUIPersistenceSettingsDraftDisplayLibrary`.
@@ -267,11 +335,11 @@ Recommended future sequence:
 9. Add a non-mutating Apply/Cancel contract without widget controls. Complete as `FSQLUIPersistenceSettingsApplyContractResult`, `FSQLUIPersistenceSettingsCancelPreviewResult`, and the `USQLUIPersistenceSettingsDraftLibrary` contract helpers.
 10. Add UI-safe apply/cancel contract display rows for future settings panels. Complete as a SQLUICore-only display formatter with smoke coverage through `-UsePersistenceSettingsDraftProbe`.
 11. Add an optional C++ UMG widget shell contract for apply/cancel contract rows. Complete as `USQLUISamplePersistenceSettingsApplyContractPanelWidget`.
-11. Add actual Apply execution helper APIs without widget controls.
-12. Add a backend selector UI shell that edits pending state only.
-13. Add SQLite path display/edit validation that does not create files.
-14. Add reset UX confirmation and smoke coverage through SQLUICore database management helpers.
-15. Add packaged validation for any startup, config, default map, viewport, or packaged lifecycle integration.
+12. Add actual Apply execution helper APIs without widget controls, following the actual apply implementation gate above.
+13. Add a backend selector UI shell that edits pending state only.
+14. Add SQLite path display/edit validation that does not create files.
+15. Add reset UX confirmation and smoke coverage through SQLUICore database management helpers.
+16. Add packaged validation for any startup, config, default map, viewport, or packaged lifecycle integration.
 
 Each implementation PR should keep the blast radius narrow and should not combine default policy changes with UI scaffolding.
 
