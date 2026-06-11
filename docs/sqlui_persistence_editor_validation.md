@@ -122,6 +122,7 @@ This checkpoint is stronger than build/commandlet-only validation because the fu
 Future slices should add stronger validation when they introduce stronger behavior:
 
 - Interactive editor/manual validation when widget Blueprint assets, visible UI controls, or real settings screens are introduced.
+- Manual editor inspection from clean `main` before the first real config-write/apply PR merges, if practical. That inspection should not commit assets, maps, config, widget Blueprints, generated logs, database files, or packaged outputs; local throwaway widget Blueprints are acceptable only when they are not committed.
 - PIE validation when runtime UI behavior is wired into maps, viewport flow, startup, provider lifecycle, or game execution.
 - Packaged validation when startup behavior, default maps, config wiring, provider lifecycle, packaged runtime behavior, or actual config writes are introduced.
 - Reset/delete validation when reset UX or destructive maintenance actions are introduced.

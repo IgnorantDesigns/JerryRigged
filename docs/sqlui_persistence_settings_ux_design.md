@@ -2,7 +2,7 @@
 
 This document defines the intended user-facing settings surface for SQLUI layout persistence before any product widget, menu, or settings UI implementation is added.
 
-The backend and policy pieces now exist for a safe first UI. Tiny optional SQLUISamples sample/dev presenter, panel-adapter, and C++ UMG widget shell objects already provide Blueprint-callable, explicitly refreshed read-only display-row hooks for validation and Blueprint/sample consumption, and SQLUICore now has dry-run apply-intent preview plus apply/cancel contract display rows for drafts. SQLUISamples also has sample/dev adapters and optional C++ UMG widget shells for validation, apply-preview, and apply/cancel contract rows, but the full product settings UI is still future work. This design keeps SQLite explicit, keeps `InMemory` as the safe default, and routes database status/reset behavior through SQLUICore helpers instead of widget-owned storage logic.
+The backend and policy pieces now exist for a safe first UI. Tiny optional SQLUISamples sample/dev presenter, panel-adapter, and C++ UMG widget shell objects already provide Blueprint-callable, explicitly refreshed read-only display-row hooks for validation and Blueprint/sample consumption, and SQLUICore now has dry-run apply-intent preview plus apply/cancel contract display rows for drafts. SQLUISamples also has sample/dev adapters and optional C++ UMG widget shells for validation, apply-preview, and apply/cancel contract rows, but the full product settings UI is still future work. The actual apply/save/config-write implementation is gated in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md) and must be SQLUICore-first before real controls are introduced. This design keeps SQLite explicit, keeps `InMemory` as the safe default, and routes database status/reset behavior through SQLUICore helpers instead of widget-owned storage logic.
 
 Related docs:
 
@@ -92,6 +92,14 @@ The dry-run apply-intent preview, apply/cancel contract, apply-preview display r
 The #117 apply-preview foundation checkpoint declared the #112-#116 dry-run apply-preview UI chain complete. The apply/cancel contract checkpoint through #124 declares the #118-#124 readiness/display/adapter/widget-shell/usage/final-checkpoint chain complete. These checkpoints still do not add actual mutating Apply/Cancel execution, config writes, settings editing controls, backend selector controls, SQLite path editing, provider auto-init controls, reset/delete behavior, widget blueprint assets, maps, startup wiring, viewport attachment, polling, ticking, auto-refresh, migrations, seed-copy behavior, provider/repository initialization, or default policy changes.
 
 Future actual Apply/Cancel work should keep widgets ignorant of SQL, schema, migrations, seed-copy policy, sidecar internals, deletion behavior, and provider/repository lifecycle details. Widgets should not write config directly, initialize providers/repositories, or delete files. Apply should route through SQLUICore helper/policy surfaces, keep validation failures user-readable and non-destructive, avoid silently initializing providers/repositories, and show restart/reopen/reinitialize-required messaging when lifecycle work is needed.
+
+## Actual Apply Gate For UI Work
+
+The first real Apply button behavior is not part of the current UI foundation. Future UI controls should not be added until SQLUICore owns and smoke-tests an actual apply entrypoint or a deliberate not-implemented/dry-run-only result.
+
+The first mutating SQLUICore apply implementation must validate the pending draft, refuse invalid values without mutation, write only explicitly scoped persistence settings, avoid committed-default config writes in normal runtime/user paths, and report whether restart, reopen, provider reset, or provider reinitialization is required. It must not create SQLite databases or directories, open databases for writing, run migrations, copy seeds, initialize providers/repositories, delete files, or perform reset/delete behavior as a side effect.
+
+Backend selector controls, SQLite path editor controls, provider auto-init controls, real Apply/Save controls, and reset/delete controls should therefore remain future work until the SQLUICore apply gate in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md) is implemented and validated. SQLUISamples can consume SQLUICore result/display rows after that, but it should still not own config writes or persistence lifecycle policy.
 
 Future settings-editing and reset work must preserve these prerequisites:
 
