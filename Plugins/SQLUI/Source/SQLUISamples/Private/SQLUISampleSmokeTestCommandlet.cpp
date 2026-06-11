@@ -3110,6 +3110,13 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("repeated apply request deterministic"), ProbeResult.bRepeatedApplyRequestDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("apply request preserved config files"), ProbeResult.bApplyRequestPreservedConfigFiles);
 	LogPersistenceSettingsDraftBool(TEXT("apply request did not create directory"), ProbeResult.bApplyRequestDidNotCreateDirectory);
+	LogPersistenceSettingsDraftBool(TEXT("default apply result display safe"), ProbeResult.bDefaultApplyResultDisplaySafe);
+	LogPersistenceSettingsDraftBool(TEXT("unknown backend apply result display blocked"), ProbeResult.bUnknownBackendApplyResultDisplayBlocked);
+	LogPersistenceSettingsDraftBool(TEXT("SQLite apply result display preview only"), ProbeResult.bSQLiteApplyResultDisplayPreviewOnly);
+	LogPersistenceSettingsDraftBool(TEXT("provider auto-init apply result display pending"), ProbeResult.bProviderAutoInitApplyResultDisplayPending);
+	LogPersistenceSettingsDraftBool(TEXT("repeated apply result display deterministic"), ProbeResult.bRepeatedApplyResultDisplayDeterministic);
+	LogPersistenceSettingsDraftBool(TEXT("apply result display preserved config files"), ProbeResult.bApplyResultDisplayPreservedConfigFiles);
+	LogPersistenceSettingsDraftBool(TEXT("apply result display did not create directory"), ProbeResult.bApplyResultDisplayDidNotCreateDirectory);
 	LogPersistenceSettingsDraftBool(TEXT("backend change apply contract detected"), ProbeResult.bBackendChangeApplyContractDetected);
 	LogPersistenceSettingsDraftBool(TEXT("SQLite apply contract safe"), ProbeResult.bSQLiteApplyContractSafe);
 	LogPersistenceSettingsDraftBool(TEXT("unknown backend apply contract blocked"), ProbeResult.bUnknownBackendApplyContractBlocked);
@@ -3214,6 +3221,7 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply contract display"), ProbeResult.bSidecarPreservedDuringApplyContractDisplay);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply contract"), ProbeResult.bSidecarPreservedDuringApplyContract);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply request"), ProbeResult.bSidecarPreservedDuringApplyRequest);
+	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply result display"), ProbeResult.bSidecarPreservedDuringApplyResultDisplay);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during cancel preview"), ProbeResult.bSidecarPreservedDuringCancelPreview);
 	LogPersistenceSettingsDraftBool(TEXT("database files removed"), ProbeResult.bDatabaseFilesRemoved);
 
