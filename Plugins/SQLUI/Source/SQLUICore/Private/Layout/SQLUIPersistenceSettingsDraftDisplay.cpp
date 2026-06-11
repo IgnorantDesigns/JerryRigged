@@ -106,6 +106,21 @@ const TCHAR* MakeSQLUIPersistenceSettingsApplyPreviewDisplayLabelForSeverity(
 	}
 }
 
+const TCHAR* MakeSQLUIPersistenceSettingsApplyContractDisplayLabelForSeverity(
+	const ESQLUIPersistenceSettingsValidationMessageSeverity Severity)
+{
+	switch (Severity)
+	{
+	case ESQLUIPersistenceSettingsValidationMessageSeverity::Error:
+		return TEXT("Apply contract error");
+	case ESQLUIPersistenceSettingsValidationMessageSeverity::Warning:
+		return TEXT("Apply contract warning");
+	case ESQLUIPersistenceSettingsValidationMessageSeverity::Info:
+	default:
+		return TEXT("Apply contract info");
+	}
+}
+
 bool DoesSQLUIPersistenceSettingsValidationHaveSeverity(
 	const FSQLUIPersistenceSettingsValidationResult& ValidationResult,
 	const ESQLUIPersistenceSettingsValidationMessageSeverity Severity)
@@ -127,6 +142,22 @@ bool DoesSQLUIPersistenceSettingsApplyPreviewHaveSeverity(
 {
 	for (const FSQLUIPersistenceSettingsValidationMessage& Message :
 		PreviewResult.Messages)
+	{
+		if (Message.Severity == Severity)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DoesSQLUIPersistenceSettingsApplyContractHaveSeverity(
+	const FSQLUIPersistenceSettingsApplyContractResult& ContractResult,
+	const ESQLUIPersistenceSettingsValidationMessageSeverity Severity)
+{
+	for (const FSQLUIPersistenceSettingsValidationMessage& Message :
+		ContractResult.Messages)
 	{
 		if (Message.Severity == Severity)
 		{
@@ -185,6 +216,33 @@ MakeSQLUIPersistenceSettingsApplyPreviewDisplaySummaryState(
 		: ESQLUIPersistenceSettingsValidationDisplayState::Normal;
 }
 
+ESQLUIPersistenceSettingsValidationDisplayState
+MakeSQLUIPersistenceSettingsApplyContractDisplaySummaryState(
+	const FSQLUIPersistenceSettingsApplyContractResult& ContractResult)
+{
+	if (ContractResult.bHasErrors
+		|| DoesSQLUIPersistenceSettingsApplyContractHaveSeverity(
+			ContractResult,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error))
+	{
+		return ESQLUIPersistenceSettingsValidationDisplayState::Error;
+	}
+
+	if (ContractResult.bHasWarnings
+		|| ContractResult.bRequiresRestartOrReinitialize
+		|| ContractResult.Availability
+			== ESQLUIPersistenceSettingsApplyAvailability::NotImplemented
+		|| ContractResult.Availability
+			== ESQLUIPersistenceSettingsApplyAvailability::PreviewOnlyReady)
+	{
+		return ESQLUIPersistenceSettingsValidationDisplayState::Warning;
+	}
+
+	return ContractResult.bIsValid
+		? ESQLUIPersistenceSettingsValidationDisplayState::Good
+		: ESQLUIPersistenceSettingsValidationDisplayState::Normal;
+}
+
 void AddSQLUIPersistenceSettingsValidationDisplayRow(
 	TArray<FSQLUIPersistenceSettingsValidationDisplayRow>& Rows,
 	const FName FieldKey,
@@ -221,6 +279,24 @@ void AddSQLUIPersistenceSettingsApplyPreviewDisplayRow(
 	Rows.Add(Row);
 }
 
+void AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+	TArray<FSQLUIPersistenceSettingsApplyContractDisplayRow>& Rows,
+	const FName FieldKey,
+	const TCHAR* Label,
+	const FText& Value,
+	const ESQLUIPersistenceSettingsValidationDisplayState State =
+		ESQLUIPersistenceSettingsValidationDisplayState::Normal,
+	const TCHAR* DetailText = TEXT(""))
+{
+	FSQLUIPersistenceSettingsApplyContractDisplayRow Row;
+	Row.FieldKey = FieldKey;
+	Row.Label = SQLUIPersistenceSettingsDisplayText(Label);
+	Row.Value = Value;
+	Row.State = State;
+	Row.DetailText = SQLUIPersistenceSettingsDisplayText(DetailText);
+	Rows.Add(Row);
+}
+
 FText MakeSQLUIPersistenceSettingsApplyPreviewDisplayWouldChangeValue(
 	const bool bWouldChange)
 {
@@ -243,6 +319,54 @@ MakeSQLUIPersistenceSettingsApplyPreviewDisplayChangeState(
 	return bWouldChange
 		? ESQLUIPersistenceSettingsValidationDisplayState::Warning
 		: ESQLUIPersistenceSettingsValidationDisplayState::Good;
+}
+
+FText MakeSQLUIPersistenceSettingsApplyContractDisplayAvailabilityValue(
+	const ESQLUIPersistenceSettingsApplyAvailability Availability)
+{
+	switch (Availability)
+	{
+	case ESQLUIPersistenceSettingsApplyAvailability::BlockedByValidation:
+		return SQLUIPersistenceSettingsDisplayText(TEXT("Blocked by validation"));
+	case ESQLUIPersistenceSettingsApplyAvailability::NoChanges:
+		return SQLUIPersistenceSettingsDisplayText(TEXT("No changes to apply"));
+	case ESQLUIPersistenceSettingsApplyAvailability::PreviewOnlyReady:
+		return SQLUIPersistenceSettingsDisplayText(
+			TEXT("Preview only, ready for future apply"));
+	case ESQLUIPersistenceSettingsApplyAvailability::NotImplemented:
+	default:
+		return SQLUIPersistenceSettingsDisplayText(TEXT("Apply not implemented"));
+	}
+}
+
+ESQLUIPersistenceSettingsValidationDisplayState
+MakeSQLUIPersistenceSettingsApplyContractDisplayAvailabilityState(
+	const ESQLUIPersistenceSettingsApplyAvailability Availability)
+{
+	switch (Availability)
+	{
+	case ESQLUIPersistenceSettingsApplyAvailability::BlockedByValidation:
+		return ESQLUIPersistenceSettingsValidationDisplayState::Error;
+	case ESQLUIPersistenceSettingsApplyAvailability::NoChanges:
+		return ESQLUIPersistenceSettingsValidationDisplayState::Good;
+	case ESQLUIPersistenceSettingsApplyAvailability::PreviewOnlyReady:
+	case ESQLUIPersistenceSettingsApplyAvailability::NotImplemented:
+	default:
+		return ESQLUIPersistenceSettingsValidationDisplayState::Warning;
+	}
+}
+
+FText MakeSQLUIPersistenceSettingsApplyContractDisplayCancelValue(
+	const FSQLUIPersistenceSettingsCancelPreviewResult& CancelPreviewResult)
+{
+	if (CancelPreviewResult.bWouldDiscardChanges)
+	{
+		return SQLUIPersistenceSettingsDisplayText(
+			TEXT("Would discard pending changes"));
+	}
+
+	return SQLUIPersistenceSettingsDisplayText(
+		TEXT("No pending changes to discard"));
 }
 
 bool IsSQLUIPersistenceSettingsDisplaySQLite(
@@ -564,6 +688,222 @@ USQLUIPersistenceSettingsApplyPreviewDisplayLibrary::
 			Rows,
 			TEXT("ApplyPreviewMessage"),
 			MakeSQLUIPersistenceSettingsApplyPreviewDisplayLabelForSeverity(
+				Message.Severity),
+			SQLUIPersistenceSettingsDisplayString(Message.Message),
+			MakeSQLUIPersistenceSettingsDisplayStateForSeverity(Message.Severity),
+			*Message.DetailText);
+	}
+
+	return Rows;
+}
+
+FSQLUIPersistenceSettingsApplyContractDisplaySummary
+USQLUIPersistenceSettingsApplyContractDisplayLibrary::
+	BuildAndMakePersistenceSettingsApplyContractDisplay(
+		const FSQLUIPersistenceSettingsDraft& Draft)
+{
+	return MakePersistenceSettingsApplyContractDisplay(
+		USQLUIPersistenceSettingsDraftLibrary::BuildPersistenceSettingsApplyContract(
+			Draft),
+		USQLUIPersistenceSettingsDraftLibrary::BuildPersistenceSettingsCancelPreview(
+			Draft));
+}
+
+FSQLUIPersistenceSettingsApplyContractDisplaySummary
+USQLUIPersistenceSettingsApplyContractDisplayLibrary::
+	MakePersistenceSettingsApplyContractDisplay(
+		const FSQLUIPersistenceSettingsApplyContractResult& ContractResult,
+		const FSQLUIPersistenceSettingsCancelPreviewResult& CancelPreviewResult)
+{
+	FSQLUIPersistenceSettingsApplyContractDisplaySummary Summary;
+	Summary.bCanApplyInFuture = ContractResult.bCanApplyInFuture;
+	Summary.bActualApplyImplemented = ContractResult.bActualApplyImplemented;
+	Summary.bCanExecuteApplyNow = ContractResult.bCanExecuteApplyNow;
+	Summary.bIsValid = ContractResult.bIsValid;
+	Summary.bHasChanges = ContractResult.bHasChanges;
+	Summary.bHasErrors = ContractResult.bHasErrors;
+	Summary.bHasWarnings = ContractResult.bHasWarnings;
+	Summary.bRequiresRestartOrReinitialize =
+		ContractResult.bRequiresRestartOrReinitialize;
+	Summary.bWouldNeedProviderReinitialize =
+		ContractResult.bWouldNeedProviderReinitialize;
+	Summary.bWouldNeedRepositoryReopen =
+		ContractResult.bWouldNeedRepositoryReopen;
+	Summary.bWouldDiscardChangesOnCancel =
+		CancelPreviewResult.bWouldDiscardChanges;
+	Summary.Availability = ContractResult.Availability;
+	Summary.SummaryText = SQLUIPersistenceSettingsDisplayString(
+		ContractResult.SummaryText);
+	Summary.Rows = MakePersistenceSettingsApplyContractDisplayRows(
+		ContractResult,
+		CancelPreviewResult);
+	return Summary;
+}
+
+TArray<FSQLUIPersistenceSettingsApplyContractDisplayRow>
+USQLUIPersistenceSettingsApplyContractDisplayLibrary::
+	MakePersistenceSettingsApplyContractDisplayRows(
+		const FSQLUIPersistenceSettingsApplyContractResult& ContractResult,
+		const FSQLUIPersistenceSettingsCancelPreviewResult& CancelPreviewResult)
+{
+	TArray<FSQLUIPersistenceSettingsApplyContractDisplayRow> Rows;
+
+	AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+		Rows,
+		TEXT("ApplyContractSummary"),
+		TEXT("Apply/cancel contract summary"),
+		SQLUIPersistenceSettingsDisplayString(ContractResult.SummaryText),
+		MakeSQLUIPersistenceSettingsApplyContractDisplaySummaryState(
+			ContractResult),
+		TEXT("Display only. No settings were applied, saved, or written to config."));
+
+	AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+		Rows,
+		TEXT("ApplyAvailability"),
+		TEXT("Apply availability"),
+		MakeSQLUIPersistenceSettingsApplyContractDisplayAvailabilityValue(
+			ContractResult.Availability),
+		MakeSQLUIPersistenceSettingsApplyContractDisplayAvailabilityState(
+			ContractResult.Availability),
+		TEXT("Readiness only. This row does not run Apply."));
+
+	AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+		Rows,
+		TEXT("ActualApplyImplemented"),
+		TEXT("Actual apply implemented"),
+		SQLUIPersistenceSettingsDisplayYesNo(
+			ContractResult.bActualApplyImplemented),
+		ContractResult.bActualApplyImplemented
+			? ESQLUIPersistenceSettingsValidationDisplayState::Good
+			: ESQLUIPersistenceSettingsValidationDisplayState::Warning,
+		TEXT("Actual Apply execution remains unavailable in this implementation slice."));
+
+	AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+		Rows,
+		TEXT("CanExecuteApplyNow"),
+		TEXT("Can execute apply now"),
+		SQLUIPersistenceSettingsDisplayYesNo(ContractResult.bCanExecuteApplyNow),
+		ContractResult.bCanExecuteApplyNow
+			? ESQLUIPersistenceSettingsValidationDisplayState::Good
+			: ESQLUIPersistenceSettingsValidationDisplayState::Warning,
+		TEXT("No config write, repository lifecycle action, or provider initialization is performed."));
+
+	AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+		Rows,
+		TEXT("CanApplyInFuture"),
+		TEXT("Can apply in future"),
+		SQLUIPersistenceSettingsDisplayYesNo(ContractResult.bCanApplyInFuture),
+		ContractResult.bCanApplyInFuture
+			? ESQLUIPersistenceSettingsValidationDisplayState::Good
+			: MakeSQLUIPersistenceSettingsApplyContractDisplayAvailabilityState(
+				ContractResult.Availability),
+		TEXT("A future Apply implementation would still need an explicit non-preview execution path."));
+
+	AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+		Rows,
+		TEXT("HasChanges"),
+		TEXT("Has changes"),
+		SQLUIPersistenceSettingsDisplayYesNo(ContractResult.bHasChanges),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayChangeState(
+			ContractResult.bHasChanges),
+		TEXT("Pending-value comparison only. No live settings are changed."));
+
+	AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+		Rows,
+		TEXT("BackendChange"),
+		TEXT("Backend change"),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayWouldChangeValue(
+			ContractResult.bWouldChangeBackend),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayChangeState(
+			ContractResult.bWouldChangeBackend),
+		TEXT("Preview only. This row does not switch repositories or enable SQLite."));
+
+	AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+		Rows,
+		TEXT("SQLitePathOrPolicyChange"),
+		TEXT("SQLite path/policy change"),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayWouldChangeValue(
+			ContractResult.bWouldChangeSQLitePath
+			|| ContractResult.bWouldChangeSQLiteConfig),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayChangeState(
+			ContractResult.bWouldChangeSQLitePath
+			|| ContractResult.bWouldChangeSQLiteConfig),
+		TEXT("SQLite remains opt-in. This display does not create directories or databases, open databases for writing, copy seeds, or run migrations."));
+
+	AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+		Rows,
+		TEXT("ProviderAutoInitChange"),
+		TEXT("Provider auto-init policy change"),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayWouldChangeValue(
+			ContractResult.bWouldChangeProviderAutoInitialize),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayChangeState(
+			ContractResult.bWouldChangeProviderAutoInitialize),
+		TEXT("Startup behavior is unchanged by this display."));
+
+	AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+		Rows,
+		TEXT("RepositoryReopen"),
+		TEXT("Repository reopen"),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayWouldRequireValue(
+			ContractResult.bWouldNeedRepositoryReopen,
+			TEXT("Would require reopen")),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayChangeState(
+			ContractResult.bWouldNeedRepositoryReopen),
+		TEXT("Preview only. No repository is opened or reopened."));
+
+	AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+		Rows,
+		TEXT("ProviderReinitialize"),
+		TEXT("Provider reinitialize"),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayWouldRequireValue(
+			ContractResult.bWouldNeedProviderReinitialize,
+			TEXT("Would require reinitialize")),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayChangeState(
+			ContractResult.bWouldNeedProviderReinitialize),
+		TEXT("Preview only. No provider is initialized or reinitialized."));
+
+	AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+		Rows,
+		TEXT("RestartOrReinitialize"),
+		TEXT("Restart/reinitialize required"),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayWouldRequireValue(
+			ContractResult.bRequiresRestartOrReinitialize,
+			TEXT("Would require restart or reinitialize")),
+		MakeSQLUIPersistenceSettingsApplyPreviewDisplayChangeState(
+			ContractResult.bRequiresRestartOrReinitialize),
+		TEXT("Informational only. No lifecycle action is taken by display generation."));
+
+	AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+		Rows,
+		TEXT("CancelPreview"),
+		TEXT("Cancel/discard preview"),
+		MakeSQLUIPersistenceSettingsApplyContractDisplayCancelValue(
+			CancelPreviewResult),
+		CancelPreviewResult.bWouldDiscardChanges
+			? ESQLUIPersistenceSettingsValidationDisplayState::Warning
+			: ESQLUIPersistenceSettingsValidationDisplayState::Good,
+		TEXT("Value preview only. No live draft, config, provider, repository, or file state is reset or deleted."));
+
+	for (const FSQLUIPersistenceSettingsValidationMessage& Message :
+		ContractResult.Messages)
+	{
+		AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+			Rows,
+			TEXT("ApplyContractMessage"),
+			MakeSQLUIPersistenceSettingsApplyContractDisplayLabelForSeverity(
+				Message.Severity),
+			SQLUIPersistenceSettingsDisplayString(Message.Message),
+			MakeSQLUIPersistenceSettingsDisplayStateForSeverity(Message.Severity),
+			*Message.DetailText);
+	}
+
+	for (const FSQLUIPersistenceSettingsValidationMessage& Message :
+		CancelPreviewResult.Messages)
+	{
+		AddSQLUIPersistenceSettingsApplyContractDisplayRow(
+			Rows,
+			TEXT("CancelPreviewMessage"),
+			MakeSQLUIPersistenceSettingsApplyContractDisplayLabelForSeverity(
 				Message.Severity),
 			SQLUIPersistenceSettingsDisplayString(Message.Message),
 			MakeSQLUIPersistenceSettingsDisplayStateForSeverity(Message.Severity),
