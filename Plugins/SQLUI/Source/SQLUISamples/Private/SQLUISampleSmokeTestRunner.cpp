@@ -3,6 +3,7 @@
 #include "SQLUISamplePersistenceStatusPanelAdapter.h"
 #include "SQLUISamplePersistenceStatusPanelWidget.h"
 #include "SQLUISamplePersistenceStatusPresenter.h"
+#include "SQLUISamplePersistenceSettingsApplyContractPanelWidget.h"
 #include "SQLUISamplePersistenceSettingsApplyContractPresenter.h"
 #include "SQLUISamplePersistenceSettingsApplyPreviewPanelWidget.h"
 #include "SQLUISamplePersistenceSettingsApplyPreviewPresenter.h"
@@ -10725,6 +10726,183 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		}
 	}
 
+	const UClass* ApplyContractPanelWidgetClass =
+		USQLUISamplePersistenceSettingsApplyContractPanelWidget::StaticClass();
+	Result.bApplyContractPanelWidgetClassDerivedFromUserWidget =
+		ApplyContractPanelWidgetClass
+		&& ApplyContractPanelWidgetClass->IsChildOf(
+			UUserWidget::StaticClass());
+	Result.bApplyContractPanelWidgetBlueprintDefaultRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			ApplyContractPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyContractPanelWidget,
+				RefreshDefaultPersistenceSettingsApplyContractPanel));
+	Result.bApplyContractPanelWidgetBlueprintCurrentRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			ApplyContractPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyContractPanelWidget,
+				RefreshCurrentPersistenceSettingsApplyContractPanel));
+	Result.bApplyContractPanelWidgetBlueprintBuildFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			ApplyContractPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyContractPanelWidget,
+				BuildPersistenceSettingsApplyContractPanel));
+	Result.bApplyContractPanelWidgetRefreshFunctionsNotBlueprintPure =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			ApplyContractPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyContractPanelWidget,
+				RefreshDefaultPersistenceSettingsApplyContractPanel))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			ApplyContractPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyContractPanelWidget,
+				RefreshCurrentPersistenceSettingsApplyContractPanel))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			ApplyContractPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyContractPanelWidget,
+				BuildPersistenceSettingsApplyContractPanel));
+	Result.bApplyContractPanelWidgetCachedGetterFunctionsBlueprintPure =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			ApplyContractPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyContractPanelWidget,
+				GetRows))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			ApplyContractPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyContractPanelWidget,
+				GetFormattedLines))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			ApplyContractPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyContractPanelWidget,
+				GetLastRefreshResult))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			ApplyContractPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyContractPanelWidget,
+				GetSummaryText));
+	Result.bApplyContractPanelWidgetRowsPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("Rows"));
+	Result.bApplyContractPanelWidgetFormattedLinesPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("FormattedLines"));
+	Result.bApplyContractPanelWidgetRefreshResultPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("LastRefreshResult"));
+	Result.bApplyContractPanelWidgetSummaryTextPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("SummaryText"));
+	Result.bApplyContractPanelWidgetContractFlagsBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("bCanApplyInFuture"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("bActualApplyImplemented"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("bCanExecuteApplyNow"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("bIsValid"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("bHasChanges"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("bHasErrors"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("bHasWarnings"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("bRequiresRestartOrReinitialize"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("bWouldNeedProviderReinitialize"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("bWouldNeedRepositoryReopen"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("bWouldDiscardChangesOnCancel"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyContractPanelWidgetClass,
+			TEXT("Availability"));
+	// Reflection keeps this proof independent from widget blueprint assets,
+	// maps, viewport attachment, widget construction, and startup wiring.
+	Result.bApplyContractPanelWidgetContractValidatedWithoutAssetOrViewport =
+		ApplyContractPanelWidgetClass
+		&& Result.bApplyContractPanelWidgetClassDerivedFromUserWidget
+		&& Result.bApplyContractPanelWidgetBlueprintDefaultRefreshFunctionCallable
+		&& Result.bApplyContractPanelWidgetBlueprintCurrentRefreshFunctionCallable
+		&& Result.bApplyContractPanelWidgetBlueprintBuildFunctionCallable
+		&& Result.bApplyContractPanelWidgetRefreshFunctionsNotBlueprintPure
+		&& Result.bApplyContractPanelWidgetCachedGetterFunctionsBlueprintPure
+		&& Result.bApplyContractPanelWidgetRowsPropertyBlueprintVisible
+		&& Result.bApplyContractPanelWidgetFormattedLinesPropertyBlueprintVisible
+		&& Result.bApplyContractPanelWidgetRefreshResultPropertyBlueprintVisible
+		&& Result.bApplyContractPanelWidgetSummaryTextPropertyBlueprintVisible
+		&& Result.bApplyContractPanelWidgetContractFlagsBlueprintVisible;
+
+	const auto AppendApplyContractPanelWidgetReflectionFailure =
+		[&Result](const bool bPassed, const TCHAR* FailureMessage)
+		{
+			if (!bPassed)
+			{
+				AppendSQLUISamplePersistenceSettingsDraftProbeError(
+					Result,
+					FailureMessage);
+			}
+		};
+	AppendApplyContractPanelWidgetReflectionFailure(
+		Result.bApplyContractPanelWidgetClassDerivedFromUserWidget,
+		TEXT("SQLUI persistence settings draft probe failed: apply contract panel widget shell did not derive from UUserWidget."));
+	AppendApplyContractPanelWidgetReflectionFailure(
+		Result.bApplyContractPanelWidgetBlueprintDefaultRefreshFunctionCallable,
+		TEXT("SQLUI persistence settings draft probe failed: apply contract panel widget default refresh was not BlueprintCallable."));
+	AppendApplyContractPanelWidgetReflectionFailure(
+		Result.bApplyContractPanelWidgetBlueprintCurrentRefreshFunctionCallable,
+		TEXT("SQLUI persistence settings draft probe failed: apply contract panel widget current refresh was not BlueprintCallable."));
+	AppendApplyContractPanelWidgetReflectionFailure(
+		Result.bApplyContractPanelWidgetBlueprintBuildFunctionCallable,
+		TEXT("SQLUI persistence settings draft probe failed: apply contract panel widget build function was not BlueprintCallable."));
+	AppendApplyContractPanelWidgetReflectionFailure(
+		Result.bApplyContractPanelWidgetRefreshFunctionsNotBlueprintPure,
+		TEXT("SQLUI persistence settings draft probe failed: apply contract panel widget refresh/build functions were unexpectedly BlueprintPure."));
+	AppendApplyContractPanelWidgetReflectionFailure(
+		Result.bApplyContractPanelWidgetCachedGetterFunctionsBlueprintPure,
+		TEXT("SQLUI persistence settings draft probe failed: apply contract panel widget cached getter functions were not BlueprintPure."));
+	AppendApplyContractPanelWidgetReflectionFailure(
+		Result.bApplyContractPanelWidgetRowsPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply contract panel widget Rows property was not Blueprint-visible."));
+	AppendApplyContractPanelWidgetReflectionFailure(
+		Result.bApplyContractPanelWidgetFormattedLinesPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply contract panel widget FormattedLines property was not Blueprint-visible."));
+	AppendApplyContractPanelWidgetReflectionFailure(
+		Result.bApplyContractPanelWidgetRefreshResultPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply contract panel widget LastRefreshResult property was not Blueprint-visible."));
+	AppendApplyContractPanelWidgetReflectionFailure(
+		Result.bApplyContractPanelWidgetSummaryTextPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply contract panel widget SummaryText property was not Blueprint-visible."));
+	AppendApplyContractPanelWidgetReflectionFailure(
+		Result.bApplyContractPanelWidgetContractFlagsBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply contract panel widget contract flag properties were not Blueprint-visible."));
+	AppendApplyContractPanelWidgetReflectionFailure(
+		Result.bApplyContractPanelWidgetContractValidatedWithoutAssetOrViewport,
+		TEXT("SQLUI persistence settings draft probe failed: apply contract panel widget shell contract could not be validated by reflection without an asset or viewport."));
+
 	const UClass* ApplyPreviewPanelWidgetClass =
 		USQLUISamplePersistenceSettingsApplyPreviewPanelWidget::StaticClass();
 	Result.bApplyPreviewPanelWidgetClassDerivedFromUserWidget =
@@ -11278,6 +11456,18 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bApplyContractAdapterProviderAutoInitPending
 		&& Result.bApplyContractAdapterCancelPreviewWouldDiscardChanges
 		&& Result.bApplyContractAdapterRepeatedDisplayDeterministic
+		&& Result.bApplyContractPanelWidgetClassDerivedFromUserWidget
+		&& Result.bApplyContractPanelWidgetBlueprintDefaultRefreshFunctionCallable
+		&& Result.bApplyContractPanelWidgetBlueprintCurrentRefreshFunctionCallable
+		&& Result.bApplyContractPanelWidgetBlueprintBuildFunctionCallable
+		&& Result.bApplyContractPanelWidgetRefreshFunctionsNotBlueprintPure
+		&& Result.bApplyContractPanelWidgetCachedGetterFunctionsBlueprintPure
+		&& Result.bApplyContractPanelWidgetRowsPropertyBlueprintVisible
+		&& Result.bApplyContractPanelWidgetFormattedLinesPropertyBlueprintVisible
+		&& Result.bApplyContractPanelWidgetRefreshResultPropertyBlueprintVisible
+		&& Result.bApplyContractPanelWidgetSummaryTextPropertyBlueprintVisible
+		&& Result.bApplyContractPanelWidgetContractFlagsBlueprintVisible
+		&& Result.bApplyContractPanelWidgetContractValidatedWithoutAssetOrViewport
 		&& Result.bApplyPreviewPanelWidgetClassDerivedFromUserWidget
 		&& Result.bApplyPreviewPanelWidgetBlueprintDefaultRefreshFunctionCallable
 		&& Result.bApplyPreviewPanelWidgetBlueprintCurrentRefreshFunctionCallable

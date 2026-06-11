@@ -3154,6 +3154,18 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter provider auto-init pending"), ProbeResult.bApplyContractAdapterProviderAutoInitPending);
 	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter cancel preview would discard changes"), ProbeResult.bApplyContractAdapterCancelPreviewWouldDiscardChanges);
 	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter repeated display deterministic"), ProbeResult.bApplyContractAdapterRepeatedDisplayDeterministic);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract panel widget class derived from UUserWidget"), ProbeResult.bApplyContractPanelWidgetClassDerivedFromUserWidget);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract panel widget Blueprint default refresh function callable"), ProbeResult.bApplyContractPanelWidgetBlueprintDefaultRefreshFunctionCallable);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract panel widget Blueprint current refresh function callable"), ProbeResult.bApplyContractPanelWidgetBlueprintCurrentRefreshFunctionCallable);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract panel widget Blueprint build function callable"), ProbeResult.bApplyContractPanelWidgetBlueprintBuildFunctionCallable);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract panel widget refresh functions not BlueprintPure"), ProbeResult.bApplyContractPanelWidgetRefreshFunctionsNotBlueprintPure);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract panel widget cached getter functions BlueprintPure"), ProbeResult.bApplyContractPanelWidgetCachedGetterFunctionsBlueprintPure);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract panel widget rows property Blueprint visible"), ProbeResult.bApplyContractPanelWidgetRowsPropertyBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract panel widget formatted lines property Blueprint visible"), ProbeResult.bApplyContractPanelWidgetFormattedLinesPropertyBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract panel widget refresh result property Blueprint visible"), ProbeResult.bApplyContractPanelWidgetRefreshResultPropertyBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract panel widget summary text property Blueprint visible"), ProbeResult.bApplyContractPanelWidgetSummaryTextPropertyBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract panel widget contract flags Blueprint visible"), ProbeResult.bApplyContractPanelWidgetContractFlagsBlueprintVisible);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract panel widget contract validated without asset or viewport"), ProbeResult.bApplyContractPanelWidgetContractValidatedWithoutAssetOrViewport);
 	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget class derived from UUserWidget"), ProbeResult.bApplyPreviewPanelWidgetClassDerivedFromUserWidget);
 	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget Blueprint default refresh function callable"), ProbeResult.bApplyPreviewPanelWidgetBlueprintDefaultRefreshFunctionCallable);
 	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget Blueprint current refresh function callable"), ProbeResult.bApplyPreviewPanelWidgetBlueprintCurrentRefreshFunctionCallable);
