@@ -3,6 +3,7 @@
 #include "SQLUISamplePersistenceStatusPanelAdapter.h"
 #include "SQLUISamplePersistenceStatusPanelWidget.h"
 #include "SQLUISamplePersistenceStatusPresenter.h"
+#include "SQLUISamplePersistenceSettingsApplyContractPresenter.h"
 #include "SQLUISamplePersistenceSettingsApplyPreviewPanelWidget.h"
 #include "SQLUISamplePersistenceSettingsApplyPreviewPresenter.h"
 #include "SQLUISamplePersistenceSettingsDraftPanelWidget.h"
@@ -10513,6 +10514,217 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		}
 	}
 
+	USQLUISamplePersistenceSettingsApplyContractPresenter*
+		ApplyContractPresenter =
+			NewObject<USQLUISamplePersistenceSettingsApplyContractPresenter>(
+				Outer ? Outer : GetTransientPackage());
+	if (!IsValid(ApplyContractPresenter))
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: sample apply contract presenter was not created."));
+	}
+	else
+	{
+		const FSQLUISamplePersistenceSettingsApplyContractRefreshResult
+			DefaultApplyContractAdapterResult =
+				ApplyContractPresenter
+					->RefreshDefaultPersistenceSettingsApplyContractDisplay();
+		Result.bApplyContractAdapterDefaultDisplayGenerated =
+			DefaultApplyContractAdapterResult.bSucceeded
+			&& DefaultApplyContractAdapterResult.Rows.Num() > 0
+			&& DefaultApplyContractAdapterResult.FormattedLines.Num()
+				== DefaultApplyContractAdapterResult.Rows.Num()
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainField(
+				DefaultApplyContractAdapterResult.DisplaySummary,
+				TEXT("ApplyContractSummary"))
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainField(
+				DefaultApplyContractAdapterResult.DisplaySummary,
+				TEXT("ApplyAvailability"))
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainField(
+				DefaultApplyContractAdapterResult.DisplaySummary,
+				TEXT("CancelPreview"));
+		Result.bApplyContractAdapterDefaultDisplaySafe =
+			DefaultApplyContractAdapterResult.bIsValid
+			&& !DefaultApplyContractAdapterResult.bHasErrors
+			&& !DefaultApplyContractAdapterResult.bHasWarnings
+			&& !DefaultApplyContractAdapterResult.bCanApplyInFuture
+			&& !DefaultApplyContractAdapterResult.bCanExecuteApplyNow
+			&& !DefaultApplyContractAdapterResult.bActualApplyImplemented
+			&& !DefaultApplyContractAdapterResult.bHasChanges
+			&& DefaultApplyContractAdapterResult.Availability
+				== ESQLUIPersistenceSettingsApplyAvailability::NoChanges
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainText(
+				DefaultApplyContractAdapterResult.DisplaySummary,
+				TEXT("No changes to apply"))
+			&& ApplyContractPresenter->GetRows().Num()
+				== DefaultApplyContractAdapterResult.Rows.Num()
+			&& ApplyContractPresenter->GetFormattedLines().Num()
+				== DefaultApplyContractAdapterResult.FormattedLines.Num()
+			&& ApplyContractPresenter->GetSummaryText()
+				== DefaultApplyContractAdapterResult.SummaryText
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsApplyContractRefreshResult
+			CurrentApplyContractAdapterResult =
+				ApplyContractPresenter
+					->RefreshCurrentPersistenceSettingsApplyContractDisplay();
+		Result.bApplyContractAdapterCurrentDisplayNoChanges =
+			CurrentApplyContractAdapterResult.bSucceeded
+			&& CurrentApplyContractAdapterResult.bIsValid
+			&& !CurrentApplyContractAdapterResult.bHasChanges
+			&& !CurrentApplyContractAdapterResult.bCanApplyInFuture
+			&& !CurrentApplyContractAdapterResult.bCanExecuteApplyNow
+			&& !CurrentApplyContractAdapterResult.bActualApplyImplemented
+			&& CurrentApplyContractAdapterResult.Availability
+				== ESQLUIPersistenceSettingsApplyAvailability::NoChanges
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainText(
+				CurrentApplyContractAdapterResult.DisplaySummary,
+				TEXT("No changes to apply"))
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+		Result.bApplyContractAdapterExecutionUnavailable =
+			!DefaultApplyContractAdapterResult.bActualApplyImplemented
+			&& !DefaultApplyContractAdapterResult.bCanExecuteApplyNow
+			&& !CurrentApplyContractAdapterResult.bActualApplyImplemented
+			&& !CurrentApplyContractAdapterResult.bCanExecuteApplyNow;
+
+		const FSQLUISamplePersistenceSettingsApplyContractRefreshResult
+			SQLiteApplyContractAdapterResult =
+				ApplyContractPresenter
+					->BuildPersistenceSettingsApplyContractDisplay(SQLiteDraft);
+		Result.bApplyContractAdapterBackendChangeDetected =
+			SQLiteApplyContractAdapterResult.bSucceeded
+			&& SQLiteApplyContractAdapterResult.bCanApplyInFuture
+			&& !SQLiteApplyContractAdapterResult.bActualApplyImplemented
+			&& !SQLiteApplyContractAdapterResult.bCanExecuteApplyNow
+			&& SQLiteApplyContractAdapterResult.bHasChanges
+			&& SQLiteApplyContractAdapterResult.bWouldNeedRepositoryReopen
+			&& SQLiteApplyContractAdapterResult.bWouldNeedProviderReinitialize
+			&& SQLiteApplyContractAdapterResult.Availability
+				== ESQLUIPersistenceSettingsApplyAvailability::PreviewOnlyReady
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainField(
+				SQLiteApplyContractAdapterResult.DisplaySummary,
+				TEXT("BackendChange"))
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainText(
+				SQLiteApplyContractAdapterResult.DisplaySummary,
+				TEXT("Would change"));
+		Result.bApplyContractAdapterSQLiteDisplayGenerated =
+			SQLiteApplyContractAdapterResult.bSucceeded
+			&& SQLiteApplyContractAdapterResult.bIsValid
+			&& SQLiteApplyContractAdapterResult.bRequiresRestartOrReinitialize
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainField(
+				SQLiteApplyContractAdapterResult.DisplaySummary,
+				TEXT("SQLitePathOrPolicyChange"))
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainText(
+				SQLiteApplyContractAdapterResult.DisplaySummary,
+				TEXT("SQLite remains opt-in"))
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainText(
+				SQLiteApplyContractAdapterResult.DisplaySummary,
+				TEXT("Preview only"));
+		Result.bApplyContractAdapterSQLiteDisplayDidNotCreateDb =
+			!DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsApplyContractRefreshResult
+			UnknownBackendApplyContractAdapterResult =
+				ApplyContractPresenter
+					->BuildPersistenceSettingsApplyContractDisplay(
+						UnknownBackendDraft);
+		Result.bApplyContractAdapterUnknownBackendShowsError =
+			UnknownBackendApplyContractAdapterResult.bHasErrors
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainState(
+				UnknownBackendApplyContractAdapterResult.DisplaySummary,
+				ESQLUIPersistenceSettingsValidationDisplayState::Error)
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainText(
+				UnknownBackendApplyContractAdapterResult.DisplaySummary,
+				TEXT("not a selectable SQLUI persistence backend"))
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainText(
+				UnknownBackendApplyContractAdapterResult.DisplaySummary,
+				TEXT("Blocked by validation"))
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainText(
+				UnknownBackendApplyContractAdapterResult.DisplaySummary,
+				TEXT("Actual Apply execution remains unavailable"))
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsApplyContractRefreshResult
+			EmptySQLitePathApplyContractAdapterResult =
+				ApplyContractPresenter
+					->BuildPersistenceSettingsApplyContractDisplay(
+						EmptySQLitePathDraft);
+		Result.bApplyContractAdapterSQLiteEmptyPathShowsError =
+			EmptySQLitePathApplyContractAdapterResult.bHasErrors
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainState(
+				EmptySQLitePathApplyContractAdapterResult.DisplaySummary,
+				ESQLUIPersistenceSettingsValidationDisplayState::Error)
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainText(
+				EmptySQLitePathApplyContractAdapterResult.DisplaySummary,
+				TEXT("SQLite requires a database path"))
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainText(
+				EmptySQLitePathApplyContractAdapterResult.DisplaySummary,
+				TEXT("Blocked by validation"))
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainText(
+				EmptySQLitePathApplyContractAdapterResult.DisplaySummary,
+				TEXT("Actual Apply execution remains unavailable"))
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsApplyContractRefreshResult
+			ProviderAutoInitApplyContractAdapterResult =
+				ApplyContractPresenter
+					->BuildPersistenceSettingsApplyContractDisplay(
+						ProviderAutoInitDraft);
+		Result.bApplyContractAdapterProviderAutoInitPending =
+			ProviderAutoInitApplyContractAdapterResult.bSucceeded
+			&& ProviderAutoInitApplyContractAdapterResult.bHasWarnings
+			&& ProviderAutoInitApplyContractAdapterResult
+				.bRequiresRestartOrReinitialize
+			&& ProviderAutoInitApplyContractAdapterResult.Availability
+				== ESQLUIPersistenceSettingsApplyAvailability::PreviewOnlyReady
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainField(
+				ProviderAutoInitApplyContractAdapterResult.DisplaySummary,
+				TEXT("ProviderAutoInitChange"))
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainText(
+				ProviderAutoInitApplyContractAdapterResult.DisplaySummary,
+				TEXT("Startup behavior is unchanged"))
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+		Result.bApplyContractAdapterCancelPreviewWouldDiscardChanges =
+			SQLiteApplyContractAdapterResult.bWouldDiscardChangesOnCancel
+			&& DoesSQLUIPersistenceSettingsApplyContractDisplayContainText(
+				SQLiteApplyContractAdapterResult.DisplaySummary,
+				TEXT("Would discard pending changes"))
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		const FSQLUISamplePersistenceSettingsApplyContractRefreshResult
+			RepeatedSQLiteApplyContractAdapterResult =
+				ApplyContractPresenter
+					->BuildPersistenceSettingsApplyContractDisplayFromContract(
+						SQLiteApplyContract,
+						SQLiteCancelPreview);
+		Result.bApplyContractAdapterRepeatedDisplayDeterministic =
+			AreSQLUIPersistenceSettingsApplyContractDisplaysEquivalent(
+				SQLiteApplyContractAdapterResult.DisplaySummary,
+				RepeatedSQLiteApplyContractAdapterResult.DisplaySummary)
+			&& RepeatedSQLiteApplyContractAdapterResult.FormattedLines
+				== SQLiteApplyContractAdapterResult.FormattedLines
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
+		if (!Result.bApplyContractAdapterDefaultDisplayGenerated
+			|| !Result.bApplyContractAdapterDefaultDisplaySafe
+			|| !Result.bApplyContractAdapterCurrentDisplayNoChanges
+			|| !Result.bApplyContractAdapterExecutionUnavailable
+			|| !Result.bApplyContractAdapterBackendChangeDetected
+			|| !Result.bApplyContractAdapterSQLiteDisplayGenerated
+			|| !Result.bApplyContractAdapterSQLiteDisplayDidNotCreateDb
+			|| !Result.bApplyContractAdapterUnknownBackendShowsError
+			|| !Result.bApplyContractAdapterSQLiteEmptyPathShowsError
+			|| !Result.bApplyContractAdapterProviderAutoInitPending
+			|| !Result.bApplyContractAdapterCancelPreviewWouldDiscardChanges
+			|| !Result.bApplyContractAdapterRepeatedDisplayDeterministic)
+		{
+			AppendSQLUISamplePersistenceSettingsDraftProbeError(
+				Result,
+				TEXT("SQLUI persistence settings draft probe failed: sample apply contract adapter did not preserve non-mutating contract display behavior."));
+		}
+	}
+
 	const UClass* ApplyPreviewPanelWidgetClass =
 		USQLUISamplePersistenceSettingsApplyPreviewPanelWidget::StaticClass();
 	Result.bApplyPreviewPanelWidgetClassDerivedFromUserWidget =
@@ -10931,6 +11143,14 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		SidecarApplyPreviewPresenter
 			->BuildPersistenceSettingsApplyPreviewDisplay(SidecarDraft);
 	}
+	if (USQLUISamplePersistenceSettingsApplyContractPresenter*
+			SidecarApplyContractPresenter =
+				NewObject<USQLUISamplePersistenceSettingsApplyContractPresenter>(
+					Outer ? Outer : GetTransientPackage()))
+	{
+		SidecarApplyContractPresenter
+			->BuildPersistenceSettingsApplyContractDisplay(SidecarDraft);
+	}
 	Result.bSidecarPreservedDuringValidation =
 		bSidecarCreated
 		&& FPaths::FileExists(SidecarPath);
@@ -10941,6 +11161,9 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		bSidecarCreated
 		&& FPaths::FileExists(SidecarPath);
 	Result.bSidecarPreservedDuringApplyPreviewAdapter =
+		bSidecarCreated
+		&& FPaths::FileExists(SidecarPath);
+	Result.bSidecarPreservedDuringApplyContractAdapter =
 		bSidecarCreated
 		&& FPaths::FileExists(SidecarPath);
 	Result.bSidecarPreservedDuringApplyContractDisplay =
@@ -10956,13 +11179,14 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		|| !Result.bSidecarPreservedDuringApplyPreview
 		|| !Result.bSidecarPreservedDuringApplyPreviewDisplay
 		|| !Result.bSidecarPreservedDuringApplyPreviewAdapter
+		|| !Result.bSidecarPreservedDuringApplyContractAdapter
 		|| !Result.bSidecarPreservedDuringApplyContractDisplay
 		|| !Result.bSidecarPreservedDuringApplyContract
 		|| !Result.bSidecarPreservedDuringCancelPreview)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
-			TEXT("SQLUI persistence settings draft probe failed: validation, apply preview, apply preview display, apply preview adapter, apply contract display, apply contract, or cancel preview deleted a smoke-owned sidecar file."));
+			TEXT("SQLUI persistence settings draft probe failed: validation, apply preview, apply preview display, apply preview adapter, apply contract adapter, apply contract display, apply contract, or cancel preview deleted a smoke-owned sidecar file."));
 	}
 
 	Result.bDatabaseFilesRemoved =
@@ -11042,6 +11266,18 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bApplyPreviewAdapterSQLiteEmptyPathShowsError
 		&& Result.bApplyPreviewAdapterProviderAutoInitPending
 		&& Result.bApplyPreviewAdapterRepeatedDisplayDeterministic
+		&& Result.bApplyContractAdapterDefaultDisplayGenerated
+		&& Result.bApplyContractAdapterDefaultDisplaySafe
+		&& Result.bApplyContractAdapterCurrentDisplayNoChanges
+		&& Result.bApplyContractAdapterExecutionUnavailable
+		&& Result.bApplyContractAdapterBackendChangeDetected
+		&& Result.bApplyContractAdapterSQLiteDisplayGenerated
+		&& Result.bApplyContractAdapterSQLiteDisplayDidNotCreateDb
+		&& Result.bApplyContractAdapterUnknownBackendShowsError
+		&& Result.bApplyContractAdapterSQLiteEmptyPathShowsError
+		&& Result.bApplyContractAdapterProviderAutoInitPending
+		&& Result.bApplyContractAdapterCancelPreviewWouldDiscardChanges
+		&& Result.bApplyContractAdapterRepeatedDisplayDeterministic
 		&& Result.bApplyPreviewPanelWidgetClassDerivedFromUserWidget
 		&& Result.bApplyPreviewPanelWidgetBlueprintDefaultRefreshFunctionCallable
 		&& Result.bApplyPreviewPanelWidgetBlueprintCurrentRefreshFunctionCallable
@@ -11077,6 +11313,7 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bSidecarPreservedDuringApplyPreview
 		&& Result.bSidecarPreservedDuringApplyPreviewDisplay
 		&& Result.bSidecarPreservedDuringApplyPreviewAdapter
+		&& Result.bSidecarPreservedDuringApplyContractAdapter
 		&& Result.bSidecarPreservedDuringApplyContractDisplay
 		&& Result.bSidecarPreservedDuringApplyContract
 		&& Result.bSidecarPreservedDuringCancelPreview
