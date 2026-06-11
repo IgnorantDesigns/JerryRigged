@@ -3142,6 +3142,18 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter SQLite empty path shows error"), ProbeResult.bApplyPreviewAdapterSQLiteEmptyPathShowsError);
 	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter provider auto-init pending"), ProbeResult.bApplyPreviewAdapterProviderAutoInitPending);
 	LogPersistenceSettingsDraftBool(TEXT("apply preview adapter repeated display deterministic"), ProbeResult.bApplyPreviewAdapterRepeatedDisplayDeterministic);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter default display generated"), ProbeResult.bApplyContractAdapterDefaultDisplayGenerated);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter default display safe"), ProbeResult.bApplyContractAdapterDefaultDisplaySafe);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter current display no changes"), ProbeResult.bApplyContractAdapterCurrentDisplayNoChanges);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter execution unavailable"), ProbeResult.bApplyContractAdapterExecutionUnavailable);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter backend change detected"), ProbeResult.bApplyContractAdapterBackendChangeDetected);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter SQLite display generated"), ProbeResult.bApplyContractAdapterSQLiteDisplayGenerated);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter SQLite display did not create DB"), ProbeResult.bApplyContractAdapterSQLiteDisplayDidNotCreateDb);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter unknown backend shows error"), ProbeResult.bApplyContractAdapterUnknownBackendShowsError);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter SQLite empty path shows error"), ProbeResult.bApplyContractAdapterSQLiteEmptyPathShowsError);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter provider auto-init pending"), ProbeResult.bApplyContractAdapterProviderAutoInitPending);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter cancel preview would discard changes"), ProbeResult.bApplyContractAdapterCancelPreviewWouldDiscardChanges);
+	LogPersistenceSettingsDraftBool(TEXT("apply contract adapter repeated display deterministic"), ProbeResult.bApplyContractAdapterRepeatedDisplayDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget class derived from UUserWidget"), ProbeResult.bApplyPreviewPanelWidgetClassDerivedFromUserWidget);
 	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget Blueprint default refresh function callable"), ProbeResult.bApplyPreviewPanelWidgetBlueprintDefaultRefreshFunctionCallable);
 	LogPersistenceSettingsDraftBool(TEXT("apply preview panel widget Blueprint current refresh function callable"), ProbeResult.bApplyPreviewPanelWidgetBlueprintCurrentRefreshFunctionCallable);
@@ -3177,6 +3189,7 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply preview"), ProbeResult.bSidecarPreservedDuringApplyPreview);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply preview display"), ProbeResult.bSidecarPreservedDuringApplyPreviewDisplay);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply preview adapter"), ProbeResult.bSidecarPreservedDuringApplyPreviewAdapter);
+	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply contract adapter"), ProbeResult.bSidecarPreservedDuringApplyContractAdapter);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply contract display"), ProbeResult.bSidecarPreservedDuringApplyContractDisplay);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply contract"), ProbeResult.bSidecarPreservedDuringApplyContract);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during cancel preview"), ProbeResult.bSidecarPreservedDuringCancelPreview);
