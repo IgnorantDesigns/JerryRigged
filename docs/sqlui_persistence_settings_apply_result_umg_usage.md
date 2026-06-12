@@ -2,7 +2,7 @@
 
 This document is the focused Blueprint/UMG binding recipe for the optional SQLUISamples persistence settings apply-result widget shell.
 
-PR #129 added `USQLUISamplePersistenceSettingsApplyResultPanelWidget` as a C++ `UUserWidget` shell for apply-result display. This guide documents how future local Blueprint/UMG work can subclass or bind to that shell safely, without adding widget Blueprint assets, maps, startup wiring, viewport attachment, polling, ticking, settings controls, actual Apply/Save behavior, reset/delete behavior, provider lifecycle behavior, migrations, seed-copy behavior, directory creation, database file creation, config writes, or file deletion.
+PR #129 added `USQLUISamplePersistenceSettingsApplyResultPanelWidget` as a C++ `UUserWidget` shell for apply-result display. PR #130 is docs-only: it documents how future local Blueprint/UMG work can subclass or bind to that shell safely, without adding widget Blueprint assets, maps, startup wiring, viewport attachment, polling, ticking, settings controls, actual Apply/Save behavior, reset/delete behavior, provider lifecycle behavior, migrations, seed-copy behavior, directory creation, database file creation, config writes, or file deletion.
 
 Related docs:
 
