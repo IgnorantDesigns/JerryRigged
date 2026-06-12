@@ -112,6 +112,12 @@ This foundation remains a refusal/reporting surface only. It is not settings edi
 
 Future actual config-write/apply behavior must stay SQLUICore-first, validate drafts before writing, refuse invalid drafts without mutation, keep widgets away from SQL/schema/migrations/seed-copy/sidecar/deletion/provider lifecycle details, and use explicit pending/apply/cancel semantics. Any reset/delete UX must route through SQLUICore database management policy surfaces. Any config-write path needs focused smoke coverage plus config diff/snapshot checks, and any startup/default-map/config/provider lifecycle or packaged behavior change needs packaged validation.
 
+## Smoke-Owned Apply Config Target Scaffold
+
+SQLUICore now has a first explicit apply config target scaffold for smoke-owned writes. It can serialize a validated draft only when the caller provides a target marked as an explicit smoke/test target under `Saved/SQLUI/SmokeTests`; default/runtime targets and unsafe project config paths are refused. This is a target proof for future Apply work, not production user/runtime config persistence.
+
+The production/default `RequestPersistenceSettingsApply` entrypoint is still unavailable/not implemented and still reports `bDidWriteConfig=false` and `bDidChangeSettings=false`. The smoke-owned target helper does not write committed `Config` defaults or generated `Saved/Config`, does not enable SQLite or provider auto-init by default, does not initialize providers/repositories, does not create or open SQLite databases, does not run migrations, does not copy seeds, and does not add reset/delete behavior. `-UsePersistenceSettingsDraftProbe` verifies the smoke target write, invalid-draft refusal, unsafe-path refusal, repo config preservation, lifecycle no-op behavior, DB no-op behavior, and smoke artifact cleanup.
+
 ## Persistence Settings Actual Apply Implementation Gate
 
 PR #125 records this gate as documentation only; it adds no runtime code, scripts, config changes, smoke flags, UI controls, settings editing, or apply/save/config-write behavior.

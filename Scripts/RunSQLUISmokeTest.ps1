@@ -148,10 +148,12 @@ Parameters:
       and validation display-row probe, including the dry-run apply-intent preview,
       non-mutating apply/cancel contract, apply preview display rows, apply/cancel
       contract display rows, the unavailable/non-mutating actual apply entrypoint
-      skeleton, UI-safe apply result display rows, SQLUISamples
+      skeleton, UI-safe apply result display rows, the explicit smoke-owned
+      apply config target scaffold, SQLUISamples
       validation/apply-preview/apply-contract/apply-result sample adapters, and
       validation/apply-preview/apply-contract/apply-result C++ UMG widget shell
-      contracts.
+      contracts. The config target proof writes only to a smoke-owned temporary
+      ini artifact and cleans it up.
 
   -UseSQLiteMigrationProbe
       Run the optional SQLUICore SQLite migration-runner probe.

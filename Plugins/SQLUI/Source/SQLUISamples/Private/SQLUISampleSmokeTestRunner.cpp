@@ -28,6 +28,7 @@
 #include "Layout/ISQLUILayoutRepository.h"
 #include "Layout/SQLUIInMemoryLayoutRepository.h"
 #include "Layout/SQLUIJsonFileLayoutRepository.h"
+#include "Layout/SQLUIPersistenceSettingsApplyConfigTarget.h"
 #include "Layout/SQLUIPersistenceSettingsDraft.h"
 #include "Layout/SQLUIPersistenceSettingsDraftDisplay.h"
 #include "Layout/SQLUIPersistenceStatus.h"
@@ -8736,6 +8737,51 @@ FString MakeSQLUISamplePersistenceSettingsDraftPath(
 	return FPaths::ConvertRelativePathToFull(DatabasePath);
 }
 
+FString MakeSQLUISamplePersistenceSettingsDraftConfigTargetPath(
+	const TCHAR* ConfigFileName)
+{
+	FString ConfigPath = FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("SQLUI"),
+		TEXT("SmokeTests"),
+		TEXT("PersistenceSettingsDraft"),
+		TEXT("ApplyConfigTarget"),
+		ConfigFileName);
+	FPaths::NormalizeFilename(ConfigPath);
+	return FPaths::ConvertRelativePathToFull(ConfigPath);
+}
+
+bool DeleteSQLUISamplePersistenceSettingsDraftConfigTarget(
+	const FString& ConfigPath,
+	FSQLUISamplePersistenceSettingsDraftProbeResult& Result)
+{
+	bool bRemoved = true;
+	if (FPaths::FileExists(ConfigPath)
+		&& !IFileManager::Get().Delete(*ConfigPath, false, true, true))
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI persistence settings draft probe failed: could not remove smoke-owned config target '%s'."),
+				*ConfigPath));
+		bRemoved = false;
+	}
+
+	const FString Directory = FPaths::GetPath(ConfigPath);
+	if (IFileManager::Get().DirectoryExists(*Directory)
+		&& !IFileManager::Get().DeleteDirectory(*Directory, false, true))
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI persistence settings draft probe failed: could not remove smoke-owned config target directory '%s'."),
+				*Directory));
+		bRemoved = false;
+	}
+
+	return bRemoved;
+}
+
 TArray<FString> MakeSQLUISamplePersistenceSettingsDraftFiles(
 	const FString& DatabasePath)
 {
@@ -9553,8 +9599,14 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		MakeSQLUISamplePersistenceSettingsDraftPath(TEXT("PersistenceSettingsDraft.db"));
 	Result.SidecarDatabasePath =
 		MakeSQLUISamplePersistenceSettingsDraftPath(TEXT("PersistenceSettingsDraftSidecarOnly.db"));
+	const FString ApplyConfigTargetPath =
+		MakeSQLUISamplePersistenceSettingsDraftConfigTargetPath(
+			TEXT("SmokeOwnedPersistenceSettingsApplyTarget.ini"));
 
 	DeleteSQLUISamplePersistenceSettingsDraftFiles(Result);
+	DeleteSQLUISamplePersistenceSettingsDraftConfigTarget(
+		ApplyConfigTargetPath,
+		Result);
 
 	const TArray<FString> ApplyConfigPaths =
 		MakeSQLUISamplePersistenceSettingsDraftConfigPaths();
@@ -11167,6 +11219,155 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			Result,
 			TEXT("SQLUI persistence settings draft probe failed: apply request/result display skeleton, sample apply result adapter, or apply result widget shell did not remain unavailable and non-mutating."));
 	}
+
+	FSQLUIPersistenceSettingsDraft SmokeConfigTargetDraft = SQLiteDraft;
+	SmokeConfigTargetDraft.bPendingProviderAutoInitialize = true;
+	SmokeConfigTargetDraft.bHasProviderAutoInitializeOverride = true;
+	const FSQLUIPersistenceSettingsApplyConfigTarget RuntimeConfigTarget =
+		FSQLUIPersistenceSettingsApplyConfigTargetWriter::
+			MakeUnavailableRuntimeTarget();
+	const FSQLUIPersistenceSettingsApplyConfigTarget SmokeConfigTarget =
+		FSQLUIPersistenceSettingsApplyConfigTargetWriter::
+			MakeExplicitSmokeTestTarget(
+				ApplyConfigTargetPath,
+				TEXT("SQLUI persistence settings draft probe smoke-owned config target"));
+	const FSQLUIPersistenceSettingsApplyConfigTarget UnsafeConfigTarget =
+		FSQLUIPersistenceSettingsApplyConfigTargetWriter::
+			MakeExplicitSmokeTestTarget(
+				FPaths::Combine(FPaths::ProjectConfigDir(), TEXT("DefaultGame.ini")),
+				TEXT("Unsafe project config path should be rejected"));
+
+	const FSQLUIPersistenceSettingsApplyConfigWriteResult
+		RuntimeConfigTargetResult =
+			FSQLUIPersistenceSettingsApplyConfigTargetWriter::WriteToConfigTarget(
+				MakeApplyRequest(SmokeConfigTargetDraft),
+				RuntimeConfigTarget);
+	Result.bApplyConfigTargetDefaultRuntimeUnavailable =
+		!RuntimeConfigTargetResult.bSucceeded
+		&& !RuntimeConfigTargetResult.bDidWriteConfig
+		&& !RuntimeConfigTargetResult.bDidChangeSettings
+		&& !RuntimeConfigTargetResult.bUsedSmokeOwnedTarget
+		&& !FPaths::FileExists(ApplyConfigTargetPath)
+		&& AreSQLUISampleFileSnapshotsUnchanged(
+			ApplyConfigBefore,
+			CaptureSQLUISampleFileSnapshots(ApplyConfigPaths));
+
+	const FSQLUIPersistenceSettingsApplyConfigWriteResult
+		SmokeConfigTargetResult =
+			FSQLUIPersistenceSettingsApplyConfigTargetWriter::WriteToConfigTarget(
+				MakeApplyRequest(SmokeConfigTargetDraft),
+				SmokeConfigTarget);
+	FString SmokeConfigTargetContents;
+	FFileHelper::LoadFileToString(
+		SmokeConfigTargetContents,
+		*ApplyConfigTargetPath);
+	Result.bApplyConfigTargetSmokeTargetValidated =
+		SmokeConfigTargetResult.bUsedSmokeOwnedTarget
+		&& !SmokeConfigTargetResult.bWouldAffectRuntimeDefaults
+		&& SmokeConfigTargetResult.ConfigFilePath == ApplyConfigTargetPath;
+	Result.bApplyConfigTargetValidDraftWroteSmokeConfig =
+		SmokeConfigTargetResult.bSucceeded
+		&& SmokeConfigTargetResult.bDidWriteConfig
+		&& SmokeConfigTargetResult.bDidChangeSettings
+		&& FPaths::FileExists(ApplyConfigTargetPath);
+	Result.bApplyConfigTargetRecordedExpectedValues =
+		SmokeConfigTargetContents.Contains(TEXT("bSmokeOwnedTarget=true"))
+		&& SmokeConfigTargetContents.Contains(TEXT("bRuntimeDefaultsUntouched=true"))
+		&& SmokeConfigTargetContents.Contains(TEXT("Backend=SQLite"))
+		&& SmokeConfigTargetContents.Contains(Result.DatabasePath)
+		&& SmokeConfigTargetContents.Contains(TEXT("bProviderAutoInitialize=true"))
+		&& SmokeConfigTargetContents.Contains(TEXT("bDidCreateDatabaseFiles=false"))
+		&& SmokeConfigTargetContents.Contains(TEXT("bDidOpenDatabaseForWriting=false"))
+		&& SmokeConfigTargetContents.Contains(TEXT("bDidRunMigrations=false"))
+		&& SmokeConfigTargetContents.Contains(TEXT("bDidCopySeedDatabase=false"))
+		&& SmokeConfigTargetContents.Contains(TEXT("bDidDeleteFiles=false"));
+
+	const FString SmokeConfigTargetContentsBeforeInvalidWrite =
+		SmokeConfigTargetContents;
+	const FSQLUIPersistenceSettingsApplyConfigWriteResult
+		InvalidConfigTargetResult =
+			FSQLUIPersistenceSettingsApplyConfigTargetWriter::WriteToConfigTarget(
+				MakeApplyRequest(EmptySQLitePathDraft),
+				SmokeConfigTarget);
+	FString SmokeConfigTargetContentsAfterInvalidWrite;
+	FFileHelper::LoadFileToString(
+		SmokeConfigTargetContentsAfterInvalidWrite,
+		*ApplyConfigTargetPath);
+	Result.bApplyConfigTargetInvalidDraftRefused =
+		!InvalidConfigTargetResult.bSucceeded
+		&& !InvalidConfigTargetResult.bDidWriteConfig
+		&& !InvalidConfigTargetResult.bDidChangeSettings
+		&& InvalidConfigTargetResult.bUsedSmokeOwnedTarget;
+	Result.bApplyConfigTargetInvalidDraftDidNotMutate =
+		SmokeConfigTargetContentsAfterInvalidWrite
+			== SmokeConfigTargetContentsBeforeInvalidWrite;
+
+	const FSQLUIPersistenceSettingsApplyConfigWriteResult
+		UnsafeConfigTargetResult =
+			FSQLUIPersistenceSettingsApplyConfigTargetWriter::WriteToConfigTarget(
+				MakeApplyRequest(SmokeConfigTargetDraft),
+				UnsafeConfigTarget);
+	Result.bApplyConfigTargetUnsafePathRejected =
+		!UnsafeConfigTargetResult.bSucceeded
+		&& !UnsafeConfigTargetResult.bDidWriteConfig
+		&& !UnsafeConfigTargetResult.bDidChangeSettings
+		&& !UnsafeConfigTargetResult.bUsedSmokeOwnedTarget
+		&& UnsafeConfigTargetResult.bWouldAffectRuntimeDefaults
+		&& AreSQLUISampleFileSnapshotsUnchanged(
+			ApplyConfigBefore,
+			CaptureSQLUISampleFileSnapshots(ApplyConfigPaths));
+
+	const FSQLUIPersistenceSettingsDraft CurrentAfterConfigTargetWrite =
+		USQLUIPersistenceSettingsDraftLibrary::MakeCurrentPersistenceSettingsDraft();
+	Result.bApplyConfigTargetRuntimePolicyUnchanged =
+		CurrentAfterConfigTargetWrite.CurrentRuntimeConfig.Backend
+			== DefaultDraft.CurrentRuntimeConfig.Backend
+		&& CurrentAfterConfigTargetWrite.PendingRuntimeConfig.Backend
+			== DefaultDraft.PendingRuntimeConfig.Backend
+		&& !FSQLUILayoutRepositoryRuntimeSettingsPolicy::ShouldAutoInitializeProvider(
+			DefaultSettings,
+			TEXT(""))
+		&& AreSQLUISampleFileSnapshotsUnchanged(
+			ApplyConfigBefore,
+			CaptureSQLUISampleFileSnapshots(ApplyConfigPaths));
+	Result.bApplyConfigTargetSQLiteDidNotCreateDb =
+		!SmokeConfigTargetResult.bDidCreateDatabaseFiles
+		&& !SmokeConfigTargetResult.bDidOpenDatabaseForWriting
+		&& !SmokeConfigTargetResult.bDidRunMigrations
+		&& !SmokeConfigTargetResult.bDidCopySeedDatabase
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bApplyConfigTargetNoLifecycleSideEffects =
+		!SmokeConfigTargetResult.bDidInitializeProvider
+		&& !SmokeConfigTargetResult.bDidInitializeRepository
+		&& !SmokeConfigTargetResult.bDidCreateDatabaseFiles
+		&& !SmokeConfigTargetResult.bDidOpenDatabaseForWriting
+		&& !SmokeConfigTargetResult.bDidRunMigrations
+		&& !SmokeConfigTargetResult.bDidCopySeedDatabase
+		&& !SmokeConfigTargetResult.bDidDeleteFiles;
+	Result.bApplyConfigTargetArtifactCleaned =
+		DeleteSQLUISamplePersistenceSettingsDraftConfigTarget(
+			ApplyConfigTargetPath,
+			Result)
+		&& !FPaths::FileExists(ApplyConfigTargetPath)
+		&& !IFileManager::Get().DirectoryExists(
+			*FPaths::GetPath(ApplyConfigTargetPath));
+	if (!Result.bApplyConfigTargetDefaultRuntimeUnavailable
+		|| !Result.bApplyConfigTargetSmokeTargetValidated
+		|| !Result.bApplyConfigTargetValidDraftWroteSmokeConfig
+		|| !Result.bApplyConfigTargetRecordedExpectedValues
+		|| !Result.bApplyConfigTargetInvalidDraftRefused
+		|| !Result.bApplyConfigTargetInvalidDraftDidNotMutate
+		|| !Result.bApplyConfigTargetUnsafePathRejected
+		|| !Result.bApplyConfigTargetRuntimePolicyUnchanged
+		|| !Result.bApplyConfigTargetSQLiteDidNotCreateDb
+		|| !Result.bApplyConfigTargetNoLifecycleSideEffects
+		|| !Result.bApplyConfigTargetArtifactCleaned)
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			TEXT("SQLUI persistence settings draft probe failed: smoke-owned apply config target scaffold did not stay isolated, explicit, or clean."));
+	}
+
 	Result.bProviderAutoInitApplyPreviewDisplayPending =
 		ProviderAutoInitApplyPreviewDisplay.bIsValid
 		&& ProviderAutoInitApplyPreviewDisplay.bHasWarnings
@@ -12478,6 +12679,17 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bApplyResultPanelWidgetRepeatedDisplayDeterministic
 		&& Result.bApplyResultPanelWidgetPreservedConfigFiles
 		&& Result.bApplyResultPanelWidgetDidNotCreateDirectory
+		&& Result.bApplyConfigTargetDefaultRuntimeUnavailable
+		&& Result.bApplyConfigTargetSmokeTargetValidated
+		&& Result.bApplyConfigTargetValidDraftWroteSmokeConfig
+		&& Result.bApplyConfigTargetRecordedExpectedValues
+		&& Result.bApplyConfigTargetInvalidDraftRefused
+		&& Result.bApplyConfigTargetInvalidDraftDidNotMutate
+		&& Result.bApplyConfigTargetUnsafePathRejected
+		&& Result.bApplyConfigTargetRuntimePolicyUnchanged
+		&& Result.bApplyConfigTargetSQLiteDidNotCreateDb
+		&& Result.bApplyConfigTargetNoLifecycleSideEffects
+		&& Result.bApplyConfigTargetArtifactCleaned
 		&& Result.bBackendChangeApplyContractDetected
 		&& Result.bSQLiteApplyContractSafe
 		&& Result.bUnknownBackendApplyContractBlocked
