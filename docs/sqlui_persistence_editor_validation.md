@@ -57,7 +57,7 @@ Result: exit code `0`; the persistence status sample surface probe succeeded. Th
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.ps1 -EngineRoot "C:\Program Files\Epic Games\UE_5.7" -UsePersistenceSettingsDraftProbe
 ```
 
-Result: exit code `0`; the persistence settings draft probe succeeded. The probe confirmed draft validation, dry-run apply preview, apply/cancel contract display rows, apply-result display rows, the apply-result sample adapter, and optional sample surfaces remain non-mutating.
+Result: exit code `0`; the persistence settings draft probe succeeded. The probe confirmed draft validation, dry-run apply preview, apply/cancel contract display rows, apply-result display rows, the apply-result sample adapter, the apply-result C++ UMG widget shell contract, and optional sample surfaces remain non-mutating.
 
 ```powershell
 $paths = @(
