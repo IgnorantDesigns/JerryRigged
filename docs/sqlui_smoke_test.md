@@ -307,7 +307,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 The commandlet also accepts `-PersistenceSettingsDraftProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
 This existing probe is the validation path for the completed non-mutating persistence settings apply/cancel contract UI foundation checkpoint and the apply entrypoint/result UI foundation checkpoint. No new smoke flag was added for these checkpoints; the same probe covers the #105-#131 chain while preserving the no-asset, no-map, no-startup, no-viewport, no-settings-mutation boundaries.
-It also covers the first smoke-owned apply config target scaffold: the production/default apply target is refused, unsafe project config paths are refused, a valid draft can write only to a temporary `Saved\SQLUI\SmokeTests` ini target, invalid drafts do not mutate that target, repo `Config` and `Saved\Config` snapshots remain unchanged, no database/lifecycle/migration/seed-copy work runs, and the smoke-owned target artifact is removed before the probe reports success.
+It also covers the first smoke-owned apply config target scaffold from #132: the production/default apply target is refused, unsafe project config paths are refused, a valid draft can write only to a temporary `Saved\SQLUI\SmokeTests` ini target, invalid drafts do not mutate that target, repo `Config` and `Saved\Config` snapshots remain unchanged, no database/lifecycle/migration/seed-copy work runs, and the smoke-owned target artifact is removed before the probe reports success.
 
 This same probe covers:
 
@@ -329,7 +329,22 @@ This same probe covers:
 - C++ apply/cancel contract UMG widget shell contract.
 - SQLUICore explicit smoke-owned apply config target scaffold.
 
-The probe does not require widget blueprint assets or maps, does not attach widgets to the viewport, does not alter startup/config behavior, and does not add settings editing or actual apply/save behavior. Actual Apply execution is explicitly unavailable/not implemented, and the apply request skeleton plus apply-result display keep all config/settings/provider/repository/database/directory/write-open/migration/seed-copy/delete side-effect flags false. Cancel/discard is represented only as a pure value preview. Cleanup removes only smoke-owned files and the explicit checkpoint cleanup check should confirm no draft/status probe database or SQLite sidecar files remain.
+The probe proves the scaffold only as an isolated smoke target. It does not require widget blueprint assets or maps, does not attach widgets to the viewport, does not alter startup/config behavior, and does not add settings editing or actual apply/save behavior. Actual Apply execution is explicitly unavailable/not implemented, and the apply request skeleton plus apply-result display keep all config/settings/provider/repository/database/directory/write-open/migration/seed-copy/delete side-effect flags false. Cancel/discard is represented only as a pure value preview.
+
+The smoke-owned config target portion verifies:
+
+- Default/runtime Apply remains unavailable/not implemented.
+- Default/runtime targets cannot write config.
+- Unsafe project config paths are rejected.
+- Valid drafts write only expected narrow values to the smoke-owned target.
+- Invalid drafts are refused without mutating that target.
+- Repo `Config` and generated `Saved\Config` remain unchanged.
+- Runtime backend/provider-auto-init policy remains unchanged.
+- No SQLite database is created or opened for writing.
+- No migrations, seed copy, provider initialization, repository initialization, reset/delete action, or startup behavior runs.
+- Cleanup removes only smoke-owned files.
+
+After the probe succeeds, explicit cleanup checks should confirm no draft/status/apply probe `.db`, `.db-journal`, `.db-wal`, or `.db-shm` files remain and no temporary apply config target artifact remains under `Saved\SQLUI\SmokeTests\PersistenceSettingsDraft\ApplyConfigTarget`.
 
 Expected log lines include:
 

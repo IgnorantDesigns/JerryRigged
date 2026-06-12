@@ -57,6 +57,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - The non-mutating apply/cancel contract UI foundation is now documented as complete through #105-#124 and `-UsePersistenceSettingsDraftProbe`; it remains a checkpoint only and does not add settings editing, apply/save/config writes, controls, assets, maps, startup wiring, or lifecycle mutation.
 - The non-mutating apply entrypoint/result UI foundation is now documented as complete through #105-#131 and `-UsePersistenceSettingsDraftProbe`; it closes the apply implementation gate, callable apply entrypoint/result skeleton, apply-result display rows, SQLUISamples apply-result adapter, optional C++ apply-result UMG shell, apply-result usage guide, and final checkpoint before any settings editing or config-write behavior begins.
 - A first smoke-owned apply config target scaffold now exists in SQLUICore. It can write a valid draft only to an explicit temporary `Saved/SQLUI/SmokeTests` ini target for smoke coverage, while the production/default Apply entrypoint remains unavailable and non-mutating.
+- The smoke-owned apply config target checkpoint records that #132 proves isolated target mechanics only: explicit smoke/test-owned targets can be written and cleaned up, default/runtime targets are refused, unsafe project config paths are refused, invalid drafts do not mutate the target, repo `Config` and `Saved/Config` remain unchanged, and no database, lifecycle, migration, seed-copy, reset/delete, startup, UI-control, or committed-config behavior was added.
 - PR #125 adds a docs-only actual apply implementation gate in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). It defines the first mutating SQLUICore apply/config-write constraints, config-write boundaries, lifecycle boundaries, reset/delete separation, smoke requirements, packaged-validation triggers, and manual-editor validation expectations without adding apply/save/config-write behavior or UI controls.
 - A SQLUICore actual apply entrypoint skeleton now exists through `RequestPersistenceSettingsApply`. It reuses the existing apply contract and returns validation-blocked, no-change, or preview-only/unavailable result data while keeping execution unavailable/not implemented and performing no config, settings, provider, repository, database, directory, migration, seed-copy, or delete side effects.
 - The draft validation sequence is: #106 validation-only draft model, #107 validation display rows/summary, #108 SQLUISamples draft presenter/adapter, #109 optional C++ draft validation UMG shell, and #110 docs-only safe usage/binding guide.
@@ -71,6 +72,26 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - An explicit packaged runtime persistence workflow smoke exists and runs only with `-RunPackagedPersistenceWorkflowSmoke` / `-SQLUIRuntimePersistenceWorkflowSmoke`; it saves in one packaged launch, verifies the persisted layout in a second launch, and cleans up in a third launch.
 
 This is still not a default production persistence policy. Implementing the user-facing settings UI, choosing product startup policy, broader platform validation, production async service hardening, and actual future schema upgrades remain future work.
+
+## Smoke-Owned Apply Config Target Checkpoint
+
+The #132 smoke-owned apply config target scaffold is the first write-capable persistence settings slice, but it is deliberately not production Apply. It proves that SQLUICore can route future config writes through an explicit target object and that smoke tests can exercise deterministic ini serialization under `Saved/SQLUI/SmokeTests` without touching repo `Config`, generated `Saved/Config`, committed defaults, user/global editor settings, provider/repository lifecycle, or SQLite files.
+
+PR #133 is documentation-only. It records the #132 scaffold state and adds no runtime code, scripts, config changes, Build.cs changes, plugin descriptor changes, smoke flags, assets, maps, generated files, packaged outputs, database files, CI, or behavior changes.
+
+The checkpoint keeps these boundaries:
+
+- Production/default `RequestPersistenceSettingsApply` remains unavailable/not implemented.
+- Real user/runtime config writes remain unavailable.
+- Runtime settings are not applied or saved.
+- `InMemory` remains the default backend.
+- SQLite remains opt-in and is not enabled by default.
+- Provider auto-init remains off by default.
+- No settings controls, backend selector, SQLite path editor, provider auto-init toggle/control, reset/delete UX, widget Blueprint asset, map, startup wiring, viewport attachment, polling, ticking, or auto-refresh path was added.
+- No DB files are created or opened for writing.
+- No migrations, seed-copy behavior, provider/repository initialization, or file deletion occurs outside smoke-owned cleanup.
+
+The next real config-write phase must first choose a safe real write target, keep writes narrow and explicit, validate drafts before writing, refuse invalid drafts without mutation, preserve no-change/no-op behavior, keep lifecycle and database work out of config writes, include config diff/snapshot checks, and preserve smoke-owned versus real-target separation. Packaged validation becomes required if a future PR changes startup behavior, default maps, config wiring, provider lifecycle, viewport flow, packaged runtime behavior, or committed/default runtime config.
 
 ## Read-Only Persistence Status UMG Foundation Checkpoint
 

@@ -114,9 +114,20 @@ Future actual config-write/apply behavior must stay SQLUICore-first, validate dr
 
 ## Smoke-Owned Apply Config Target Scaffold
 
-SQLUICore now has a first explicit apply config target scaffold for smoke-owned writes. It can serialize a validated draft only when the caller provides a target marked as an explicit smoke/test target under `Saved/SQLUI/SmokeTests`; default/runtime targets and unsafe project config paths are refused. This is a target proof for future Apply work, not production user/runtime config persistence.
+SQLUICore now has a first explicit apply config target scaffold for smoke-owned writes. PR #132 introduced `FSQLUIPersistenceSettingsApplyConfigTarget` and `FSQLUIPersistenceSettingsApplyConfigTargetWriter` as a proof that future Apply work can be routed through an explicit target abstraction. The writer can serialize a validated draft only when the caller provides a target marked as an explicit smoke/test target under `Saved/SQLUI/SmokeTests`; default/runtime targets and unsafe project config paths are refused. This is a target proof for future Apply work, not production user/runtime config persistence.
 
 The production/default `RequestPersistenceSettingsApply` entrypoint is still unavailable/not implemented and still reports `bDidWriteConfig=false` and `bDidChangeSettings=false`. The smoke-owned target helper does not write committed `Config` defaults or generated `Saved/Config`, does not enable SQLite or provider auto-init by default, does not initialize providers/repositories, does not create or open SQLite databases, does not run migrations, does not copy seeds, and does not add reset/delete behavior. `-UsePersistenceSettingsDraftProbe` verifies the smoke target write, invalid-draft refusal, unsafe-path refusal, repo config preservation, lifecycle no-op behavior, DB no-op behavior, and smoke artifact cleanup.
+
+This checkpoint proves only isolated smoke mechanics:
+
+- SQLUICore can distinguish smoke/test-owned targets from default/runtime targets.
+- Smoke coverage can write a deterministic temporary ini artifact without touching repo config or `Saved/Config`.
+- Draft validation happens before the smoke-owned write.
+- Invalid drafts and unsafe paths are refused without mutation.
+- Runtime/default Apply remains unavailable and non-mutating.
+- Smoke-owned artifacts are cleaned after the probe.
+
+It does not add a production/user config write path, actual runtime settings application, settings editing controls, backend selector, SQLite path editor, provider auto-init control, reset/delete UX, startup integration, map/config wiring, packaged runtime behavior, provider/repository lifecycle behavior, database creation, database write-open, migrations, seed copy, or committed config changes.
 
 ## Persistence Settings Actual Apply Implementation Gate
 
