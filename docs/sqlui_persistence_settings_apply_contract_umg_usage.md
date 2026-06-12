@@ -8,6 +8,7 @@ Related docs:
 
 - [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) documents the validation-only draft settings widget-shell binding recipe.
 - [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md) documents the dry-run apply-preview widget-shell binding recipe.
+- [`sqlui_persistence_settings_apply_result_umg_usage.md`](sqlui_persistence_settings_apply_result_umg_usage.md) documents the apply-result widget-shell binding recipe.
 - [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) defines the broader future persistence settings UX.
 - [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md) plans the future mutating settings editing, apply/cancel, backend selection, SQLite path, provider auto-init, and reset/delete UX phase.
 - [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) documents the read-only status-panel UMG binding recipe.
@@ -23,6 +24,7 @@ The current apply/cancel contract stack is intentionally non-mutating:
 - #119: `USQLUIPersistenceSettingsApplyContractDisplayLibrary` formats the contract and cancel preview into `FSQLUIPersistenceSettingsApplyContractDisplayRow` values plus `FSQLUIPersistenceSettingsApplyContractDisplaySummary`.
 - #121: `USQLUISamplePersistenceSettingsApplyContractPresenter` is the optional SQLUISamples sample/dev-facing adapter. It delegates to SQLUICore display helpers and caches rows, formatted lines, summary text, and contract flags for simple sample or Blueprint consumption.
 - #122: `USQLUISamplePersistenceSettingsApplyContractPanelWidget` is the optional SQLUISamples C++ `UUserWidget` shell over that presenter/adapter. It creates no visual layout, adds no widget Blueprint asset, and is not wired into startup, maps, config, timers, tick, polling, or the viewport.
+- #129: `USQLUISamplePersistenceSettingsApplyResultPanelWidget` is the optional SQLUISamples C++ `UUserWidget` shell over the apply-result presenter. Its focused safe binding recipe is [`sqlui_persistence_settings_apply_result_umg_usage.md`](sqlui_persistence_settings_apply_result_umg_usage.md).
 
 Future UI should consume display rows, display summary, summary text, and contract flags only. It should not duplicate draft validation, dry-run apply-preview logic, apply/cancel contract logic, path policy, backend policy, provider lifecycle policy, file checks, SQLite schema knowledge, migration policy, seed-copy policy, sidecar policy, or persistence policy in Blueprint or widget code.
 
@@ -161,7 +163,7 @@ For a future local/manual Blueprint exploration, keep the asset local unless a l
 
 ## Smoke Coverage
 
-The existing `-UsePersistenceSettingsDraftProbe` smoke path validates the SQLUICore draft model, validation display rows/summary, dry-run apply preview, apply-preview display-row formatting, non-mutating apply/cancel contract, apply/cancel contract display-row formatting, `USQLUISamplePersistenceSettingsDraftPresenter`, `USQLUISamplePersistenceSettingsDraftPanelWidget`, `USQLUISamplePersistenceSettingsApplyPreviewPresenter`, `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget`, `USQLUISamplePersistenceSettingsApplyContractPresenter`, and `USQLUISamplePersistenceSettingsApplyContractPanelWidget` contracts by reflection.
+The existing `-UsePersistenceSettingsDraftProbe` smoke path validates the SQLUICore draft model, validation display rows/summary, dry-run apply preview, apply-preview display-row formatting, non-mutating apply/cancel contract, apply/cancel contract display-row formatting, unavailable apply entrypoint skeleton, apply-result display-row formatting, `USQLUISamplePersistenceSettingsDraftPresenter`, `USQLUISamplePersistenceSettingsDraftPanelWidget`, `USQLUISamplePersistenceSettingsApplyPreviewPresenter`, `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget`, `USQLUISamplePersistenceSettingsApplyContractPresenter`, `USQLUISamplePersistenceSettingsApplyContractPanelWidget`, `USQLUISamplePersistenceSettingsApplyResultPresenter`, and `USQLUISamplePersistenceSettingsApplyResultPanelWidget` contracts by reflection.
 
 It verifies the apply/cancel contract shell derives from `UUserWidget`, that refresh/build functions are Blueprint-callable and not `BlueprintPure`, that cached getters are `BlueprintPure`, and that cached row/formatted-line/result/summary/flag properties are Blueprint-visible. It does this without a widget Blueprint asset, map, viewport instance, startup wiring, polling, ticking, or automatic refresh.
 
