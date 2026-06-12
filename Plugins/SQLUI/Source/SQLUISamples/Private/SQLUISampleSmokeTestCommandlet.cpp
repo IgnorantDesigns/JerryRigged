@@ -3148,6 +3148,17 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("apply result panel widget repeated display deterministic"), ProbeResult.bApplyResultPanelWidgetRepeatedDisplayDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("apply result panel widget preserved config files"), ProbeResult.bApplyResultPanelWidgetPreservedConfigFiles);
 	LogPersistenceSettingsDraftBool(TEXT("apply result panel widget did not create directory"), ProbeResult.bApplyResultPanelWidgetDidNotCreateDirectory);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target default runtime unavailable"), ProbeResult.bApplyConfigTargetDefaultRuntimeUnavailable);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target smoke target validated"), ProbeResult.bApplyConfigTargetSmokeTargetValidated);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target valid draft wrote smoke config"), ProbeResult.bApplyConfigTargetValidDraftWroteSmokeConfig);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target recorded expected values"), ProbeResult.bApplyConfigTargetRecordedExpectedValues);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target invalid draft refused"), ProbeResult.bApplyConfigTargetInvalidDraftRefused);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target invalid draft did not mutate"), ProbeResult.bApplyConfigTargetInvalidDraftDidNotMutate);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target unsafe path rejected"), ProbeResult.bApplyConfigTargetUnsafePathRejected);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target runtime policy unchanged"), ProbeResult.bApplyConfigTargetRuntimePolicyUnchanged);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target SQLite did not create DB"), ProbeResult.bApplyConfigTargetSQLiteDidNotCreateDb);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target no lifecycle side effects"), ProbeResult.bApplyConfigTargetNoLifecycleSideEffects);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target artifact cleaned"), ProbeResult.bApplyConfigTargetArtifactCleaned);
 	LogPersistenceSettingsDraftBool(TEXT("backend change apply contract detected"), ProbeResult.bBackendChangeApplyContractDetected);
 	LogPersistenceSettingsDraftBool(TEXT("SQLite apply contract safe"), ProbeResult.bSQLiteApplyContractSafe);
 	LogPersistenceSettingsDraftBool(TEXT("unknown backend apply contract blocked"), ProbeResult.bUnknownBackendApplyContractBlocked);

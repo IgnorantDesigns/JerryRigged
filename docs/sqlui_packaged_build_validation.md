@@ -475,6 +475,7 @@ Future work still includes:
 - CI automation if Unreal-capable build agents become available.
 - Broader packaged runtime database path coverage beyond the first `Saved/SQLUI/PackagedRuntimeSmoke` lifecycle proof.
 - More packaged persistence-across-launches scenarios beyond the first explicit workflow smoke.
-- Implementing the user-facing persistence settings/DB path UX documented in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) and planned in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), plus product startup policy beyond the safe config-backed settings object, passive provider subsystem, and explicit packaged smoke flags.
+- Implementing the user-facing persistence settings/DB path UX documented in [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) and planned in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md), plus product startup policy beyond the safe config-backed settings object, passive provider subsystem, explicit smoke-owned apply config target scaffold, and explicit packaged smoke flags.
+- Packaged validation for any future real runtime/user config-write Apply behavior that changes startup/config/provider lifecycle semantics. The current apply config target scaffold is smoke-owned only and does not require packaged validation by itself.
 - Production async database service, queue, cancellation, and shutdown hardening.
 - Migration upgrade/versioning validation beyond the initial schema.
