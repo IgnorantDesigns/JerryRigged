@@ -3117,6 +3117,17 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("repeated apply result display deterministic"), ProbeResult.bRepeatedApplyResultDisplayDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("apply result display preserved config files"), ProbeResult.bApplyResultDisplayPreservedConfigFiles);
 	LogPersistenceSettingsDraftBool(TEXT("apply result display did not create directory"), ProbeResult.bApplyResultDisplayDidNotCreateDirectory);
+	LogPersistenceSettingsDraftBool(TEXT("apply result adapter default display generated"), ProbeResult.bApplyResultAdapterDefaultDisplayGenerated);
+	LogPersistenceSettingsDraftBool(TEXT("apply result adapter default display safe"), ProbeResult.bApplyResultAdapterDefaultDisplaySafe);
+	LogPersistenceSettingsDraftBool(TEXT("apply result adapter current display no changes"), ProbeResult.bApplyResultAdapterCurrentDisplayNoChanges);
+	LogPersistenceSettingsDraftBool(TEXT("apply result adapter execution unavailable"), ProbeResult.bApplyResultAdapterExecutionUnavailable);
+	LogPersistenceSettingsDraftBool(TEXT("apply result adapter unknown backend shows error"), ProbeResult.bApplyResultAdapterUnknownBackendShowsError);
+	LogPersistenceSettingsDraftBool(TEXT("apply result adapter SQLite display generated"), ProbeResult.bApplyResultAdapterSQLiteDisplayGenerated);
+	LogPersistenceSettingsDraftBool(TEXT("apply result adapter SQLite display did not create DB"), ProbeResult.bApplyResultAdapterSQLiteDisplayDidNotCreateDb);
+	LogPersistenceSettingsDraftBool(TEXT("apply result adapter provider auto-init pending"), ProbeResult.bApplyResultAdapterProviderAutoInitPending);
+	LogPersistenceSettingsDraftBool(TEXT("apply result adapter repeated display deterministic"), ProbeResult.bApplyResultAdapterRepeatedDisplayDeterministic);
+	LogPersistenceSettingsDraftBool(TEXT("apply result adapter preserved config files"), ProbeResult.bApplyResultAdapterPreservedConfigFiles);
+	LogPersistenceSettingsDraftBool(TEXT("apply result adapter did not create directory"), ProbeResult.bApplyResultAdapterDidNotCreateDirectory);
 	LogPersistenceSettingsDraftBool(TEXT("backend change apply contract detected"), ProbeResult.bBackendChangeApplyContractDetected);
 	LogPersistenceSettingsDraftBool(TEXT("SQLite apply contract safe"), ProbeResult.bSQLiteApplyContractSafe);
 	LogPersistenceSettingsDraftBool(TEXT("unknown backend apply contract blocked"), ProbeResult.bUnknownBackendApplyContractBlocked);
@@ -3222,6 +3233,7 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply contract"), ProbeResult.bSidecarPreservedDuringApplyContract);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply request"), ProbeResult.bSidecarPreservedDuringApplyRequest);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply result display"), ProbeResult.bSidecarPreservedDuringApplyResultDisplay);
+	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during apply result adapter"), ProbeResult.bSidecarPreservedDuringApplyResultAdapter);
 	LogPersistenceSettingsDraftBool(TEXT("sidecar preserved during cancel preview"), ProbeResult.bSidecarPreservedDuringCancelPreview);
 	LogPersistenceSettingsDraftBool(TEXT("database files removed"), ProbeResult.bDatabaseFilesRemoved);
 
