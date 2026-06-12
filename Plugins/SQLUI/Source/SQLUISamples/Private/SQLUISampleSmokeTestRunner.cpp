@@ -8901,6 +8901,22 @@ bool AreSQLUISampleFileSnapshotsUnchanged(
 	return true;
 }
 
+bool AreSQLUISampleApplyConfigTargetResolutionsEquivalent(
+	const FSQLUIPersistenceSettingsApplyConfigTargetResolution& First,
+	const FSQLUIPersistenceSettingsApplyConfigTargetResolution& Second)
+{
+	return First.TargetKind == Second.TargetKind
+		&& First.bCanWrite == Second.bCanWrite
+		&& First.bIsProductionRuntimeTarget == Second.bIsProductionRuntimeTarget
+		&& First.bIsSmokeOwnedTarget == Second.bIsSmokeOwnedTarget
+		&& First.bRequiresExplicitTarget == Second.bRequiresExplicitTarget
+		&& First.bProductionApplyEnabled == Second.bProductionApplyEnabled
+		&& First.bWouldAffectRuntimeDefaults == Second.bWouldAffectRuntimeDefaults
+		&& First.ConfigFilePath == Second.ConfigFilePath
+		&& First.TargetDescription == Second.TargetDescription
+		&& First.SummaryText == Second.SummaryText;
+}
+
 bool WriteSQLUISamplePersistenceSettingsDraftSidecar(
 	const FString& Path,
 	FSQLUISamplePersistenceSettingsDraftProbeResult& Result)
@@ -11236,6 +11252,67 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			MakeExplicitSmokeTestTarget(
 				FPaths::Combine(FPaths::ProjectConfigDir(), TEXT("DefaultGame.ini")),
 				TEXT("Unsafe project config path should be rejected"));
+	const FSQLUIPersistenceSettingsApplyConfigTargetResolution
+		DefaultRuntimeTargetPolicy =
+			FSQLUIPersistenceSettingsApplyConfigTargetPolicy::
+				ResolveDefaultRuntimeTarget();
+	const FSQLUIPersistenceSettingsApplyConfigTargetResolution
+		SmokeTargetPolicy =
+			FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveExplicitTarget(
+				SmokeConfigTarget);
+	const FSQLUIPersistenceSettingsApplyConfigTargetResolution
+		RepeatedSmokeTargetPolicy =
+			FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveExplicitTarget(
+				SmokeConfigTarget);
+	const FSQLUIPersistenceSettingsApplyConfigTargetResolution
+		FutureProjectUserTargetPolicy =
+			FSQLUIPersistenceSettingsApplyConfigTargetPolicy::
+				ResolveFutureProjectUserConfigTarget();
+	Result.bApplyConfigTargetPolicyDefaultRuntimeUnavailable =
+		DefaultRuntimeTargetPolicy.TargetKind
+			== ESQLUIPersistenceSettingsApplyConfigTargetKind::Unavailable
+		&& DefaultRuntimeTargetPolicy.bIsProductionRuntimeTarget
+		&& !DefaultRuntimeTargetPolicy.bIsSmokeOwnedTarget
+		&& !DefaultRuntimeTargetPolicy.bProductionApplyEnabled
+		&& DefaultRuntimeTargetPolicy.SummaryText.Contains(TEXT("unavailable"));
+	Result.bApplyConfigTargetPolicyDefaultCannotWrite =
+		!DefaultRuntimeTargetPolicy.bCanWrite
+		&& DefaultRuntimeTargetPolicy.bRequiresExplicitTarget
+		&& DefaultRuntimeTargetPolicy.Messages.Num() > 0
+		&& !FPaths::FileExists(ApplyConfigTargetPath);
+	Result.bApplyConfigTargetPolicySmokeOwnedResolved =
+		SmokeTargetPolicy.TargetKind
+			== ESQLUIPersistenceSettingsApplyConfigTargetKind::SmokeOwned
+		&& SmokeTargetPolicy.bIsSmokeOwnedTarget
+		&& !SmokeTargetPolicy.bIsProductionRuntimeTarget
+		&& !SmokeTargetPolicy.bProductionApplyEnabled
+		&& SmokeTargetPolicy.ConfigFilePath == ApplyConfigTargetPath;
+	Result.bApplyConfigTargetPolicySmokeOwnedCanWrite =
+		SmokeTargetPolicy.bCanWrite
+		&& !SmokeTargetPolicy.bWouldAffectRuntimeDefaults
+		&& SmokeTargetPolicy.Messages.Num() > 0;
+	Result.bApplyConfigTargetPolicyFutureRealTargetUnavailable =
+		FutureProjectUserTargetPolicy.TargetKind
+			== ESQLUIPersistenceSettingsApplyConfigTargetKind::FutureProjectUserConfig
+		&& FutureProjectUserTargetPolicy.bIsProductionRuntimeTarget
+		&& !FutureProjectUserTargetPolicy.bIsSmokeOwnedTarget
+		&& !FutureProjectUserTargetPolicy.bCanWrite
+		&& !FutureProjectUserTargetPolicy.bProductionApplyEnabled
+		&& FutureProjectUserTargetPolicy.SummaryText.Contains(TEXT("future implementation"));
+	Result.bApplyConfigTargetPolicyProductionApplyDisabled =
+		!DefaultRuntimeTargetPolicy.bProductionApplyEnabled
+		&& !SmokeTargetPolicy.bProductionApplyEnabled
+		&& !FutureProjectUserTargetPolicy.bProductionApplyEnabled
+		&& !DefaultRuntimeTargetPolicy.bCanWrite
+		&& !FutureProjectUserTargetPolicy.bCanWrite;
+	Result.bApplyConfigTargetPolicyRepeatedDeterministic =
+		AreSQLUISampleApplyConfigTargetResolutionsEquivalent(
+			SmokeTargetPolicy,
+			RepeatedSmokeTargetPolicy)
+		&& !FPaths::FileExists(ApplyConfigTargetPath)
+		&& AreSQLUISampleFileSnapshotsUnchanged(
+			ApplyConfigBefore,
+			CaptureSQLUISampleFileSnapshots(ApplyConfigPaths));
 
 	const FSQLUIPersistenceSettingsApplyConfigWriteResult
 		RuntimeConfigTargetResult =
@@ -11361,11 +11438,18 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		|| !Result.bApplyConfigTargetRuntimePolicyUnchanged
 		|| !Result.bApplyConfigTargetSQLiteDidNotCreateDb
 		|| !Result.bApplyConfigTargetNoLifecycleSideEffects
-		|| !Result.bApplyConfigTargetArtifactCleaned)
+		|| !Result.bApplyConfigTargetArtifactCleaned
+		|| !Result.bApplyConfigTargetPolicyDefaultRuntimeUnavailable
+		|| !Result.bApplyConfigTargetPolicyDefaultCannotWrite
+		|| !Result.bApplyConfigTargetPolicySmokeOwnedResolved
+		|| !Result.bApplyConfigTargetPolicySmokeOwnedCanWrite
+		|| !Result.bApplyConfigTargetPolicyFutureRealTargetUnavailable
+		|| !Result.bApplyConfigTargetPolicyProductionApplyDisabled
+		|| !Result.bApplyConfigTargetPolicyRepeatedDeterministic)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
-			TEXT("SQLUI persistence settings draft probe failed: smoke-owned apply config target scaffold did not stay isolated, explicit, or clean."));
+			TEXT("SQLUI persistence settings draft probe failed: smoke-owned apply config target scaffold or target policy did not stay isolated, explicit, or clean."));
 	}
 
 	Result.bProviderAutoInitApplyPreviewDisplayPending =
@@ -12690,6 +12774,13 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bApplyConfigTargetSQLiteDidNotCreateDb
 		&& Result.bApplyConfigTargetNoLifecycleSideEffects
 		&& Result.bApplyConfigTargetArtifactCleaned
+		&& Result.bApplyConfigTargetPolicyDefaultRuntimeUnavailable
+		&& Result.bApplyConfigTargetPolicyDefaultCannotWrite
+		&& Result.bApplyConfigTargetPolicySmokeOwnedResolved
+		&& Result.bApplyConfigTargetPolicySmokeOwnedCanWrite
+		&& Result.bApplyConfigTargetPolicyFutureRealTargetUnavailable
+		&& Result.bApplyConfigTargetPolicyProductionApplyDisabled
+		&& Result.bApplyConfigTargetPolicyRepeatedDeterministic
 		&& Result.bBackendChangeApplyContractDetected
 		&& Result.bSQLiteApplyContractSafe
 		&& Result.bUnknownBackendApplyContractBlocked
