@@ -124,7 +124,7 @@ Future slices should add stronger validation when they introduce stronger behavi
 - Interactive editor/manual validation when widget Blueprint assets, visible UI controls, or real settings screens are introduced.
 - Manual editor inspection from clean `main` before the first real config-write/apply PR merges, if practical. That inspection should not commit assets, maps, config, widget Blueprints, generated logs, database files, or packaged outputs; local throwaway widget Blueprints are acceptable only when they are not committed.
 - The smoke-owned apply config target scaffold is covered by the commandlet draft probe only. It is not a real editor Apply flow and does not replace future manual editor validation for user/runtime config writes.
-- Docs-only checkpoint updates for the smoke-owned apply config target scaffold do not claim additional manual editor, PIE, or packaged validation. They only record that #132 remains smoke-owned and non-production.
+- PR #133 is a docs-only checkpoint update for the smoke-owned apply config target scaffold. It does not claim additional manual editor, PIE, or packaged validation; it only records that #132 remains smoke-owned and non-production.
 - PIE validation when runtime UI behavior is wired into maps, viewport flow, startup, provider lifecycle, or game execution.
 - Packaged validation when startup behavior, default maps, config wiring, provider lifecycle, packaged runtime behavior, or actual config writes are introduced.
 - Reset/delete validation when reset UX or destructive maintenance actions are introduced.

@@ -77,6 +77,8 @@ This is still not a default production persistence policy. Implementing the user
 
 The #132 smoke-owned apply config target scaffold is the first write-capable persistence settings slice, but it is deliberately not production Apply. It proves that SQLUICore can route future config writes through an explicit target object and that smoke tests can exercise deterministic ini serialization under `Saved/SQLUI/SmokeTests` without touching repo `Config`, generated `Saved/Config`, committed defaults, user/global editor settings, provider/repository lifecycle, or SQLite files.
 
+PR #133 is documentation-only. It records the #132 scaffold state and adds no runtime code, scripts, config changes, Build.cs changes, plugin descriptor changes, smoke flags, assets, maps, generated files, packaged outputs, database files, CI, or behavior changes.
+
 The checkpoint keeps these boundaries:
 
 - Production/default `RequestPersistenceSettingsApply` remains unavailable/not implemented.
