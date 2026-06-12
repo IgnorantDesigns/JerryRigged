@@ -3159,6 +3159,13 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("apply config target SQLite did not create DB"), ProbeResult.bApplyConfigTargetSQLiteDidNotCreateDb);
 	LogPersistenceSettingsDraftBool(TEXT("apply config target no lifecycle side effects"), ProbeResult.bApplyConfigTargetNoLifecycleSideEffects);
 	LogPersistenceSettingsDraftBool(TEXT("apply config target artifact cleaned"), ProbeResult.bApplyConfigTargetArtifactCleaned);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy default runtime unavailable"), ProbeResult.bApplyConfigTargetPolicyDefaultRuntimeUnavailable);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy default cannot write"), ProbeResult.bApplyConfigTargetPolicyDefaultCannotWrite);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy smoke-owned resolved"), ProbeResult.bApplyConfigTargetPolicySmokeOwnedResolved);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy smoke-owned can write"), ProbeResult.bApplyConfigTargetPolicySmokeOwnedCanWrite);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy future real target unavailable"), ProbeResult.bApplyConfigTargetPolicyFutureRealTargetUnavailable);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy production apply disabled"), ProbeResult.bApplyConfigTargetPolicyProductionApplyDisabled);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy repeated deterministic"), ProbeResult.bApplyConfigTargetPolicyRepeatedDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("backend change apply contract detected"), ProbeResult.bBackendChangeApplyContractDetected);
 	LogPersistenceSettingsDraftBool(TEXT("SQLite apply contract safe"), ProbeResult.bSQLiteApplyContractSafe);
 	LogPersistenceSettingsDraftBool(TEXT("unknown backend apply contract blocked"), ProbeResult.bUnknownBackendApplyContractBlocked);
