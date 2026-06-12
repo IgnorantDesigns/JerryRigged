@@ -141,9 +141,9 @@ The non-mutating persistence settings apply entrypoint/result UI foundation is c
 
 This closes the display/adapter/widget-shell chain for apply results before actual config-write behavior begins. It is still not settings editing. It adds no actual apply/save/config-write behavior, backend selector UI, SQLite path editor UI, provider auto-init control, reset/delete UX, widget Blueprint asset, map, startup wiring, viewport attachment, polling, ticking, timer, auto-refresh, provider/repository initialization, migration, seed-copy behavior, or default config change. Refresh/build/validation/preview/contract/apply-result generation remains caller-invoked only.
 
-## Smoke-Owned Apply Config Target Scaffold
+## Smoke-Owned Apply Config Target Checkpoint
 
-The first write-capable scaffold after the non-mutating foundation is limited to an explicit SQLUICore smoke-owned config target. It gives future Apply work a concrete target abstraction and lets editor smoke tests write only to a temporary `Saved/SQLUI/SmokeTests` ini artifact, then remove that artifact. The production/default `RequestPersistenceSettingsApply` entrypoint still returns unavailable/not implemented, does not write config, and does not change live settings.
+PR #132 added the first write-capable scaffold after the non-mutating foundation, but it is limited to an explicit SQLUICore smoke-owned config target. It gives future Apply work a concrete `FSQLUIPersistenceSettingsApplyConfigTarget` abstraction and lets editor smoke tests write only to a temporary `Saved/SQLUI/SmokeTests` ini artifact, then remove that artifact. The production/default `RequestPersistenceSettingsApply` entrypoint still returns unavailable/not implemented, does not write config, and does not change live settings.
 
 The scaffold is not a user/runtime Apply implementation. It does not write committed `Config` defaults, generated `Saved/Config`, user/global editor settings, real runtime settings, or project defaults. It does not create SQLite databases, open databases for writing, run migrations, copy seeds, initialize providers/repositories, reset/delete files, add settings controls, change startup behavior, make SQLite the default backend, or enable provider auto-init by default.
 
@@ -151,9 +151,19 @@ The scaffold is not a user/runtime Apply implementation. It does not write commi
 
 The apply entrypoint skeleton and apply-result display path remain non-mutating. They can report validation-blocked, no-change, preview-only, and unavailable/not-implemented result states; they do not write config, apply settings, change provider auto-init policy, initialize providers/repositories, create directories or database files, open databases for writing, run migrations, copy seed databases, reset/delete data, or change startup behavior.
 
-The first actual config-write implementation must now build on this foundation. It should use SQLUICore helper/policy surfaces, keep widgets ignorant of SQL, schema, migrations, seed-copy policy, sidecar internals, deletion behavior, and provider/repository lifecycle, keep widgets from writing config directly, keep runtime DB writes under `Saved/SQLUI`, validate drafts before writing any config, refuse invalid drafts without mutation, keep validation failures user-readable and non-destructive, avoid silently initializing providers/repositories, and show restart/reopen/reinitialize-required messaging instead of forcing lifecycle changes. Reset/delete UX remains separate and must route through SQLUICore database management helper/policy surfaces.
+This checkpoint proves a narrow set of mechanics only:
 
-Future mutating work should stay split into small PRs: first a smoke-owned config-write target/design if needed, then a narrow backend/provider-auto-init config-write slice only when safe, then validation/no-op/failure paths, and then UI controls only after SQLUICore behavior is fully tested. Any such path needs smoke coverage, config diff/snapshot checks, cleanup/restore for smoke-owned artifacts, and packaged validation if startup behavior, default maps, config wiring, provider lifecycle, viewport flow, or packaged runtime behavior changes.
+- SQLUICore can distinguish default/runtime targets from explicit smoke/test-owned write targets.
+- Smoke tests can exercise isolated config serialization without touching repo `Config`, generated `Saved/Config`, committed defaults, or user/global editor settings.
+- Draft validation runs before any smoke-owned write.
+- Invalid drafts are refused without mutating the smoke-owned target.
+- No-change drafts remain no-op writes.
+- Smoke-owned artifacts can be cleaned deterministically.
+- Runtime/default Apply stays unavailable and does not call the smoke-owned writer.
+
+The first actual config-write implementation must now build on this foundation. It should use SQLUICore helper/policy surfaces, keep writes narrow and explicit, keep widgets ignorant of SQL, schema, migrations, seed-copy policy, sidecar internals, deletion behavior, and provider/repository lifecycle, keep widgets from writing config directly, keep runtime DB writes under `Saved/SQLUI`, validate drafts before writing any config, refuse invalid drafts without mutation, support no-change/no-op behavior, keep validation failures user-readable and non-destructive, avoid silently initializing providers/repositories, and show restart/reopen/reinitialize-required messaging instead of forcing lifecycle changes. Reset/delete UX remains separate and must route through SQLUICore database management helper/policy surfaces.
+
+Future mutating work should stay split into small PRs: first a real target policy decision, then a narrow backend/provider-auto-init config-write slice only when safe, then validation/no-op/failure paths, then smoke-owned versus real-target separation checks, and then UI controls only after SQLUICore behavior is fully tested. Any such path needs smoke coverage, config diff/snapshot checks, cleanup/restore for smoke-owned artifacts, and packaged validation if startup behavior, default maps, config wiring, provider lifecycle, viewport flow, packaged runtime behavior, or committed/default runtime config changes.
 
 ## Actual Apply Implementation Gate
 
