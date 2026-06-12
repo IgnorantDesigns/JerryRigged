@@ -7,6 +7,7 @@
 #include "SQLUISamplePersistenceSettingsApplyContractPresenter.h"
 #include "SQLUISamplePersistenceSettingsApplyPreviewPanelWidget.h"
 #include "SQLUISamplePersistenceSettingsApplyPreviewPresenter.h"
+#include "SQLUISamplePersistenceSettingsApplyResultPanelWidget.h"
 #include "SQLUISamplePersistenceSettingsApplyResultPresenter.h"
 #include "SQLUISamplePersistenceSettingsDraftPanelWidget.h"
 #include "SQLUISamplePersistenceSettingsDraftPresenter.h"
@@ -10893,6 +10894,231 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 				TEXT("SQLUI persistence settings draft probe failed: sample apply result adapter did not preserve non-mutating apply result display behavior."));
 		}
 	}
+
+	const UClass* ApplyResultPanelWidgetClass =
+		USQLUISamplePersistenceSettingsApplyResultPanelWidget::StaticClass();
+	Result.bApplyResultPanelWidgetClassDerivedFromUserWidget =
+		ApplyResultPanelWidgetClass
+		&& ApplyResultPanelWidgetClass->IsChildOf(UUserWidget::StaticClass());
+	Result.bApplyResultPanelWidgetBlueprintDefaultRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			ApplyResultPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyResultPanelWidget,
+				RefreshDefaultPersistenceSettingsApplyResultPanel));
+	Result.bApplyResultPanelWidgetBlueprintCurrentRefreshFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			ApplyResultPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyResultPanelWidget,
+				RefreshCurrentPersistenceSettingsApplyResultPanel));
+	Result.bApplyResultPanelWidgetBlueprintBuildFunctionCallable =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintCallable(
+			ApplyResultPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyResultPanelWidget,
+				BuildPersistenceSettingsApplyResultPanel));
+	Result.bApplyResultPanelWidgetRefreshFunctionsNotBlueprintPure =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			ApplyResultPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyResultPanelWidget,
+				RefreshDefaultPersistenceSettingsApplyResultPanel))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			ApplyResultPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyResultPanelWidget,
+				RefreshCurrentPersistenceSettingsApplyResultPanel))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionNotBlueprintPure(
+			ApplyResultPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyResultPanelWidget,
+				BuildPersistenceSettingsApplyResultPanel));
+	Result.bApplyResultPanelWidgetCachedGetterFunctionsBlueprintPure =
+		IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			ApplyResultPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyResultPanelWidget,
+				GetRows))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			ApplyResultPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyResultPanelWidget,
+				GetFormattedLines))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			ApplyResultPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyResultPanelWidget,
+				GetLastRefreshResult))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetFunctionBlueprintPure(
+			ApplyResultPanelWidgetClass,
+			GET_FUNCTION_NAME_CHECKED(
+				USQLUISamplePersistenceSettingsApplyResultPanelWidget,
+				GetSummaryText));
+	Result.bApplyResultPanelWidgetRowsPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("Rows"));
+	Result.bApplyResultPanelWidgetFormattedLinesPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("FormattedLines"));
+	Result.bApplyResultPanelWidgetRefreshResultPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("LastRefreshResult"));
+	Result.bApplyResultPanelWidgetSummaryTextPropertyBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("SummaryText"));
+	Result.bApplyResultPanelWidgetApplyResultFlagsBlueprintVisible =
+		IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bSucceeded"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bApplyResultSucceeded"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bActualApplyImplemented"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bDidWriteConfig"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bDidChangeSettings"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bDidInitializeProvider"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bDidInitializeRepository"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bDidCreateDatabaseFiles"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bDidCreateDirectories"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bDidOpenDatabaseForWriting"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bDidRunMigrations"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bDidCopySeedDatabase"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bDidDeleteFiles"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bRequiresRestartOrReinitialize"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bHasErrors"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("bHasWarnings"))
+		&& IsSQLUISamplePersistenceStatusPanelWidgetPropertyBlueprintVisible(
+			ApplyResultPanelWidgetClass,
+			TEXT("Status"));
+	// Reflection keeps this proof independent from widget blueprint assets,
+	// maps, viewport attachment, widget construction, and startup wiring.
+	Result.bApplyResultPanelWidgetContractValidatedWithoutAssetOrViewport =
+		ApplyResultPanelWidgetClass
+		&& Result.bApplyResultPanelWidgetClassDerivedFromUserWidget
+		&& Result.bApplyResultPanelWidgetBlueprintDefaultRefreshFunctionCallable
+		&& Result.bApplyResultPanelWidgetBlueprintCurrentRefreshFunctionCallable
+		&& Result.bApplyResultPanelWidgetBlueprintBuildFunctionCallable
+		&& Result.bApplyResultPanelWidgetRefreshFunctionsNotBlueprintPure
+		&& Result.bApplyResultPanelWidgetCachedGetterFunctionsBlueprintPure
+		&& Result.bApplyResultPanelWidgetRowsPropertyBlueprintVisible
+		&& Result.bApplyResultPanelWidgetFormattedLinesPropertyBlueprintVisible
+		&& Result.bApplyResultPanelWidgetRefreshResultPropertyBlueprintVisible
+		&& Result.bApplyResultPanelWidgetSummaryTextPropertyBlueprintVisible
+		&& Result.bApplyResultPanelWidgetApplyResultFlagsBlueprintVisible;
+	Result.bApplyResultPanelWidgetDefaultDisplayGenerated =
+		Result.bApplyResultPanelWidgetContractValidatedWithoutAssetOrViewport
+		&& Result.bApplyResultAdapterDefaultDisplayGenerated;
+	Result.bApplyResultPanelWidgetDefaultDisplaySafe =
+		Result.bApplyResultPanelWidgetContractValidatedWithoutAssetOrViewport
+		&& Result.bApplyResultAdapterDefaultDisplaySafe;
+	Result.bApplyResultPanelWidgetUnknownBackendShowsError =
+		Result.bApplyResultPanelWidgetContractValidatedWithoutAssetOrViewport
+		&& Result.bApplyResultAdapterUnknownBackendShowsError;
+	Result.bApplyResultPanelWidgetSQLiteDisplayDidNotCreateDb =
+		Result.bApplyResultPanelWidgetContractValidatedWithoutAssetOrViewport
+		&& Result.bApplyResultAdapterSQLiteDisplayDidNotCreateDb;
+	Result.bApplyResultPanelWidgetProviderAutoInitPending =
+		Result.bApplyResultPanelWidgetContractValidatedWithoutAssetOrViewport
+		&& Result.bApplyResultAdapterProviderAutoInitPending;
+	Result.bApplyResultPanelWidgetRepeatedDisplayDeterministic =
+		Result.bApplyResultPanelWidgetContractValidatedWithoutAssetOrViewport
+		&& Result.bApplyResultAdapterRepeatedDisplayDeterministic;
+	Result.bApplyResultPanelWidgetPreservedConfigFiles =
+		Result.bApplyResultPanelWidgetContractValidatedWithoutAssetOrViewport
+		&& Result.bApplyResultAdapterPreservedConfigFiles;
+	Result.bApplyResultPanelWidgetDidNotCreateDirectory =
+		Result.bApplyResultPanelWidgetContractValidatedWithoutAssetOrViewport
+		&& Result.bApplyResultAdapterDidNotCreateDirectory;
+
+	const auto AppendApplyResultPanelWidgetFailure =
+		[&Result](const bool bPassed, const TCHAR* FailureMessage)
+		{
+			if (!bPassed)
+			{
+				AppendSQLUISamplePersistenceSettingsDraftProbeError(
+					Result,
+					FailureMessage);
+			}
+		};
+	AppendApplyResultPanelWidgetFailure(
+		Result.bApplyResultPanelWidgetClassDerivedFromUserWidget,
+		TEXT("SQLUI persistence settings draft probe failed: apply result panel widget shell did not derive from UUserWidget."));
+	AppendApplyResultPanelWidgetFailure(
+		Result.bApplyResultPanelWidgetBlueprintDefaultRefreshFunctionCallable,
+		TEXT("SQLUI persistence settings draft probe failed: apply result panel widget default refresh was not BlueprintCallable."));
+	AppendApplyResultPanelWidgetFailure(
+		Result.bApplyResultPanelWidgetBlueprintCurrentRefreshFunctionCallable,
+		TEXT("SQLUI persistence settings draft probe failed: apply result panel widget current refresh was not BlueprintCallable."));
+	AppendApplyResultPanelWidgetFailure(
+		Result.bApplyResultPanelWidgetBlueprintBuildFunctionCallable,
+		TEXT("SQLUI persistence settings draft probe failed: apply result panel widget build function was not BlueprintCallable."));
+	AppendApplyResultPanelWidgetFailure(
+		Result.bApplyResultPanelWidgetRefreshFunctionsNotBlueprintPure,
+		TEXT("SQLUI persistence settings draft probe failed: apply result panel widget refresh/build functions were unexpectedly BlueprintPure."));
+	AppendApplyResultPanelWidgetFailure(
+		Result.bApplyResultPanelWidgetCachedGetterFunctionsBlueprintPure,
+		TEXT("SQLUI persistence settings draft probe failed: apply result panel widget cached getter functions were not BlueprintPure."));
+	AppendApplyResultPanelWidgetFailure(
+		Result.bApplyResultPanelWidgetRowsPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply result panel widget Rows property was not Blueprint-visible."));
+	AppendApplyResultPanelWidgetFailure(
+		Result.bApplyResultPanelWidgetFormattedLinesPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply result panel widget FormattedLines property was not Blueprint-visible."));
+	AppendApplyResultPanelWidgetFailure(
+		Result.bApplyResultPanelWidgetRefreshResultPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply result panel widget LastRefreshResult property was not Blueprint-visible."));
+	AppendApplyResultPanelWidgetFailure(
+		Result.bApplyResultPanelWidgetSummaryTextPropertyBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply result panel widget SummaryText property was not Blueprint-visible."));
+	AppendApplyResultPanelWidgetFailure(
+		Result.bApplyResultPanelWidgetApplyResultFlagsBlueprintVisible,
+		TEXT("SQLUI persistence settings draft probe failed: apply result panel widget apply-result flag properties were not Blueprint-visible."));
+	AppendApplyResultPanelWidgetFailure(
+		Result.bApplyResultPanelWidgetContractValidatedWithoutAssetOrViewport,
+		TEXT("SQLUI persistence settings draft probe failed: apply result panel widget shell contract could not be validated by reflection without an asset or viewport."));
+	AppendApplyResultPanelWidgetFailure(
+		Result.bApplyResultPanelWidgetDefaultDisplayGenerated
+			&& Result.bApplyResultPanelWidgetDefaultDisplaySafe
+			&& Result.bApplyResultPanelWidgetUnknownBackendShowsError
+			&& Result.bApplyResultPanelWidgetSQLiteDisplayDidNotCreateDb
+			&& Result.bApplyResultPanelWidgetProviderAutoInitPending
+			&& Result.bApplyResultPanelWidgetRepeatedDisplayDeterministic
+			&& Result.bApplyResultPanelWidgetPreservedConfigFiles
+			&& Result.bApplyResultPanelWidgetDidNotCreateDirectory,
+		TEXT("SQLUI persistence settings draft probe failed: apply result panel widget shell did not preserve the non-mutating apply-result presenter contract."));
 	if (IFileManager::Get().DirectoryExists(*ApplyNoCreateDirectoryPath))
 	{
 		IFileManager::Get().DeleteDirectory(
@@ -10926,11 +11152,20 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		|| !Result.bApplyResultAdapterProviderAutoInitPending
 		|| !Result.bApplyResultAdapterRepeatedDisplayDeterministic
 		|| !Result.bApplyResultAdapterPreservedConfigFiles
-		|| !Result.bApplyResultAdapterDidNotCreateDirectory)
+		|| !Result.bApplyResultAdapterDidNotCreateDirectory
+		|| !Result.bApplyResultPanelWidgetContractValidatedWithoutAssetOrViewport
+		|| !Result.bApplyResultPanelWidgetDefaultDisplayGenerated
+		|| !Result.bApplyResultPanelWidgetDefaultDisplaySafe
+		|| !Result.bApplyResultPanelWidgetUnknownBackendShowsError
+		|| !Result.bApplyResultPanelWidgetSQLiteDisplayDidNotCreateDb
+		|| !Result.bApplyResultPanelWidgetProviderAutoInitPending
+		|| !Result.bApplyResultPanelWidgetRepeatedDisplayDeterministic
+		|| !Result.bApplyResultPanelWidgetPreservedConfigFiles
+		|| !Result.bApplyResultPanelWidgetDidNotCreateDirectory)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
-			TEXT("SQLUI persistence settings draft probe failed: apply request/result display skeleton or sample apply result adapter did not remain unavailable and non-mutating."));
+			TEXT("SQLUI persistence settings draft probe failed: apply request/result display skeleton, sample apply result adapter, or apply result widget shell did not remain unavailable and non-mutating."));
 	}
 	Result.bProviderAutoInitApplyPreviewDisplayPending =
 		ProviderAutoInitApplyPreviewDisplay.bIsValid
@@ -12223,6 +12458,26 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bApplyResultAdapterRepeatedDisplayDeterministic
 		&& Result.bApplyResultAdapterPreservedConfigFiles
 		&& Result.bApplyResultAdapterDidNotCreateDirectory
+		&& Result.bApplyResultPanelWidgetClassDerivedFromUserWidget
+		&& Result.bApplyResultPanelWidgetBlueprintDefaultRefreshFunctionCallable
+		&& Result.bApplyResultPanelWidgetBlueprintCurrentRefreshFunctionCallable
+		&& Result.bApplyResultPanelWidgetBlueprintBuildFunctionCallable
+		&& Result.bApplyResultPanelWidgetRefreshFunctionsNotBlueprintPure
+		&& Result.bApplyResultPanelWidgetCachedGetterFunctionsBlueprintPure
+		&& Result.bApplyResultPanelWidgetRowsPropertyBlueprintVisible
+		&& Result.bApplyResultPanelWidgetFormattedLinesPropertyBlueprintVisible
+		&& Result.bApplyResultPanelWidgetRefreshResultPropertyBlueprintVisible
+		&& Result.bApplyResultPanelWidgetSummaryTextPropertyBlueprintVisible
+		&& Result.bApplyResultPanelWidgetApplyResultFlagsBlueprintVisible
+		&& Result.bApplyResultPanelWidgetContractValidatedWithoutAssetOrViewport
+		&& Result.bApplyResultPanelWidgetDefaultDisplayGenerated
+		&& Result.bApplyResultPanelWidgetDefaultDisplaySafe
+		&& Result.bApplyResultPanelWidgetUnknownBackendShowsError
+		&& Result.bApplyResultPanelWidgetSQLiteDisplayDidNotCreateDb
+		&& Result.bApplyResultPanelWidgetProviderAutoInitPending
+		&& Result.bApplyResultPanelWidgetRepeatedDisplayDeterministic
+		&& Result.bApplyResultPanelWidgetPreservedConfigFiles
+		&& Result.bApplyResultPanelWidgetDidNotCreateDirectory
 		&& Result.bBackendChangeApplyContractDetected
 		&& Result.bSQLiteApplyContractSafe
 		&& Result.bUnknownBackendApplyContractBlocked

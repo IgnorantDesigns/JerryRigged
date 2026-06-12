@@ -150,7 +150,8 @@ Parameters:
       contract display rows, the unavailable/non-mutating actual apply entrypoint
       skeleton, UI-safe apply result display rows, SQLUISamples
       validation/apply-preview/apply-contract/apply-result sample adapters, and
-      validation/apply-preview/apply-contract C++ UMG widget shell contracts.
+      validation/apply-preview/apply-contract/apply-result C++ UMG widget shell
+      contracts.
 
   -UseSQLiteMigrationProbe
       Run the optional SQLUICore SQLite migration-runner probe.
