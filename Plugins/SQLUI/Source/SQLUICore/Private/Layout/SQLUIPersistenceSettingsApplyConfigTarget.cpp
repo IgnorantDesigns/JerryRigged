@@ -223,9 +223,10 @@ FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveExplicitTarget(
 	{
 		FSQLUIPersistenceSettingsApplyConfigTargetResolution Result =
 			ResolveDefaultRuntimeTarget();
-		Result.TargetDescription = Target.TargetDescription;
-		Result.ConfigFilePath =
-			NormalizeSQLUIPersistenceSettingsApplyConfigPath(Target.ConfigFilePath);
+		if (!Target.TargetDescription.IsEmpty())
+		{
+			Result.TargetDescription = Target.TargetDescription;
+		}
 		return Result;
 	}
 
