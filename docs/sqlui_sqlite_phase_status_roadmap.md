@@ -55,6 +55,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - A focused apply/cancel contract UMG usage guide now records the safe future widget blueprint subclass/binding recipe, contract/cancel-preview semantics, refresh/build boundaries, and manual local checklist for the apply/cancel contract widget shell.
 - A focused apply-result UMG usage guide now records the safe future widget blueprint subclass/binding recipe, result/refusal semantics, refresh/build boundaries, side-effect flag display rules, and manual local checklist for the apply-result widget shell.
 - The non-mutating apply/cancel contract UI foundation is now documented as complete through #105-#124 and `-UsePersistenceSettingsDraftProbe`; it remains a checkpoint only and does not add settings editing, apply/save/config writes, controls, assets, maps, startup wiring, or lifecycle mutation.
+- The non-mutating apply entrypoint/result UI foundation is now documented as complete through #105-#131 and `-UsePersistenceSettingsDraftProbe`; it closes the apply implementation gate, callable apply entrypoint/result skeleton, apply-result display rows, SQLUISamples apply-result adapter, optional C++ apply-result UMG shell, apply-result usage guide, and final checkpoint before any settings editing or config-write behavior begins.
 - PR #125 adds a docs-only actual apply implementation gate in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). It defines the first mutating SQLUICore apply/config-write constraints, config-write boundaries, lifecycle boundaries, reset/delete separation, smoke requirements, packaged-validation triggers, and manual-editor validation expectations without adding apply/save/config-write behavior or UI controls.
 - A SQLUICore actual apply entrypoint skeleton now exists through `RequestPersistenceSettingsApply`. It reuses the existing apply contract and returns validation-blocked, no-change, or preview-only/unavailable result data while keeping execution unavailable/not implemented and performing no config, settings, provider, repository, database, directory, migration, seed-copy, or delete side effects.
 - The draft validation sequence is: #106 validation-only draft model, #107 validation display rows/summary, #108 SQLUISamples draft presenter/adapter, #109 optional C++ draft validation UMG shell, and #110 docs-only safe usage/binding guide.
@@ -245,6 +246,59 @@ The next phase should be split into small PRs:
 
 Any future apply/cancel path needs smoke coverage, and any startup behavior, default map, config wiring, viewport flow, provider lifecycle, or packaged lifecycle change needs packaged validation.
 
+## Persistence Settings Apply Result UI Foundation Checkpoint
+
+The non-mutating SQLUI persistence settings apply entrypoint/result UI foundation is complete as a documented checkpoint before actual config-write behavior begins. This checkpoint closes the full #105-#131 chain:
+
+- #105: settings editing/reset UX plan.
+- #106: validation-only draft/pending settings model.
+- #107: UI-safe validation display rows/summary.
+- #108: optional SQLUISamples draft validation sample adapter.
+- #109: optional C++ draft validation UMG widget shell.
+- #110: draft validation UMG usage guide.
+- #111: non-mutating draft validation foundation checkpoint.
+- #112: dry-run apply-intent preview model.
+- #113: UI-safe apply-preview display rows/summary.
+- #114: optional SQLUISamples apply-preview sample adapter.
+- #115: optional C++ apply-preview UMG widget shell.
+- #116: apply-preview UMG usage guide.
+- #117: non-mutating apply-preview foundation checkpoint.
+- #118: non-mutating apply/cancel contract or apply-readiness surface, including cancel/discard value preview.
+- #119: UI-safe apply/cancel contract display rows/summary.
+- #120: Unreal Editor null-RHI validation checkpoint.
+- #121: optional SQLUISamples apply/cancel contract adapter.
+- #122: optional C++ apply/cancel contract UMG widget shell.
+- #123: apply/cancel contract UMG usage guide.
+- #124: non-mutating apply/cancel contract foundation checkpoint.
+- #125: actual apply implementation gate.
+- #126: callable SQLUICore apply entrypoint/result skeleton.
+- #127: UI-safe apply-result display rows/summary.
+- #128: optional SQLUISamples apply-result sample adapter.
+- #129: optional C++ apply-result UMG widget shell.
+- #130: apply-result UMG usage guide.
+- #131: final docs-only non-mutating apply result foundation checkpoint.
+- `-UsePersistenceSettingsDraftProbe`: smoke coverage for the validation draft, apply-preview, apply/cancel contract, apply entrypoint refusal, apply-result display rows, apply-result adapter, apply-result widget-shell contract, deterministic output, config preservation, sidecar preservation, and smoke-owned cleanup.
+
+This checkpoint is still not settings editing. It adds no actual apply/save/config-write behavior, backend selector UI, SQLite path editor UI, provider auto-init control, reset/delete UX, widget Blueprint asset, map, startup wiring, viewport attachment, polling, ticking, timer, auto-refresh, provider/repository initialization, migration, seed-copy behavior, default config change, or default startup behavior change. Refresh/build/validation/preview/contract/apply-result checks remain caller-invoked only.
+
+The safety boundaries remain unchanged:
+
+- `InMemory` remains the safe default backend.
+- SQLite remains explicit opt-in and is not enabled by default.
+- Provider auto-init remains off by default.
+- No default config creates SQLite database files.
+- SQLUICore remains free of UMG, Slate, SlateCore, editor-only, and widget dependencies.
+- SQLUISamples is sample/dev-facing consumption only and does not own persistence policy.
+- Draft validation and validation display generation remain non-mutating.
+- Apply-intent preview and apply-preview display generation remain non-mutating.
+- Apply/cancel contract generation and contract display generation remain non-mutating.
+- Apply entrypoint skeleton execution and apply-result display generation remain non-mutating.
+- SQLUISamples validation/apply-preview/apply-contract/apply-result presenters and C++ widget shells do not write config, apply settings, create databases or directories, open databases for writing, run migrations, copy seeds, initialize providers/repositories, or delete files outside smoke-owned cleanup.
+
+The first actual config-write/apply phase remains future work. It must use SQLUICore helper/policy surfaces, keep widgets ignorant of SQL, schema, migrations, seed-copy policy, sidecar internals, deletion behavior, and provider/repository lifecycle, and keep widgets from writing config, initializing providers/repositories, or deleting files directly. Runtime DB writes must stay under `Saved/SQLUI` unless a later explicit path policy changes that. Apply must use explicit pending/apply/cancel semantics, validate drafts before writing config, refuse invalid drafts without mutation, keep validation failures user-readable and non-destructive, avoid silently initializing providers/repositories, and show restart/reopen/reinitialize-required messaging instead of forcing lifecycle changes.
+
+Reset/delete UX, migration controls, and seed-copy controls remain separate future work and must route through SQLUICore database management or policy helpers. Any future policy change that makes SQLite the default backend or enables provider auto-init by default requires a separate explicit policy PR. Any future config-write path needs focused smoke coverage, config diff/snapshot checks, and cleanup/restore of smoke-owned artifacts. Any startup behavior, default map, config wiring, viewport flow, provider lifecycle, or packaged lifecycle change needs packaged validation. The first mutating work should stay split into small PRs: smoke-owned config-write target/design if needed, narrow backend/provider-auto-init config writes only when safe, validation/no-op/failure paths, and UI controls only after SQLUICore behavior is tested.
+
 ## Persistence Settings Actual Apply Implementation Gate
 
 The current persistence settings path is still non-mutating. `FSQLUIPersistenceSettingsDraft`, dry-run apply preview, apply/cancel contract results, display rows, SQLUISamples adapters, and C++ UMG shells only validate and describe a future Apply. They do not apply settings, write config, change startup behavior, create directories or database files, initialize providers/repositories, run migrations, copy seeds, or delete files.
@@ -298,6 +352,7 @@ Any first mutating apply PR should include a new or extended apply/config-write 
 | Persistence settings apply result display rows | Implemented | SQLUICore formats the unavailable/non-mutating apply entrypoint result into UI-safe rows/summary that report apply status, actual apply not implemented, config not written, settings not changed, provider/repository not initialized, DB/files/directories untouched, no write-open DB, no migrations, no seed copy, and no file deletion. |
 | Persistence settings apply result sample adapter | Implemented | SQLUISamples consumes SQLUICore apply-result rows through a sample/dev presenter with cached rows/summary strings and side-effect flags, without actual apply/save/config writes, settings controls, provider/repository lifecycle, DB creation, migrations, seed copy, widget assets, maps, startup wiring, or destructive actions. |
 | Persistence settings apply result UMG shell | Implemented | Optional SQLUISamples C++ `UUserWidget` shell delegates to the apply-result presenter and exposes cached apply-result rows/result/summary/flags for future Blueprint binding; no Apply button, settings controls, widget blueprint asset, map, viewport attachment, startup wiring, config writes, lifecycle behavior, DB creation, migrations, seed copy, or destructive actions. |
+| Persistence settings apply result UI foundation checkpoint | Documented | The #105-#131 non-mutating apply entrypoint/result chain is recorded as complete before actual settings editing, config writes, controls, assets, maps, startup wiring, lifecycle mutation, or destructive actions. |
 | Persistence settings draft validation display rows | Implemented | SQLUICore formats validation-only draft results into UI-safe summary/row data without apply/save/config writes, lifecycle behavior, DB creation, migrations, seed copy, provider/repository init, destructive actions, or UI controls. |
 | Persistence settings draft validation sample adapter | Implemented | SQLUISamples consumes SQLUICore draft validation display rows through a sample/dev presenter with cached rows/summary strings, without settings controls, apply/save/config writes, DB creation, migrations, seed copy, provider/repository init, destructive actions, widget assets, maps, or startup wiring. |
 | Persistence settings apply-preview sample adapter | Implemented | SQLUISamples consumes SQLUICore dry-run apply-preview display rows through a sample/dev presenter with cached rows/summary strings and preview flags, without actual apply/save/config writes, settings controls, DB creation, migrations, seed copy, provider/repository init, destructive actions, widget assets, maps, or startup wiring. |
