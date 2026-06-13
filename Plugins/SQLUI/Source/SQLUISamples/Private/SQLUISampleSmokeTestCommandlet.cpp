@@ -3164,6 +3164,10 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy smoke-owned resolved"), ProbeResult.bApplyConfigTargetPolicySmokeOwnedResolved);
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy smoke-owned can write"), ProbeResult.bApplyConfigTargetPolicySmokeOwnedCanWrite);
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy future real target unavailable"), ProbeResult.bApplyConfigTargetPolicyFutureRealTargetUnavailable);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy documented strategy resolved"), ProbeResult.bApplyConfigTargetPolicyDocumentedStrategyResolved);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy documented strategy cannot write"), ProbeResult.bApplyConfigTargetPolicyDocumentedStrategyCannotWrite);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy documented strategy no writable path"), ProbeResult.bApplyConfigTargetPolicyDocumentedStrategyNoWritablePath);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy documented strategy deterministic"), ProbeResult.bApplyConfigTargetPolicyDocumentedStrategyDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy production apply disabled"), ProbeResult.bApplyConfigTargetPolicyProductionApplyDisabled);
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy repeated deterministic"), ProbeResult.bApplyConfigTargetPolicyRepeatedDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("backend change apply contract detected"), ProbeResult.bBackendChangeApplyContractDetected);

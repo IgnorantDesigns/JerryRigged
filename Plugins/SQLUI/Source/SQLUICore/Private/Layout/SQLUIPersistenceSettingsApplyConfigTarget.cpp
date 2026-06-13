@@ -290,7 +290,7 @@ FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveExplicitTarget(
 }
 
 FSQLUIPersistenceSettingsApplyConfigTargetResolution
-FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveFutureProjectUserConfigTarget()
+FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveDocumentedProductionTargetStrategy()
 {
 	FSQLUIPersistenceSettingsApplyConfigTargetResolution Result;
 	Result.TargetKind =
@@ -302,15 +302,26 @@ FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveFutureProjectUserConfig
 	Result.bProductionApplyEnabled = false;
 	Result.bWouldAffectRuntimeDefaults = false;
 	Result.TargetDescription =
-		TEXT("Future project/user config apply target");
+		TEXT("Documented production config target strategy");
 	Result.SummaryText =
-		TEXT("SQLUI persistence settings project/user Apply target is reserved for a future implementation. No config can be written.");
+		TEXT("SQLUI persistence settings documented production Apply target strategy keeps real project/user config targets unavailable for a future implementation. No config can be written.");
 	AddSQLUIPersistenceSettingsConfigTargetPolicyMessage(
 		Result,
 		ESQLUIPersistenceSettingsValidationMessageSeverity::Warning,
-		TEXT("Future real persistence settings config target is not implemented."),
+		TEXT("Documented production persistence settings config target strategy is not write-enabled."),
+		TEXT("No DefaultEngine.ini, Saved/Config, user/global editor settings, or other real writable production target is selected by this policy."));
+	AddSQLUIPersistenceSettingsConfigTargetPolicyMessage(
+		Result,
+		ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
+		TEXT("Future real persistence settings config target remains unavailable."),
 		TEXT("A later PR must explicitly choose, validate, and smoke-test any project/user config write target before production Apply can write config."));
 	return Result;
+}
+
+FSQLUIPersistenceSettingsApplyConfigTargetResolution
+FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveFutureProjectUserConfigTarget()
+{
+	return ResolveDocumentedProductionTargetStrategy();
 }
 
 FSQLUIPersistenceSettingsApplyConfigTarget

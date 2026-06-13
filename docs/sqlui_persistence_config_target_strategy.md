@@ -2,9 +2,9 @@
 
 This document records the decision gate for future production/user config writes from the SQLUI persistence settings Apply path.
 
-The current implementation deliberately keeps real Apply unavailable. SQLUICore has a non-mutating apply entrypoint/result skeleton, UI-safe result display rows, SQLUISamples sample/dev display surfaces, a smoke-owned config target scaffold, and an apply config target policy/resolver skeleton. Production/default Apply still does not write config, does not change live runtime settings, does not initialize providers or repositories, and does not create, open, migrate, seed, reset, or delete database files.
+The current implementation deliberately keeps real Apply unavailable. SQLUICore has a non-mutating apply entrypoint/result skeleton, UI-safe result display rows, SQLUISamples sample/dev display surfaces, a smoke-owned config target scaffold, and an apply config target policy/resolver skeleton. The policy layer now also exposes `ResolveDocumentedProductionTargetStrategy()` so code and smoke coverage can identify the documented future production target strategy without making it writable. Production/default Apply still does not write config, does not change live runtime settings, does not initialize providers or repositories, and does not create, open, migrate, seed, reset, or delete database files.
 
-PR #136 is docs-only. This strategy adds no runtime code, settings controls, config writes, committed config changes, provider lifecycle behavior, database work, scripts, Build.cs changes, plugin descriptor changes, maps, assets, CI, or packaged behavior.
+PR #136 introduced this strategy as a docs-only decision gate. That strategy checkpoint added no runtime code, settings controls, config writes, committed config changes, provider lifecycle behavior, database work, scripts, Build.cs changes, plugin descriptor changes, maps, assets, CI, or packaged behavior. The follow-up policy-resolution slice keeps those runtime safety boundaries intact.
 
 ## Production Target Question
 
@@ -14,7 +14,8 @@ The current policy skeleton intentionally refuses to infer that target:
 
 - `ResolveDefaultRuntimeTarget()` reports production/default Apply unavailable and non-writable.
 - `ResolveExplicitTarget()` can resolve only explicit smoke/test-owned targets under `Saved/SQLUI/SmokeTests`.
-- `ResolveFutureProjectUserConfigTarget()` represents the future real project/user target, but it is still unavailable/not implemented.
+- `ResolveDocumentedProductionTargetStrategy()` represents the documented production strategy as a future project/user target kind, but with no writable path, `bCanWrite=false`, and production Apply disabled.
+- `ResolveFutureProjectUserConfigTarget()` delegates to the documented production strategy resolution, so the future real project/user target remains unavailable/not implemented.
 
 Smoke-owned targets are not production targets. They exist so commandlet smoke coverage can prove validation, narrow serialization, config preservation, and cleanup without touching project defaults, generated `Saved/Config`, user/global editor settings, provider lifecycle, or SQLite files.
 
@@ -104,6 +105,7 @@ Existing `-UsePersistenceSettingsDraftProbe` coverage already confirms the curre
 - default/runtime target unavailable.
 - smoke-owned target explicit only.
 - future real target unavailable.
+- documented production target strategy represented, non-writable, pathless, and deterministic.
 - invalid drafts do not mutate the smoke target.
 - no-change drafts remain no-op.
 - repo `Config` and `Saved/Config` stay unchanged.
@@ -125,4 +127,4 @@ Packaged validation becomes required for a future real target when the PR can af
 
 Production Apply remains unavailable.
 
-The only write-capable path today is the explicit smoke-owned config target under `Saved/SQLUI/SmokeTests`. Future real project/user config targets remain unavailable until a later SQLUICore policy PR chooses and validates a safe target.
+The only write-capable path today is the explicit smoke-owned config target under `Saved/SQLUI/SmokeTests`. The documented production target strategy is represented in SQLUICore policy as a non-writable future project/user target with no real path selected. Future real project/user config targets remain unavailable until a later SQLUICore policy PR chooses and validates a safe target.
