@@ -82,6 +82,8 @@ PR #133 is documentation-only. It records the #132 scaffold state and adds no ru
 
 PR #134 adds `FSQLUIPersistenceSettingsApplyConfigTargetPolicy` as a SQLUICore-only resolver skeleton. It does not add production/user writes. It simply reports that the default/runtime target is unavailable, a safe explicit smoke-owned target is smoke/test-only and writable for smoke coverage, and a future project/user config target is still unavailable/not implemented.
 
+PR #135 is documentation-only. It records the #134 target policy checkpoint and adds no runtime code, scripts, config changes, Build.cs changes, plugin descriptor changes, smoke flags, assets, maps, generated files, packaged outputs, database files, CI, production/user config writes, runtime settings application, settings controls, startup behavior, provider/repository lifecycle behavior, database creation, database write-open, migrations, seed copy, or behavior changes.
+
 The checkpoint keeps these boundaries:
 
 - Production/default `RequestPersistenceSettingsApply` remains unavailable/not implemented.
