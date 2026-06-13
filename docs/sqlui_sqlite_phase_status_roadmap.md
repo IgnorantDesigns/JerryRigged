@@ -9,6 +9,7 @@ For deeper reference, see:
 - [`sqlui_sqlite_layout_schema.md`](sqlui_sqlite_layout_schema.md) for schema details.
 - [`sqlui_sqlite_async_backend_plan.md`](sqlui_sqlite_async_backend_plan.md) for async and shutdown policy.
 - [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) for the future user-facing persistence/settings UX policy.
+- [`sqlui_persistence_config_target_strategy.md`](sqlui_persistence_config_target_strategy.md) for the production config target strategy gate before real Apply writes.
 - [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md) for the planned settings editing, apply/cancel, backend selection, SQLite path, provider auto-init, and reset/delete UX phase.
 - [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) for the focused read-only UMG binding recipe.
 - [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) for the validation-only draft settings UMG binding recipe.
@@ -59,6 +60,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 - A first smoke-owned apply config target scaffold now exists in SQLUICore. It can write a valid draft only to an explicit temporary `Saved/SQLUI/SmokeTests` ini target for smoke coverage, while the production/default Apply entrypoint remains unavailable and non-mutating.
 - The smoke-owned apply config target checkpoint records that #132 proves isolated target mechanics only: explicit smoke/test-owned targets can be written and cleaned up, default/runtime targets are refused, unsafe project config paths are refused, invalid drafts do not mutate the target, repo `Config` and `Saved/Config` remain unchanged, and no database, lifecycle, migration, seed-copy, reset/delete, startup, UI-control, or committed-config behavior was added.
 - PR #134 adds a non-mutating apply config target policy/resolver skeleton that makes those target decisions explicit: default/runtime remains unavailable and non-writable, explicit smoke-owned targets remain the only write-capable targets, and a future project/user config target is represented as unavailable until a later PR enables and validates it.
+- PR #135 documents the target policy checkpoint, and this production config target strategy gate documents the next decision before real writes: no production target is selected yet, unsafe targets are rejected, and production/default Apply remains unavailable until a later SQLUICore policy PR chooses and validates a safe target.
 - PR #125 adds a docs-only actual apply implementation gate in [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md). It defines the first mutating SQLUICore apply/config-write constraints, config-write boundaries, lifecycle boundaries, reset/delete separation, smoke requirements, packaged-validation triggers, and manual-editor validation expectations without adding apply/save/config-write behavior or UI controls.
 - A SQLUICore actual apply entrypoint skeleton now exists through `RequestPersistenceSettingsApply`. It reuses the existing apply contract and returns validation-blocked, no-change, or preview-only/unavailable result data while keeping execution unavailable/not implemented and performing no config, settings, provider, repository, database, directory, migration, seed-copy, or delete side effects.
 - The draft validation sequence is: #106 validation-only draft model, #107 validation display rows/summary, #108 SQLUISamples draft presenter/adapter, #109 optional C++ draft validation UMG shell, and #110 docs-only safe usage/binding guide.
@@ -97,6 +99,22 @@ The checkpoint keeps these boundaries:
 - No migrations, seed-copy behavior, provider/repository initialization, or file deletion occurs outside smoke-owned cleanup.
 
 The next real config-write phase must first choose a safe real write target deliberately, keep writes narrow and explicit, validate drafts before writing, refuse invalid drafts without mutation, preserve no-change/no-op behavior, keep lifecycle and database work out of config writes, include config diff/snapshot checks, and preserve smoke-owned versus real-target separation. Packaged validation becomes required if a future PR changes startup behavior, default maps, config wiring, provider lifecycle, viewport flow, packaged runtime behavior, or committed/default runtime config.
+
+## Production Config Target Strategy Gate
+
+The production target decision is now documented before any real writes are enabled. #132 added the smoke-owned target scaffold, #133 documented that checkpoint, #134 added the target policy/resolver skeleton, and #135 documented that policy checkpoint. This strategy gate inventories candidate real targets and keeps production Apply closed because no safe real target is selected yet.
+
+The current decision is:
+
+- Do not write committed defaults such as `DefaultEngine.ini` from runtime Apply.
+- Do not infer generated `Saved/Config` as a production target without a separate policy and packaged validation.
+- Do not write user/global editor settings unexpectedly.
+- Do not let widgets or SQLUISamples own file/config writes.
+- Treat `USQLUILayoutRepositoryRuntimeSettings` as the current config-backed policy surface, not as an automatically writable Apply target.
+- Consider a SQLUICore-owned `Saved/SQLUI` runtime settings file only in a future scoped implementation PR.
+- Keep explicit smoke-owned targets as the only write-capable path today.
+
+Real apply/save remains future work. The first real write slice should be narrow, preferably backend choice only, and must preserve `InMemory` default, SQLite opt-in, provider auto-init off by default, no committed config changes, no DB creation, no DB write-open, no migrations, no seed copy, no provider/repository initialization, and no file deletion.
 
 ## Read-Only Persistence Status UMG Foundation Checkpoint
 
