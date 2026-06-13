@@ -307,7 +307,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Scripts\RunSQLUISmokeTest.
 The commandlet also accepts `-PersistenceSettingsDraftProbe` directly as an alias when invoking `UnrealEditor-Cmd.exe`.
 
 This existing probe is the validation path for the completed non-mutating persistence settings apply/cancel contract UI foundation checkpoint and the apply entrypoint/result UI foundation checkpoint. No new smoke flag was added for these checkpoints; the same probe covers the #105-#131 chain while preserving the no-asset, no-map, no-startup, no-viewport, no-settings-mutation boundaries.
-It also covers the first smoke-owned apply config target scaffold from #132 and the SQLUICore target policy/resolver skeleton: the production/default apply target is refused, default/runtime policy cannot write, unsafe project config paths are refused, a valid draft can write only to a temporary `Saved\SQLUI\SmokeTests` ini target, invalid drafts do not mutate that target, future project/user target policy remains unavailable/not implemented, repo `Config` and `Saved\Config` snapshots remain unchanged, no database/lifecycle/migration/seed-copy work runs, and the smoke-owned target artifact is removed before the probe reports success.
+It also covers the first smoke-owned apply config target scaffold from #132 and the #134 SQLUICore target policy/resolver skeleton: the production/default apply target is refused, default/runtime policy cannot write, unsafe project config paths are refused, a valid draft can write only to a temporary `Saved\SQLUI\SmokeTests` ini target, invalid drafts do not mutate that target, future project/user target policy remains unavailable/not implemented, repo `Config` and `Saved\Config` snapshots remain unchanged, no database/lifecycle/migration/seed-copy work runs, and the smoke-owned target artifact is removed before the probe reports success.
 
 This same probe covers:
 
@@ -330,7 +330,7 @@ This same probe covers:
 - SQLUICore explicit smoke-owned apply config target scaffold.
 - SQLUICore non-mutating apply config target policy/resolver skeleton.
 
-The probe proves the scaffold only as an isolated smoke target. It does not require widget blueprint assets or maps, does not attach widgets to the viewport, does not alter startup/config behavior, and does not add settings editing or actual apply/save behavior. Actual Apply execution is explicitly unavailable/not implemented, and the apply request skeleton plus apply-result display keep all config/settings/provider/repository/database/directory/write-open/migration/seed-copy/delete side-effect flags false. Cancel/discard is represented only as a pure value preview.
+The probe proves the scaffold and target policy only as isolated smoke/config-target mechanics. It does not require widget blueprint assets or maps, does not attach widgets to the viewport, does not alter startup/config behavior, and does not add settings editing or actual apply/save behavior. Actual Apply execution is explicitly unavailable/not implemented, and the apply request skeleton plus apply-result display keep all config/settings/provider/repository/database/directory/write-open/migration/seed-copy/delete side-effect flags false. Cancel/discard is represented only as a pure value preview.
 
 The smoke-owned config target portion verifies:
 

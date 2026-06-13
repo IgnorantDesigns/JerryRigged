@@ -118,7 +118,7 @@ SQLUICore now has a first explicit apply config target scaffold for smoke-owned 
 
 The production/default `RequestPersistenceSettingsApply` entrypoint is still unavailable/not implemented and still reports `bDidWriteConfig=false` and `bDidChangeSettings=false`. The smoke-owned target helper does not write committed `Config` defaults or generated `Saved/Config`, does not enable SQLite or provider auto-init by default, does not initialize providers/repositories, does not create or open SQLite databases, does not run migrations, does not copy seeds, and does not add reset/delete behavior. `-UsePersistenceSettingsDraftProbe` verifies the smoke target write, invalid-draft refusal, unsafe-path refusal, repo config preservation, lifecycle no-op behavior, DB no-op behavior, and smoke artifact cleanup.
 
-SQLUICore now also has a non-mutating apply config target policy/resolver skeleton. It resolves the production/default target as unavailable/not implemented, resolves an explicit safe smoke-owned target as the only write-capable target, and represents a future project/user config target as unavailable until a later PR explicitly scopes and validates it. `RequestPersistenceSettingsApply` remains the existing unavailable/non-mutating apply entrypoint and still writes no config or changes settings. The resolver does not infer `DefaultEngine.ini`, `Saved/Config`, user/global editor settings, or any other real writable production target.
+PR #134 adds a non-mutating apply config target policy/resolver skeleton. It resolves the production/default target as unavailable/not implemented, resolves an explicit safe smoke-owned target as the only write-capable target, and represents a future project/user config target as unavailable until a later PR explicitly scopes and validates it. `RequestPersistenceSettingsApply` remains the existing unavailable/non-mutating apply entrypoint and still writes no config or changes settings. The resolver does not infer `DefaultEngine.ini`, `Saved/Config`, user/global editor settings, or any other real writable production target.
 
 This checkpoint proves only isolated smoke mechanics:
 
@@ -130,6 +130,8 @@ This checkpoint proves only isolated smoke mechanics:
 - Smoke-owned artifacts are cleaned after the probe.
 
 It does not add a production/user config write path, actual runtime settings application, settings editing controls, backend selector, SQLite path editor, provider auto-init control, reset/delete UX, startup integration, map/config wiring, packaged runtime behavior, provider/repository lifecycle behavior, database creation, database write-open, migrations, seed copy, or committed config changes.
+
+The future real project/user target must be a separate explicit policy decision. That work needs validation before any config write, no-op behavior for unchanged drafts, clear failure messages for invalid drafts, config diff/snapshot checks, separation between smoke-owned and real targets, and no hidden database/lifecycle work in the config-write path. Packaged validation is required if a future implementation changes startup behavior, default maps, config wiring, provider lifecycle, viewport flow, packaged runtime behavior, or committed/default runtime config.
 
 ## Persistence Settings Actual Apply Implementation Gate
 
