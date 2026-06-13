@@ -10,6 +10,7 @@ Related docs:
 - [`sqlui_sqlite_async_backend_plan.md`](sqlui_sqlite_async_backend_plan.md) describes the async/threading direction.
 - [`sqlui_sqlite_backend_evaluation.md`](sqlui_sqlite_backend_evaluation.md) describes why engine `SQLiteCore` is the active backend candidate.
 - [`sqlui_persistence_settings_ux_design.md`](sqlui_persistence_settings_ux_design.md) describes the future user-facing persistence/settings UX policy.
+- [`sqlui_persistence_config_target_strategy.md`](sqlui_persistence_config_target_strategy.md) records the production config target strategy/decision gate before real Apply writes.
 - [`sqlui_persistence_settings_editing_reset_plan.md`](sqlui_persistence_settings_editing_reset_plan.md) plans the next mutating settings editing, apply/cancel, backend selection, SQLite path, provider auto-init, and reset/delete UX phase.
 - [`sqlui_persistence_status_umg_usage.md`](sqlui_persistence_status_umg_usage.md) documents the focused read-only UMG binding recipe for the optional widget shell.
 - [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) documents the validation-only draft settings UMG binding recipe.
@@ -132,6 +133,21 @@ This checkpoint proves only isolated smoke mechanics:
 It does not add a production/user config write path, actual runtime settings application, settings editing controls, backend selector, SQLite path editor, provider auto-init control, reset/delete UX, startup integration, map/config wiring, packaged runtime behavior, provider/repository lifecycle behavior, database creation, database write-open, migrations, seed copy, or committed config changes.
 
 The future real project/user target must be a separate explicit policy decision. That work needs validation before any config write, no-op behavior for unchanged drafts, clear failure messages for invalid drafts, config diff/snapshot checks, separation between smoke-owned and real targets, and no hidden database/lifecycle work in the config-write path. Packaged validation is required if a future implementation changes startup behavior, default maps, config wiring, provider lifecycle, viewport flow, packaged runtime behavior, or committed/default runtime config.
+
+## Production Config Target Strategy
+
+The production config target strategy is now documented as a decision gate before real Apply writes. The current decision is to keep production/default Apply unavailable because no existing real target is safe enough to select implicitly.
+
+Candidate targets are intentionally separated:
+
+- Committed defaults such as `DefaultEngine.ini` or plugin defaults are rejected for runtime Apply.
+- Generated project `Saved/Config` is not selected; it would need separate policy, restore/diff coverage, and packaged validation before use.
+- User/global editor settings are rejected unless a future PR deliberately scopes them.
+- `USQLUILayoutRepositoryRuntimeSettings` remains the existing config-backed policy surface, but it is not automatically writable from Apply.
+- A SQLUICore-owned or plugin-managed settings file under `Saved/SQLUI` is plausible future work, but no production helper/format exists yet.
+- Explicit smoke-owned `Saved/SQLUI/SmokeTests` targets remain the only write-capable path today.
+
+A future real target PR must update SQLUICore policy explicitly, validate drafts before writing, refuse invalid drafts without mutation, preserve no-change/no-op behavior, prove committed config remains unchanged, prove smoke-owned and real targets remain separate, prove no DB files are created by config Apply, prove no provider/repository lifecycle runs, and keep migrations, seed copy, reset/delete, and database write-open out of config writes. The first real write should be narrow, preferably backend choice only. SQLite path writing needs a separate path-safety PR.
 
 ## Persistence Settings Actual Apply Implementation Gate
 
