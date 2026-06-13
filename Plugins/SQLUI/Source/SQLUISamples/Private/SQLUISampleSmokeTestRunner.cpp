@@ -11268,6 +11268,14 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		FutureProjectUserTargetPolicy =
 			FSQLUIPersistenceSettingsApplyConfigTargetPolicy::
 				ResolveFutureProjectUserConfigTarget();
+	const FSQLUIPersistenceSettingsApplyConfigTargetResolution
+		DocumentedProductionTargetPolicy =
+			FSQLUIPersistenceSettingsApplyConfigTargetPolicy::
+				ResolveDocumentedProductionTargetStrategy();
+	const FSQLUIPersistenceSettingsApplyConfigTargetResolution
+		RepeatedDocumentedProductionTargetPolicy =
+			FSQLUIPersistenceSettingsApplyConfigTargetPolicy::
+				ResolveDocumentedProductionTargetStrategy();
 	Result.bApplyConfigTargetPolicyDefaultRuntimeUnavailable =
 		DefaultRuntimeTargetPolicy.TargetKind
 			== ESQLUIPersistenceSettingsApplyConfigTargetKind::Unavailable
@@ -11299,12 +11307,37 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& !FutureProjectUserTargetPolicy.bCanWrite
 		&& !FutureProjectUserTargetPolicy.bProductionApplyEnabled
 		&& FutureProjectUserTargetPolicy.SummaryText.Contains(TEXT("future implementation"));
+	Result.bApplyConfigTargetPolicyDocumentedStrategyResolved =
+		DocumentedProductionTargetPolicy.TargetKind
+			== ESQLUIPersistenceSettingsApplyConfigTargetKind::FutureProjectUserConfig
+		&& DocumentedProductionTargetPolicy.bIsProductionRuntimeTarget
+		&& !DocumentedProductionTargetPolicy.bIsSmokeOwnedTarget
+		&& DocumentedProductionTargetPolicy.bRequiresExplicitTarget
+		&& DocumentedProductionTargetPolicy.TargetDescription.Contains(TEXT("Documented production"))
+		&& DocumentedProductionTargetPolicy.SummaryText.Contains(TEXT("documented production"));
+	Result.bApplyConfigTargetPolicyDocumentedStrategyCannotWrite =
+		!DocumentedProductionTargetPolicy.bCanWrite
+		&& !DocumentedProductionTargetPolicy.bProductionApplyEnabled
+		&& !DocumentedProductionTargetPolicy.bWouldAffectRuntimeDefaults
+		&& DocumentedProductionTargetPolicy.Messages.Num() > 0;
+	Result.bApplyConfigTargetPolicyDocumentedStrategyNoWritablePath =
+		DocumentedProductionTargetPolicy.ConfigFilePath.IsEmpty()
+		&& !DocumentedProductionTargetPolicy.bCanWrite;
+	Result.bApplyConfigTargetPolicyDocumentedStrategyDeterministic =
+		AreSQLUISampleApplyConfigTargetResolutionsEquivalent(
+			DocumentedProductionTargetPolicy,
+			RepeatedDocumentedProductionTargetPolicy)
+		&& AreSQLUISampleApplyConfigTargetResolutionsEquivalent(
+			DocumentedProductionTargetPolicy,
+			FutureProjectUserTargetPolicy);
 	Result.bApplyConfigTargetPolicyProductionApplyDisabled =
 		!DefaultRuntimeTargetPolicy.bProductionApplyEnabled
 		&& !SmokeTargetPolicy.bProductionApplyEnabled
 		&& !FutureProjectUserTargetPolicy.bProductionApplyEnabled
+		&& !DocumentedProductionTargetPolicy.bProductionApplyEnabled
 		&& !DefaultRuntimeTargetPolicy.bCanWrite
-		&& !FutureProjectUserTargetPolicy.bCanWrite;
+		&& !FutureProjectUserTargetPolicy.bCanWrite
+		&& !DocumentedProductionTargetPolicy.bCanWrite;
 	Result.bApplyConfigTargetPolicyRepeatedDeterministic =
 		AreSQLUISampleApplyConfigTargetResolutionsEquivalent(
 			SmokeTargetPolicy,
@@ -11444,6 +11477,10 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		|| !Result.bApplyConfigTargetPolicySmokeOwnedResolved
 		|| !Result.bApplyConfigTargetPolicySmokeOwnedCanWrite
 		|| !Result.bApplyConfigTargetPolicyFutureRealTargetUnavailable
+		|| !Result.bApplyConfigTargetPolicyDocumentedStrategyResolved
+		|| !Result.bApplyConfigTargetPolicyDocumentedStrategyCannotWrite
+		|| !Result.bApplyConfigTargetPolicyDocumentedStrategyNoWritablePath
+		|| !Result.bApplyConfigTargetPolicyDocumentedStrategyDeterministic
 		|| !Result.bApplyConfigTargetPolicyProductionApplyDisabled
 		|| !Result.bApplyConfigTargetPolicyRepeatedDeterministic)
 	{
@@ -12779,6 +12816,10 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bApplyConfigTargetPolicySmokeOwnedResolved
 		&& Result.bApplyConfigTargetPolicySmokeOwnedCanWrite
 		&& Result.bApplyConfigTargetPolicyFutureRealTargetUnavailable
+		&& Result.bApplyConfigTargetPolicyDocumentedStrategyResolved
+		&& Result.bApplyConfigTargetPolicyDocumentedStrategyCannotWrite
+		&& Result.bApplyConfigTargetPolicyDocumentedStrategyNoWritablePath
+		&& Result.bApplyConfigTargetPolicyDocumentedStrategyDeterministic
 		&& Result.bApplyConfigTargetPolicyProductionApplyDisabled
 		&& Result.bApplyConfigTargetPolicyRepeatedDeterministic
 		&& Result.bBackendChangeApplyContractDetected

@@ -1659,6 +1659,18 @@ struct SQLUISAMPLES_API FSQLUISamplePersistenceSettingsDraftProbeResult
 	bool bApplyConfigTargetPolicyFutureRealTargetUnavailable = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyConfigTargetPolicyDocumentedStrategyResolved = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyConfigTargetPolicyDocumentedStrategyCannotWrite = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyConfigTargetPolicyDocumentedStrategyNoWritablePath = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bApplyConfigTargetPolicyDocumentedStrategyDeterministic = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bApplyConfigTargetPolicyProductionApplyDisabled = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")

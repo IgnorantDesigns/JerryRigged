@@ -73,6 +73,8 @@ public:
 	static FSQLUIPersistenceSettingsApplyConfigTargetResolution ResolveExplicitTarget(
 		const FSQLUIPersistenceSettingsApplyConfigTarget& Target);
 
+	static FSQLUIPersistenceSettingsApplyConfigTargetResolution ResolveDocumentedProductionTargetStrategy();
+
 	static FSQLUIPersistenceSettingsApplyConfigTargetResolution ResolveFutureProjectUserConfigTarget();
 };
 
