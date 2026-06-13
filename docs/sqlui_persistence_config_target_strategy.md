@@ -6,6 +6,22 @@ The current implementation deliberately keeps real Apply unavailable. SQLUICore 
 
 PR #136 introduced this strategy as a docs-only decision gate. That strategy checkpoint added no runtime code, settings controls, config writes, committed config changes, provider lifecycle behavior, database work, scripts, Build.cs changes, plugin descriptor changes, maps, assets, CI, or packaged behavior. The follow-up policy-resolution slice keeps those runtime safety boundaries intact.
 
+## Production Config Target Resolution Checkpoint
+
+PR #137 turns the documented strategy into SQLUICore policy resolution without enabling writes. `ResolveDocumentedProductionTargetStrategy()` gives the future project/user target a code-level identity so smoke coverage and future implementations can refer to the same decision point, but the result remains unavailable, non-writable, pathless, and production Apply remains disabled.
+
+PR #138 is the docs-only checkpoint for that policy-resolution slice. It adds no runtime code, scripts, config changes, Build.cs changes, plugin descriptor changes, assets, maps, smoke flags, generated files, packaged outputs, database files, CI, production/user config writes, runtime settings application, settings controls, startup behavior, provider/repository lifecycle behavior, database creation, database write-open, migrations, seed copy, or behavior changes.
+
+This checkpoint proves target resolution only:
+
+- SQLUICore can represent the documented future real target without exposing `DefaultEngine.ini`, generated `Saved/Config`, user/global editor settings, or any other writable production path.
+- Default/runtime Apply remains unavailable/not implemented and non-writable.
+- Explicit smoke-owned targets under `Saved/SQLUI/SmokeTests` remain the only write-capable targets.
+- The future real project/user target remains unavailable/non-writable until a later PR deliberately chooses and validates a real target.
+- `-UsePersistenceSettingsDraftProbe` verifies deterministic resolution, repo `Config` / `Saved/Config` preservation, no DB creation, no DB write-open, no migrations, no seed copy, no provider/repository lifecycle work, and smoke-owned cleanup.
+
+It does not add production/user config writes, runtime settings application, committed config changes, settings controls, backend selector UI, SQLite path editing, provider auto-init controls, reset/delete behavior, startup wiring, provider/repository initialization, database work, or file deletion outside smoke-owned cleanup.
+
 ## Production Target Question
 
 Real Apply behavior needs a deliberate target decision before implementation. The target must answer where SQLUICore writes the validated persistence settings draft when a user or product chooses Apply.
