@@ -2,7 +2,7 @@
 
 This document records the decision gate for future production/user config writes from the SQLUI persistence settings Apply path.
 
-The current implementation deliberately keeps real Apply unavailable. SQLUICore has a non-mutating apply entrypoint/result skeleton, UI-safe result display rows, SQLUISamples sample/dev display surfaces, a smoke-owned config target scaffold, and an apply config target policy/resolver skeleton. The policy layer now also exposes `ResolveDocumentedProductionTargetStrategy()` so code and smoke coverage can identify the documented future production target strategy without making it writable. Production/default Apply still does not write config, does not change live runtime settings, does not initialize providers or repositories, and does not create, open, migrate, seed, reset, or delete database files.
+The current implementation deliberately keeps real Apply unavailable. SQLUICore has a non-mutating apply entrypoint/result skeleton, UI-safe result display rows, SQLUISamples sample/dev display surfaces, a smoke-owned config target scaffold, and an apply config target policy/resolver skeleton. The policy layer now also exposes `ResolveDocumentedProductionTargetStrategy()` so code and smoke coverage can identify the documented future production target strategy without making it writable. It also exposes a guarded production target enablement request resolver, but because this strategy still selects no safe concrete production target, an explicit enablement request is recorded and blocked rather than accepted. Production/default Apply still does not write config, does not change live runtime settings, does not initialize providers or repositories, and does not create, open, migrate, seed, reset, or delete database files.
 
 PR #136 introduced this strategy as a docs-only decision gate. That strategy checkpoint added no runtime code, settings controls, config writes, committed config changes, provider lifecycle behavior, database work, scripts, Build.cs changes, plugin descriptor changes, maps, assets, CI, or packaged behavior. The follow-up policy-resolution slice keeps those runtime safety boundaries intact.
 
@@ -21,6 +21,25 @@ This checkpoint proves target resolution only:
 - `-UsePersistenceSettingsDraftProbe` verifies deterministic resolution, repo `Config` / `Saved/Config` preservation, no DB creation, no DB write-open, no migrations, no seed copy, no provider/repository lifecycle work, and smoke-owned cleanup.
 
 It does not add production/user config writes, runtime settings application, committed config changes, settings controls, backend selector UI, SQLite path editing, provider auto-init controls, reset/delete behavior, startup wiring, provider/repository initialization, database work, or file deletion outside smoke-owned cleanup.
+
+## Guarded Production Target Enablement Request
+
+The guarded enablement resolver is intentionally policy-only. `ResolveDocumentedProductionTargetStrategyWithEnablement()` accepts an explicit request value so future Apply work can distinguish "no production target requested" from "production target requested but blocked." In this slice both states remain non-writable because this document still says no concrete project/user target is safe enough to enable.
+
+When no enablement request is supplied, the documented production target stays unavailable, non-writable, pathless, and production Apply disabled. When an enablement request is supplied, SQLUICore records that request and returns a warning that enablement remains blocked because no safe concrete target is selected yet. The result still has no config path, `bCanWrite=false`, and production Apply disabled.
+
+This guarded request does not:
+
+- create a production/user config target.
+- make `DefaultEngine.ini`, generated `Saved/Config`, user/global editor settings, or `USQLUILayoutRepositoryRuntimeSettings` writable from Apply.
+- create directories or files.
+- write config.
+- apply runtime settings.
+- create, open, migrate, seed, reset, or delete database files.
+- initialize providers or repositories.
+- add UI controls.
+
+The purpose is to make the future enablement gate explicit without guessing the target. A later real-write PR must still choose and validate a concrete SQLUICore-owned target before any production/user config write can occur.
 
 ## Production Target Question
 
@@ -122,6 +141,7 @@ Existing `-UsePersistenceSettingsDraftProbe` coverage already confirms the curre
 - smoke-owned target explicit only.
 - future real target unavailable.
 - documented production target strategy represented, non-writable, pathless, and deterministic.
+- guarded production target enablement requests are recorded but remain blocked, non-writable, pathless, deterministic, and side-effect free.
 - invalid drafts do not mutate the smoke target.
 - no-change drafts remain no-op.
 - repo `Config` and `Saved/Config` stay unchanged.
@@ -143,4 +163,4 @@ Packaged validation becomes required for a future real target when the PR can af
 
 Production Apply remains unavailable.
 
-The only write-capable path today is the explicit smoke-owned config target under `Saved/SQLUI/SmokeTests`. The documented production target strategy is represented in SQLUICore policy as a non-writable future project/user target with no real path selected. Future real project/user config targets remain unavailable until a later SQLUICore policy PR chooses and validates a safe target.
+The only write-capable path today is the explicit smoke-owned config target under `Saved/SQLUI/SmokeTests`. The documented production target strategy is represented in SQLUICore policy as a non-writable future project/user target with no real path selected. Explicit production target enablement can now be requested in policy, but that request is blocked and not accepted while no safe concrete production target exists. Future real project/user config targets remain unavailable until a later SQLUICore policy PR chooses and validates a safe target.

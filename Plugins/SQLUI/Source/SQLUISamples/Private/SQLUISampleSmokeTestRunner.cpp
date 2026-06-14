@@ -8911,6 +8911,10 @@ bool AreSQLUISampleApplyConfigTargetResolutionsEquivalent(
 		&& First.bIsSmokeOwnedTarget == Second.bIsSmokeOwnedTarget
 		&& First.bRequiresExplicitTarget == Second.bRequiresExplicitTarget
 		&& First.bProductionApplyEnabled == Second.bProductionApplyEnabled
+		&& First.bProductionTargetEnablementRequested
+			== Second.bProductionTargetEnablementRequested
+		&& First.bProductionTargetEnablementAccepted
+			== Second.bProductionTargetEnablementAccepted
 		&& First.bWouldAffectRuntimeDefaults == Second.bWouldAffectRuntimeDefaults
 		&& First.ConfigFilePath == Second.ConfigFilePath
 		&& First.TargetDescription == Second.TargetDescription
@@ -11276,6 +11280,26 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		RepeatedDocumentedProductionTargetPolicy =
 			FSQLUIPersistenceSettingsApplyConfigTargetPolicy::
 				ResolveDocumentedProductionTargetStrategy();
+	FSQLUIPersistenceSettingsApplyProductionTargetEnablement
+		ProductionTargetEnablementRequest;
+	ProductionTargetEnablementRequest.bEnableProductionTarget = true;
+	ProductionTargetEnablementRequest.RequestDescription =
+		TEXT("SQLUI persistence settings draft probe guarded production target enablement request.");
+	const FSQLUIPersistenceSettingsApplyConfigTargetResolution
+		ProductionTargetEnablementWithoutRequestPolicy =
+			FSQLUIPersistenceSettingsApplyConfigTargetPolicy::
+				ResolveDocumentedProductionTargetStrategyWithEnablement(
+					FSQLUIPersistenceSettingsApplyProductionTargetEnablement());
+	const FSQLUIPersistenceSettingsApplyConfigTargetResolution
+		ProductionTargetEnablementPolicy =
+			FSQLUIPersistenceSettingsApplyConfigTargetPolicy::
+				ResolveDocumentedProductionTargetStrategyWithEnablement(
+					ProductionTargetEnablementRequest);
+	const FSQLUIPersistenceSettingsApplyConfigTargetResolution
+		RepeatedProductionTargetEnablementPolicy =
+			FSQLUIPersistenceSettingsApplyConfigTargetPolicy::
+				ResolveDocumentedProductionTargetStrategyWithEnablement(
+					ProductionTargetEnablementRequest);
 	Result.bApplyConfigTargetPolicyDefaultRuntimeUnavailable =
 		DefaultRuntimeTargetPolicy.TargetKind
 			== ESQLUIPersistenceSettingsApplyConfigTargetKind::Unavailable
@@ -11346,6 +11370,42 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& AreSQLUISampleFileSnapshotsUnchanged(
 			ApplyConfigBefore,
 			CaptureSQLUISampleFileSnapshots(ApplyConfigPaths));
+	Result.bApplyConfigTargetPolicyProductionEnablementWithoutRequestBlocked =
+		!ProductionTargetEnablementWithoutRequestPolicy
+			.bProductionTargetEnablementRequested
+		&& !ProductionTargetEnablementWithoutRequestPolicy
+			.bProductionTargetEnablementAccepted
+		&& !ProductionTargetEnablementWithoutRequestPolicy.bCanWrite
+		&& !ProductionTargetEnablementWithoutRequestPolicy
+			.bProductionApplyEnabled
+		&& ProductionTargetEnablementWithoutRequestPolicy.ConfigFilePath.IsEmpty();
+	Result.bApplyConfigTargetPolicyProductionEnablementRequestRecorded =
+		ProductionTargetEnablementPolicy.bProductionTargetEnablementRequested
+		&& !ProductionTargetEnablementPolicy.bProductionTargetEnablementAccepted
+		&& ProductionTargetEnablementPolicy.Messages.Num()
+			> DocumentedProductionTargetPolicy.Messages.Num();
+	Result.bApplyConfigTargetPolicyProductionEnablementBlocked =
+		ProductionTargetEnablementPolicy.TargetKind
+			== ESQLUIPersistenceSettingsApplyConfigTargetKind::FutureProjectUserConfig
+		&& ProductionTargetEnablementPolicy.bIsProductionRuntimeTarget
+		&& !ProductionTargetEnablementPolicy.bIsSmokeOwnedTarget
+		&& !ProductionTargetEnablementPolicy.bCanWrite
+		&& !ProductionTargetEnablementPolicy.bProductionApplyEnabled
+		&& ProductionTargetEnablementPolicy.SummaryText.Contains(TEXT("requested"))
+		&& ProductionTargetEnablementPolicy.SummaryText.Contains(TEXT("No config can be written"));
+	Result.bApplyConfigTargetPolicyProductionEnablementNoWritablePath =
+		ProductionTargetEnablementPolicy.ConfigFilePath.IsEmpty()
+		&& !ProductionTargetEnablementPolicy.bCanWrite;
+	Result.bApplyConfigTargetPolicyProductionEnablementNoSideEffects =
+		!FPaths::FileExists(ApplyConfigTargetPath)
+		&& AreSQLUISampleFileSnapshotsUnchanged(
+			ApplyConfigBefore,
+			CaptureSQLUISampleFileSnapshots(ApplyConfigPaths))
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+	Result.bApplyConfigTargetPolicyProductionEnablementDeterministic =
+		AreSQLUISampleApplyConfigTargetResolutionsEquivalent(
+			ProductionTargetEnablementPolicy,
+			RepeatedProductionTargetEnablementPolicy);
 
 	const FSQLUIPersistenceSettingsApplyConfigWriteResult
 		RuntimeConfigTargetResult =
@@ -11482,7 +11542,13 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		|| !Result.bApplyConfigTargetPolicyDocumentedStrategyNoWritablePath
 		|| !Result.bApplyConfigTargetPolicyDocumentedStrategyDeterministic
 		|| !Result.bApplyConfigTargetPolicyProductionApplyDisabled
-		|| !Result.bApplyConfigTargetPolicyRepeatedDeterministic)
+		|| !Result.bApplyConfigTargetPolicyRepeatedDeterministic
+		|| !Result.bApplyConfigTargetPolicyProductionEnablementWithoutRequestBlocked
+		|| !Result.bApplyConfigTargetPolicyProductionEnablementRequestRecorded
+		|| !Result.bApplyConfigTargetPolicyProductionEnablementBlocked
+		|| !Result.bApplyConfigTargetPolicyProductionEnablementNoWritablePath
+		|| !Result.bApplyConfigTargetPolicyProductionEnablementNoSideEffects
+		|| !Result.bApplyConfigTargetPolicyProductionEnablementDeterministic)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
@@ -12822,6 +12888,12 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bApplyConfigTargetPolicyDocumentedStrategyDeterministic
 		&& Result.bApplyConfigTargetPolicyProductionApplyDisabled
 		&& Result.bApplyConfigTargetPolicyRepeatedDeterministic
+		&& Result.bApplyConfigTargetPolicyProductionEnablementWithoutRequestBlocked
+		&& Result.bApplyConfigTargetPolicyProductionEnablementRequestRecorded
+		&& Result.bApplyConfigTargetPolicyProductionEnablementBlocked
+		&& Result.bApplyConfigTargetPolicyProductionEnablementNoWritablePath
+		&& Result.bApplyConfigTargetPolicyProductionEnablementNoSideEffects
+		&& Result.bApplyConfigTargetPolicyProductionEnablementDeterministic
 		&& Result.bBackendChangeApplyContractDetected
 		&& Result.bSQLiteApplyContractSafe
 		&& Result.bUnknownBackendApplyContractBlocked

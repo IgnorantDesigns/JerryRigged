@@ -3170,6 +3170,12 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy documented strategy deterministic"), ProbeResult.bApplyConfigTargetPolicyDocumentedStrategyDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy production apply disabled"), ProbeResult.bApplyConfigTargetPolicyProductionApplyDisabled);
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy repeated deterministic"), ProbeResult.bApplyConfigTargetPolicyRepeatedDeterministic);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy production enablement without request blocked"), ProbeResult.bApplyConfigTargetPolicyProductionEnablementWithoutRequestBlocked);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy production enablement request recorded"), ProbeResult.bApplyConfigTargetPolicyProductionEnablementRequestRecorded);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy production enablement blocked"), ProbeResult.bApplyConfigTargetPolicyProductionEnablementBlocked);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy production enablement no writable path"), ProbeResult.bApplyConfigTargetPolicyProductionEnablementNoWritablePath);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy production enablement no side effects"), ProbeResult.bApplyConfigTargetPolicyProductionEnablementNoSideEffects);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy production enablement deterministic"), ProbeResult.bApplyConfigTargetPolicyProductionEnablementDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("backend change apply contract detected"), ProbeResult.bBackendChangeApplyContractDetected);
 	LogPersistenceSettingsDraftBool(TEXT("SQLite apply contract safe"), ProbeResult.bSQLiteApplyContractSafe);
 	LogPersistenceSettingsDraftBool(TEXT("unknown backend apply contract blocked"), ProbeResult.bUnknownBackendApplyContractBlocked);
