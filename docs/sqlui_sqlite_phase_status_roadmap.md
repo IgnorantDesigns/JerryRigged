@@ -107,6 +107,8 @@ The next real config-write phase must first choose a safe real write target deli
 
 The production target decision is now documented before any real writes are enabled. #132 added the smoke-owned target scaffold, #133 documented that checkpoint, #134 added the target policy/resolver skeleton, and #135 documented that policy checkpoint. This strategy gate inventories candidate real targets and keeps production Apply closed because no safe real target is selected yet.
 
+The #137 production config target resolution slice represents that strategy in SQLUICore policy through `ResolveDocumentedProductionTargetStrategy()`. This is still target resolution only: the documented future real project/user target is identifiable in code, but it remains unavailable, non-writable, has no writable path, and production Apply remains disabled. The smoke-owned target remains explicit-only and is still the only write-capable target. The draft probe verifies repo `Config` / `Saved/Config` preservation, no DB creation, no DB write-open, no migrations, no seed copy, no provider/repository lifecycle work, and deterministic cleanup of smoke-owned artifacts.
+
 The current decision is:
 
 - Do not write committed defaults such as `DefaultEngine.ini` from runtime Apply.

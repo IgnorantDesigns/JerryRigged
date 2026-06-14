@@ -138,6 +138,10 @@ The future real project/user target must be a separate explicit policy decision.
 
 The production config target strategy is now documented and codified as a policy-resolution step before real Apply writes. The current decision is to keep production/default Apply unavailable because no existing real target is safe enough to select implicitly.
 
+The production config target resolution checkpoint records that #137 added a code-level resolution for the documented strategy without changing behavior. SQLUICore can now identify the documented future real project/user target through `ResolveDocumentedProductionTargetStrategy()`, but the result remains unavailable, non-writable, pathless, and production Apply disabled. Default/runtime Apply remains unavailable, and explicit smoke-owned targets remain the only write-capable targets.
+
+That resolution layer proves the future target can be represented safely before it is enabled. It does not write real user/runtime config, apply settings, create or open databases for writing, run migrations, copy seeds, initialize providers/repositories, delete files, add UI controls, change committed config, change startup behavior, make SQLite default, or enable provider auto-init by default. Future write-enable work must explicitly choose a real target, keep this policy gate in the write path, validate drafts, preserve no-op behavior, separate smoke-owned and real targets, and include config diff/snapshot checks.
+
 Candidate targets are intentionally separated:
 
 - Committed defaults such as `DefaultEngine.ini` or plugin defaults are rejected for runtime Apply.
