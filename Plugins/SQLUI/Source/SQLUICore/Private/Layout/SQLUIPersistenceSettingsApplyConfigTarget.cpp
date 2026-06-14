@@ -120,6 +120,11 @@ bool ValidateSQLUIPersistenceSettingsApplyConfigTarget(
 	return true;
 }
 
+FString GetSQLUIPersistenceSettingsSelectedProductionRelativePath()
+{
+	return TEXT("Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini");
+}
+
 FString MakeSQLUIPersistenceSettingsSmokeConfigText(
 	const FSQLUIPersistenceSettingsDraft& Draft,
 	const FSQLUIPersistenceSettingsApplyPreviewResult& ApplyPreview,
@@ -289,6 +294,35 @@ FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveExplicitTarget(
 	return Result;
 }
 
+FString
+FSQLUIPersistenceSettingsApplyConfigTargetPolicy::GetSelectedProductionConfigTargetRelativePath()
+{
+	return GetSQLUIPersistenceSettingsSelectedProductionRelativePath();
+}
+
+FSQLUIPersistenceSettingsProductionConfigTargetDescriptor
+FSQLUIPersistenceSettingsApplyConfigTargetPolicy::DescribeSelectedProductionConfigTarget()
+{
+	FSQLUIPersistenceSettingsProductionConfigTargetDescriptor Descriptor;
+	Descriptor.SymbolicTargetName =
+		TEXT("SQLUI.PersistenceSettings.RuntimeSettings");
+	Descriptor.RelativeConfigPath =
+		GetSelectedProductionConfigTargetRelativePath();
+	Descriptor.TargetOwnership = TEXT("SQLUICore/plugin-managed");
+	Descriptor.bIsProductionTarget = true;
+	Descriptor.bIsSmokeOwnedTarget = false;
+	Descriptor.bCanWrite = false;
+	Descriptor.bIsImplemented = false;
+	Descriptor.bWriteEnabled = false;
+	Descriptor.bWouldUseCommittedConfig = false;
+	Descriptor.bWouldUseDefaultEngineIni = false;
+	Descriptor.bWouldUseSavedConfig = false;
+	Descriptor.bWouldUseUserGlobalEditorSettings = false;
+	Descriptor.SummaryText =
+		TEXT("Selected SQLUI persistence settings production target is descriptor-only and write-disabled.");
+	return Descriptor;
+}
+
 FSQLUIPersistenceSettingsApplyConfigTargetResolution
 FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveDocumentedProductionTargetStrategy()
 {
@@ -303,18 +337,21 @@ FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveDocumentedProductionTar
 	Result.bWouldAffectRuntimeDefaults = false;
 	Result.TargetDescription =
 		TEXT("Documented production config target strategy");
-	Result.SummaryText =
-		TEXT("SQLUI persistence settings documented production Apply target strategy keeps real project/user config targets unavailable for a future implementation. No config can be written.");
+	Result.ProductionTargetDescriptor =
+		DescribeSelectedProductionConfigTarget();
+	Result.SummaryText = FString::Printf(
+		TEXT("SQLUI persistence settings documented production Apply target strategy selects %s as a descriptor only. It remains unavailable for writes until a future implementation. No config can be written."),
+		*Result.ProductionTargetDescriptor.RelativeConfigPath);
 	AddSQLUIPersistenceSettingsConfigTargetPolicyMessage(
 		Result,
 		ESQLUIPersistenceSettingsValidationMessageSeverity::Warning,
-		TEXT("Documented production persistence settings config target strategy is not write-enabled."),
-		TEXT("No DefaultEngine.ini, Saved/Config, user/global editor settings, or other real writable production target is selected by this policy."));
+		TEXT("Documented production persistence settings config target descriptor is not write-enabled."),
+		Result.ProductionTargetDescriptor.RelativeConfigPath);
 	AddSQLUIPersistenceSettingsConfigTargetPolicyMessage(
 		Result,
 		ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
-		TEXT("Future real persistence settings config target remains unavailable."),
-		TEXT("A later PR must explicitly choose, validate, and smoke-test any project/user config write target before production Apply can write config."));
+		TEXT("Selected production persistence settings config target remains unavailable."),
+		TEXT("The descriptor does not create directories, write files, use DefaultEngine.ini, use Saved/Config, use user/global editor settings, or enable production Apply."));
 	return Result;
 }
 
@@ -339,12 +376,12 @@ FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveDocumentedProductionTar
 	}
 
 	Result.SummaryText =
-		TEXT("SQLUI persistence settings documented production Apply target enablement was requested, but no safe concrete project/user target is selected yet. No config can be written.");
+		TEXT("SQLUI persistence settings documented production Apply target enablement was requested for the selected descriptor, but it remains write-disabled and unimplemented. No config can be written.");
 	AddSQLUIPersistenceSettingsConfigTargetPolicyMessage(
 		Result,
 		ESQLUIPersistenceSettingsValidationMessageSeverity::Warning,
 		TEXT("Production persistence settings config target enablement remains blocked."),
-		TEXT("The strategy document has not selected a concrete writable target. This policy result records the explicit request only; it does not create directories, write files, or enable production Apply."));
+		TEXT("This policy result records the explicit request only; it does not create directories, write files, or enable production Apply."));
 	if (!Enablement.RequestDescription.IsEmpty())
 	{
 		AddSQLUIPersistenceSettingsConfigTargetPolicyMessage(

@@ -8901,6 +8901,26 @@ bool AreSQLUISampleFileSnapshotsUnchanged(
 	return true;
 }
 
+bool AreSQLUISampleProductionConfigTargetDescriptorsEquivalent(
+	const FSQLUIPersistenceSettingsProductionConfigTargetDescriptor& First,
+	const FSQLUIPersistenceSettingsProductionConfigTargetDescriptor& Second)
+{
+	return First.SymbolicTargetName == Second.SymbolicTargetName
+		&& First.RelativeConfigPath == Second.RelativeConfigPath
+		&& First.TargetOwnership == Second.TargetOwnership
+		&& First.bIsProductionTarget == Second.bIsProductionTarget
+		&& First.bIsSmokeOwnedTarget == Second.bIsSmokeOwnedTarget
+		&& First.bCanWrite == Second.bCanWrite
+		&& First.bIsImplemented == Second.bIsImplemented
+		&& First.bWriteEnabled == Second.bWriteEnabled
+		&& First.bWouldUseCommittedConfig == Second.bWouldUseCommittedConfig
+		&& First.bWouldUseDefaultEngineIni == Second.bWouldUseDefaultEngineIni
+		&& First.bWouldUseSavedConfig == Second.bWouldUseSavedConfig
+		&& First.bWouldUseUserGlobalEditorSettings
+			== Second.bWouldUseUserGlobalEditorSettings
+		&& First.SummaryText == Second.SummaryText;
+}
+
 bool AreSQLUISampleApplyConfigTargetResolutionsEquivalent(
 	const FSQLUIPersistenceSettingsApplyConfigTargetResolution& First,
 	const FSQLUIPersistenceSettingsApplyConfigTargetResolution& Second)
@@ -8918,7 +8938,10 @@ bool AreSQLUISampleApplyConfigTargetResolutionsEquivalent(
 		&& First.bWouldAffectRuntimeDefaults == Second.bWouldAffectRuntimeDefaults
 		&& First.ConfigFilePath == Second.ConfigFilePath
 		&& First.TargetDescription == Second.TargetDescription
-		&& First.SummaryText == Second.SummaryText;
+		&& First.SummaryText == Second.SummaryText
+		&& AreSQLUISampleProductionConfigTargetDescriptorsEquivalent(
+			First.ProductionTargetDescriptor,
+			Second.ProductionTargetDescriptor);
 }
 
 bool WriteSQLUISamplePersistenceSettingsDraftSidecar(
@@ -9622,6 +9645,19 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 	const FString ApplyConfigTargetPath =
 		MakeSQLUISamplePersistenceSettingsDraftConfigTargetPath(
 			TEXT("SmokeOwnedPersistenceSettingsApplyTarget.ini"));
+	FString SelectedProductionTargetPath = FPaths::Combine(
+		FPaths::ProjectDir(),
+		FSQLUIPersistenceSettingsApplyConfigTargetPolicy::
+			GetSelectedProductionConfigTargetRelativePath());
+	FPaths::NormalizeFilename(SelectedProductionTargetPath);
+	SelectedProductionTargetPath =
+		FPaths::ConvertRelativePathToFull(SelectedProductionTargetPath);
+	const FString SelectedProductionTargetDirectory =
+		FPaths::GetPath(SelectedProductionTargetPath);
+	const bool bSelectedProductionTargetDirectoryExistedBefore =
+		IFileManager::Get().DirectoryExists(*SelectedProductionTargetDirectory);
+	const TArray<FSQLUISampleFileSnapshot> SelectedProductionTargetBefore =
+		CaptureSQLUISampleFileSnapshots({ SelectedProductionTargetPath });
 
 	DeleteSQLUISamplePersistenceSettingsDraftFiles(Result);
 	DeleteSQLUISamplePersistenceSettingsDraftConfigTarget(
@@ -11280,6 +11316,10 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		RepeatedDocumentedProductionTargetPolicy =
 			FSQLUIPersistenceSettingsApplyConfigTargetPolicy::
 				ResolveDocumentedProductionTargetStrategy();
+	const FSQLUIPersistenceSettingsProductionConfigTargetDescriptor
+		SelectedProductionTargetDescriptor =
+			FSQLUIPersistenceSettingsApplyConfigTargetPolicy::
+				DescribeSelectedProductionConfigTarget();
 	FSQLUIPersistenceSettingsApplyProductionTargetEnablement
 		ProductionTargetEnablementRequest;
 	ProductionTargetEnablementRequest.bEnableProductionTarget = true;
@@ -11347,6 +11387,55 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 	Result.bApplyConfigTargetPolicyDocumentedStrategyNoWritablePath =
 		DocumentedProductionTargetPolicy.ConfigFilePath.IsEmpty()
 		&& !DocumentedProductionTargetPolicy.bCanWrite;
+	Result.bApplyConfigTargetPolicySelectedProductionDescriptorResolved =
+		SelectedProductionTargetDescriptor.SymbolicTargetName
+			== TEXT("SQLUI.PersistenceSettings.RuntimeSettings")
+		&& SelectedProductionTargetDescriptor.bIsProductionTarget
+		&& !SelectedProductionTargetDescriptor.bIsSmokeOwnedTarget
+		&& SelectedProductionTargetDescriptor.TargetOwnership
+			== TEXT("SQLUICore/plugin-managed")
+		&& AreSQLUISampleProductionConfigTargetDescriptorsEquivalent(
+			SelectedProductionTargetDescriptor,
+			DocumentedProductionTargetPolicy.ProductionTargetDescriptor)
+		&& SelectedProductionTargetDescriptor.SummaryText.Contains(
+			TEXT("descriptor-only"));
+	Result.bApplyConfigTargetPolicySelectedProductionPathDescribed =
+		SelectedProductionTargetDescriptor.RelativeConfigPath
+			== TEXT("Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini")
+		&& DocumentedProductionTargetPolicy
+			.ProductionTargetDescriptor.RelativeConfigPath
+			== SelectedProductionTargetDescriptor.RelativeConfigPath
+		&& ProductionTargetEnablementPolicy
+			.ProductionTargetDescriptor.RelativeConfigPath
+			== SelectedProductionTargetDescriptor.RelativeConfigPath;
+	Result.bApplyConfigTargetPolicySelectedProductionDescriptorCannotWrite =
+		!SelectedProductionTargetDescriptor.bCanWrite
+		&& !SelectedProductionTargetDescriptor.bIsImplemented
+		&& !SelectedProductionTargetDescriptor.bWriteEnabled
+		&& !DocumentedProductionTargetPolicy.bCanWrite
+		&& !ProductionTargetEnablementPolicy.bCanWrite;
+	Result.bApplyConfigTargetPolicySelectedProductionDescriptorNotProjectConfig =
+		!SelectedProductionTargetDescriptor.bWouldUseCommittedConfig
+		&& !SelectedProductionTargetDescriptor.bWouldUseDefaultEngineIni
+		&& !SelectedProductionTargetDescriptor.bWouldUseSavedConfig
+		&& !SelectedProductionTargetDescriptor
+			.bWouldUseUserGlobalEditorSettings;
+	Result.bApplyConfigTargetPolicySelectedProductionTargetNotCreated =
+		AreSQLUISampleFileSnapshotsUnchanged(
+			SelectedProductionTargetBefore,
+			CaptureSQLUISampleFileSnapshots({ SelectedProductionTargetPath }))
+		&& IFileManager::Get().DirectoryExists(
+			*SelectedProductionTargetDirectory)
+			== bSelectedProductionTargetDirectoryExistedBefore;
+	Result.bApplyConfigTargetPolicyGuardedProductionDescriptorBlocked =
+		ProductionTargetEnablementPolicy.bProductionTargetEnablementRequested
+		&& !ProductionTargetEnablementPolicy
+			.bProductionTargetEnablementAccepted
+		&& !ProductionTargetEnablementPolicy.bCanWrite
+		&& !ProductionTargetEnablementPolicy.bProductionApplyEnabled
+		&& AreSQLUISampleProductionConfigTargetDescriptorsEquivalent(
+			ProductionTargetEnablementPolicy.ProductionTargetDescriptor,
+			SelectedProductionTargetDescriptor);
 	Result.bApplyConfigTargetPolicyDocumentedStrategyDeterministic =
 		AreSQLUISampleApplyConfigTargetResolutionsEquivalent(
 			DocumentedProductionTargetPolicy,
@@ -11540,6 +11629,12 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		|| !Result.bApplyConfigTargetPolicyDocumentedStrategyResolved
 		|| !Result.bApplyConfigTargetPolicyDocumentedStrategyCannotWrite
 		|| !Result.bApplyConfigTargetPolicyDocumentedStrategyNoWritablePath
+		|| !Result.bApplyConfigTargetPolicySelectedProductionDescriptorResolved
+		|| !Result.bApplyConfigTargetPolicySelectedProductionPathDescribed
+		|| !Result.bApplyConfigTargetPolicySelectedProductionDescriptorCannotWrite
+		|| !Result.bApplyConfigTargetPolicySelectedProductionDescriptorNotProjectConfig
+		|| !Result.bApplyConfigTargetPolicySelectedProductionTargetNotCreated
+		|| !Result.bApplyConfigTargetPolicyGuardedProductionDescriptorBlocked
 		|| !Result.bApplyConfigTargetPolicyDocumentedStrategyDeterministic
 		|| !Result.bApplyConfigTargetPolicyProductionApplyDisabled
 		|| !Result.bApplyConfigTargetPolicyRepeatedDeterministic
@@ -12885,6 +12980,12 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bApplyConfigTargetPolicyDocumentedStrategyResolved
 		&& Result.bApplyConfigTargetPolicyDocumentedStrategyCannotWrite
 		&& Result.bApplyConfigTargetPolicyDocumentedStrategyNoWritablePath
+		&& Result.bApplyConfigTargetPolicySelectedProductionDescriptorResolved
+		&& Result.bApplyConfigTargetPolicySelectedProductionPathDescribed
+		&& Result.bApplyConfigTargetPolicySelectedProductionDescriptorCannotWrite
+		&& Result.bApplyConfigTargetPolicySelectedProductionDescriptorNotProjectConfig
+		&& Result.bApplyConfigTargetPolicySelectedProductionTargetNotCreated
+		&& Result.bApplyConfigTargetPolicyGuardedProductionDescriptorBlocked
 		&& Result.bApplyConfigTargetPolicyDocumentedStrategyDeterministic
 		&& Result.bApplyConfigTargetPolicyProductionApplyDisabled
 		&& Result.bApplyConfigTargetPolicyRepeatedDeterministic

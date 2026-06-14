@@ -11,6 +11,23 @@ struct SQLUICORE_API FSQLUIPersistenceSettingsApplyConfigTarget
 	FString TargetDescription;
 };
 
+struct SQLUICORE_API FSQLUIPersistenceSettingsProductionConfigTargetDescriptor
+{
+	FString SymbolicTargetName;
+	FString RelativeConfigPath;
+	FString TargetOwnership;
+	bool bIsProductionTarget = false;
+	bool bIsSmokeOwnedTarget = false;
+	bool bCanWrite = false;
+	bool bIsImplemented = false;
+	bool bWriteEnabled = false;
+	bool bWouldUseCommittedConfig = false;
+	bool bWouldUseDefaultEngineIni = false;
+	bool bWouldUseSavedConfig = false;
+	bool bWouldUseUserGlobalEditorSettings = false;
+	FString SummaryText;
+};
+
 enum class ESQLUIPersistenceSettingsApplyConfigTargetKind : uint8
 {
 	Invalid,
@@ -34,6 +51,8 @@ struct SQLUICORE_API FSQLUIPersistenceSettingsApplyConfigTargetResolution
 	FString ConfigFilePath;
 	FString TargetDescription;
 	FString SummaryText;
+	FSQLUIPersistenceSettingsProductionConfigTargetDescriptor
+		ProductionTargetDescriptor;
 	TArray<FSQLUIPersistenceSettingsValidationMessage> Messages;
 };
 
@@ -87,6 +106,11 @@ public:
 		const FSQLUIPersistenceSettingsApplyProductionTargetEnablement& Enablement);
 
 	static FSQLUIPersistenceSettingsApplyConfigTargetResolution ResolveFutureProjectUserConfigTarget();
+
+	static FString GetSelectedProductionConfigTargetRelativePath();
+
+	static FSQLUIPersistenceSettingsProductionConfigTargetDescriptor
+		DescribeSelectedProductionConfigTarget();
 };
 
 /**

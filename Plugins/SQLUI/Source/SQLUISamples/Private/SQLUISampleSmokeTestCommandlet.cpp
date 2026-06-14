@@ -3167,6 +3167,12 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy documented strategy resolved"), ProbeResult.bApplyConfigTargetPolicyDocumentedStrategyResolved);
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy documented strategy cannot write"), ProbeResult.bApplyConfigTargetPolicyDocumentedStrategyCannotWrite);
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy documented strategy no writable path"), ProbeResult.bApplyConfigTargetPolicyDocumentedStrategyNoWritablePath);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy selected production descriptor resolved"), ProbeResult.bApplyConfigTargetPolicySelectedProductionDescriptorResolved);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy selected production path described"), ProbeResult.bApplyConfigTargetPolicySelectedProductionPathDescribed);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy selected production descriptor cannot write"), ProbeResult.bApplyConfigTargetPolicySelectedProductionDescriptorCannotWrite);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy selected production descriptor not project config"), ProbeResult.bApplyConfigTargetPolicySelectedProductionDescriptorNotProjectConfig);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy selected production target not created"), ProbeResult.bApplyConfigTargetPolicySelectedProductionTargetNotCreated);
+	LogPersistenceSettingsDraftBool(TEXT("apply config target policy guarded production descriptor blocked"), ProbeResult.bApplyConfigTargetPolicyGuardedProductionDescriptorBlocked);
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy documented strategy deterministic"), ProbeResult.bApplyConfigTargetPolicyDocumentedStrategyDeterministic);
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy production apply disabled"), ProbeResult.bApplyConfigTargetPolicyProductionApplyDisabled);
 	LogPersistenceSettingsDraftBool(TEXT("apply config target policy repeated deterministic"), ProbeResult.bApplyConfigTargetPolicyRepeatedDeterministic);
