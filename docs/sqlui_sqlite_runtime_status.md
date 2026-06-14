@@ -142,6 +142,8 @@ The production config target resolution checkpoint records that #137 added a cod
 
 That resolution layer proves the future target and explicit enablement request can be represented safely before writes are enabled. It does not write real user/runtime config, apply settings, create or open databases for writing, run migrations, copy seeds, initialize providers/repositories, delete files, add UI controls, change committed config, change startup behavior, make SQLite default, or enable provider auto-init by default. Future write-enable work must explicitly choose a real target, keep this policy gate in the write path, validate drafts, preserve no-op behavior, separate smoke-owned and real targets, and include config diff/snapshot checks.
 
+The #139 guarded enablement checkpoint keeps the runtime status unchanged: the request is explicit and smoke-tested, but it is still blocked because no concrete safe production target exists. The repository runtime remains `InMemory` by default, SQLite remains opt-in, provider auto-init remains off by default, and the only writable settings target remains the explicit smoke-owned `Saved/SQLUI/SmokeTests` path. The next production apply slice must first name an exact storage surface under a SQLUICore-owned policy, prove it is not committed config, `DefaultEngine.ini`, implicit `Saved/Config`, user/global editor settings, or widget-owned storage, and prove config writes cannot create DBs or initialize providers/repositories as a side effect.
+
 Candidate targets are intentionally separated:
 
 - Committed defaults such as `DefaultEngine.ini` or plugin defaults are rejected for runtime Apply.
