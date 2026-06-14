@@ -2,22 +2,22 @@
 
 This document records the decision gate for future production/user config writes from the SQLUI persistence settings Apply path.
 
-The current implementation deliberately keeps real Apply unavailable. SQLUICore has a non-mutating apply entrypoint/result skeleton, UI-safe result display rows, SQLUISamples sample/dev display surfaces, a smoke-owned config target scaffold, and an apply config target policy/resolver skeleton. The policy layer now also exposes `ResolveDocumentedProductionTargetStrategy()` so code and smoke coverage can identify the documented future production target strategy without making it writable. It also exposes a descriptor for the selected future target, `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini`, and a guarded production target enablement request resolver. The selected target is known in code for validation/display purposes only: it is not write-enabled, not implemented for writes, and no file or directory is created. Production/default Apply still does not write config, does not change live runtime settings, does not initialize providers or repositories, and does not create, open, migrate, seed, reset, or delete database files.
+The current implementation deliberately keeps broad/default Apply unavailable. SQLUICore has a default non-mutating apply entrypoint/result path, UI-safe result display rows, SQLUISamples sample/dev display surfaces, a smoke-owned config target scaffold, and an apply config target policy/resolver skeleton. The policy layer exposes `ResolveDocumentedProductionTargetStrategy()` so code and smoke coverage can identify the documented production target strategy without inferring unsafe config locations. It also exposes a descriptor for the selected target, `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini`, and a guarded production target enablement request resolver. The selected target now has one narrow writer: an explicit backend-only `RequestPersistenceSettingsApply` request may create/write that file with only `Backend=<value>`. Production/default Apply still does not write config unless that guarded request is used, does not change live provider/repository state, and does not create, open, migrate, seed, reset, or delete database files.
 
 PR #136 introduced this strategy as a docs-only decision gate. That strategy checkpoint added no runtime code, settings controls, config writes, committed config changes, provider lifecycle behavior, database work, scripts, Build.cs changes, plugin descriptor changes, maps, assets, CI, or packaged behavior. The follow-up policy-resolution slice keeps those runtime safety boundaries intact. This design checkpoint chooses the production target shape for a future implementation, but it still does not write to that target or enable production Apply.
 
 ## Production Config Target Resolution Checkpoint
 
-PR #137 turns the documented strategy into SQLUICore policy resolution without enabling writes. `ResolveDocumentedProductionTargetStrategy()` gives the future project/user target a code-level identity so smoke coverage and future implementations can refer to the same decision point, but the result remains unavailable, non-writable, and production Apply remains disabled. The follow-up descriptor slice names the selected relative target path while still keeping `ConfigFilePath` empty because no writable production path is exposed.
+PR #137 turns the documented strategy into SQLUICore policy resolution without enabling broad writes. `ResolveDocumentedProductionTargetStrategy()` gives the project/runtime target a code-level identity so smoke coverage and scoped implementations can refer to the same decision point, but the resolver result remains unavailable and non-writable for default/general Apply. The follow-up descriptor slice names the selected relative target path while still keeping `ConfigFilePath` empty because no broad writable production path is exposed.
 
 PR #138 is the docs-only checkpoint for that policy-resolution slice. It adds no runtime code, scripts, config changes, Build.cs changes, plugin descriptor changes, assets, maps, smoke flags, generated files, packaged outputs, database files, CI, production/user config writes, runtime settings application, settings controls, startup behavior, provider/repository lifecycle behavior, database creation, database write-open, migrations, seed copy, or behavior changes.
 
 This checkpoint proves target resolution only:
 
-- SQLUICore can represent the documented future real target without exposing `DefaultEngine.ini`, generated `Saved/Config`, user/global editor settings, or any other writable production path.
-- Default/runtime Apply remains unavailable/not implemented and non-writable.
-- Explicit smoke-owned targets under `Saved/SQLUI/SmokeTests` remain the only write-capable targets.
-- The selected future real project/user target remains unavailable/non-writable until a later PR deliberately implements and validates writes to the descriptor target.
+- SQLUICore can represent the documented selected target without exposing `DefaultEngine.ini`, generated `Saved/Config`, user/global editor settings, or any broad writable production path.
+- Default/runtime Apply remains unavailable/not implemented and non-writable unless the explicit backend-only production request is used.
+- Explicit smoke-owned targets under `Saved/SQLUI/SmokeTests` remain the only full-draft write-capable targets.
+- The selected project/runtime target is implemented only for backend-value writes; broader writes remain unavailable.
 - SQLUICore can describe `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` as SQLUICore/plugin-managed, non-committed, not `DefaultEngine.ini`, not generated `Saved/Config`, and not user/global editor settings.
 - The descriptor does not create the target file or parent directory.
 - `-UsePersistenceSettingsDraftProbe` verifies deterministic resolution, repo `Config` / `Saved/Config` preservation, no DB creation, no DB write-open, no migrations, no seed copy, no provider/repository lifecycle work, and smoke-owned cleanup.
@@ -28,7 +28,7 @@ It does not add production/user config writes, runtime settings application, com
 
 The guarded enablement resolver is intentionally policy-only. `ResolveDocumentedProductionTargetStrategyWithEnablement()` accepts an explicit request value so future Apply work can distinguish "no production target requested" from "production target requested but blocked." In this slice both states remain non-writable because the selected descriptor target has no writer implementation yet.
 
-When no enablement request is supplied, the documented production target stays unavailable, non-writable, and production Apply disabled. When an enablement request is supplied, SQLUICore records that request and returns a warning that enablement remains blocked because the selected `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` target is not implemented yet. The result still exposes no writable `ConfigFilePath`, has `bCanWrite=false`, and keeps production Apply disabled.
+When no enablement request is supplied, the documented production target stays unavailable, non-writable, and production Apply disabled. When an enablement request is supplied to the resolver, SQLUICore records that request but still exposes no general writable `ConfigFilePath` and keeps the broad target policy blocked. The backend-only apply path is separate: it uses an explicit apply request and writes only the `Backend` value to the selected `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` target.
 
 This guarded request does not:
 
@@ -45,9 +45,9 @@ The purpose is to make the future enablement gate explicit without making the se
 
 ## Guarded Production Target Enablement Checkpoint
 
-PR #139 added the guarded SQLUICore production target enablement request/resolution. This checkpoint documents what that implementation proves: SQLUICore can now represent an explicit request to enable the documented production target, record that request, and still block it through policy while the selected target remains unimplemented.
+PR #139 added the guarded SQLUICore production target enablement request/resolution. This checkpoint documents what that implementation proves: SQLUICore can represent an explicit request to enable the documented production target, record that request, and still block broad target writes through policy while allowing later scoped writers to opt into a narrower path.
 
-The request remains blocked, non-writable, deterministic, and side-effect free. Production/default Apply remains unavailable/not implemented, real user/runtime config writes remain disabled, and explicit smoke-owned targets remain the only write-capable targets. No committed config was added, no runtime settings are applied, no provider/repository lifecycle behavior runs, no DB files are created or opened for writing, no migrations run, no seed copy runs, and cleanup removes only smoke-owned artifacts.
+The resolver request remains blocked, non-writable, deterministic, and side-effect free. Production/default Apply remains unavailable/not implemented unless the explicit backend-only request is used, and explicit smoke-owned targets remain the only full-draft write-capable targets. No committed config was added, no live runtime settings are applied, no provider/repository lifecycle behavior runs, no DB files are created or opened for writing, no migrations run, no seed copy runs, and cleanup removes only smoke-owned or probe-created artifacts.
 
 This design checkpoint chooses the concrete production target strategy for future implementation:
 
@@ -74,7 +74,7 @@ This descriptor is not a writer. It does not create `Saved/SQLUI/PersistenceSett
 
 ## Concrete Production Target Design
 
-The selected future production target is a SQLUICore-owned settings artifact:
+The selected production target is a SQLUICore-owned settings artifact:
 
 ```text
 Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini
@@ -90,7 +90,7 @@ Implementation should resolve this relative to `FPaths::ProjectSavedDir()` or th
 
 The file purpose is narrow: store validated SQLUI persistence settings intent for future runtime policy. It should not contain layout document JSON, SQLite schema data, migration rows, seed database content, or status/cache output.
 
-The first write implementation should store only the minimum validated settings needed to prove the target safely. The recommended first scope is backend selection only. Provider auto-init can follow only after restart/reopen/reinitialize messaging and startup impact are separately represented and validated. SQLite database path, seed database path, schema-create flags, seed-copy flags, reset/delete choices, migration controls, provider/repository lifecycle triggers, and UI control state remain out of the first write scope.
+The first write implementation stores only the minimum validated setting needed to prove the target safely: backend selection. Provider auto-init can follow only after restart/reopen/reinitialize messaging and startup impact are separately represented and validated. SQLite database path, seed database path, schema-create flags, seed-copy flags, reset/delete choices, migration controls, provider/repository lifecycle triggers, and UI control state remain out of the first write scope.
 
 Because this target lives under `Saved/SQLUI`, future runtime database files can continue to live under `Saved/SQLUI/LayoutRepositories` without conflating settings persistence with database contents. A settings file write must not create, open, migrate, seed, reset, or delete any database file as a side effect.
 
@@ -102,8 +102,8 @@ The current policy skeleton intentionally refuses to infer that target:
 
 - `ResolveDefaultRuntimeTarget()` reports production/default Apply unavailable and non-writable.
 - `ResolveExplicitTarget()` can resolve only explicit smoke/test-owned targets under `Saved/SQLUI/SmokeTests`.
-- `ResolveDocumentedProductionTargetStrategy()` represents the documented production strategy as a future project/user target kind, includes the selected non-writable descriptor path, keeps `ConfigFilePath` empty, keeps `bCanWrite=false`, and keeps production Apply disabled.
-- `ResolveFutureProjectUserConfigTarget()` delegates to the documented production strategy resolution, so the future real project/user target remains unavailable/not implemented.
+- `ResolveDocumentedProductionTargetStrategy()` represents the documented production strategy, includes the selected descriptor path, keeps `ConfigFilePath` empty, and keeps broad production Apply disabled.
+- `ResolveFutureProjectUserConfigTarget()` delegates to the documented production strategy resolution, so broad project/runtime target selection remains unavailable/not implemented outside separately scoped writers.
 
 Smoke-owned targets are not production targets. They exist so commandlet smoke coverage can prove validation, narrow serialization, config preservation, and cleanup without touching project defaults, generated `Saved/Config`, user/global editor settings, provider lifecycle, or SQLite files.
 
@@ -117,18 +117,18 @@ Future production writes must not be inferred implicitly from Unreal config conv
 | Generated project `Saved/Config` | Not selected | Medium. It is project-local and usually not committed, but it can still affect future editor/project launches. | Needs separate review. It can affect startup/config load behavior and requires packaged validation before it can be a real target. | Smoke use would need isolated paths, diff/restore checks, and proof that Apply does not create DB files or initialize providers. |
 | User-specific Unreal config or global editor settings | Rejected unless a future PR deliberately scopes it | High. It can surprise users, cross projects, or escape the project scope. | Needs separate review if ever scoped; user/global settings can affect future sessions outside SQLUI's current project-owned policy. | Not a smoke target today. SQLUI should not write user/global editor settings unexpectedly and must not use them to enable SQLite/provider auto-init. |
 | Existing `USQLUILayoutRepositoryRuntimeSettings` config-backed object | Not selected for runtime writes yet | Medium. It is the current config-backed runtime settings policy surface and has safe defaults, but it is `Config=Game`. | Needs explicit startup impact review and packaged validation if writes can change runtime behavior. | Not a write target yet. Any future use needs explicit target semantics, validation, diff/snapshot checks, and proof that config Apply alone does not create DBs or run provider/repository lifecycle. |
-| SQLUICore-owned persistence settings file under `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` | Selected design, not implemented or write-enabled | Lower than committed defaults because it is generated project/runtime state under SQLUI ownership. It still needs a SQLUICore helper/policy implementation before use. | Needs packaged path behavior validated before writes are considered production-ready. | Must stay separate from `Saved/SQLUI/SmokeTests` and `Saved/SQLUI/LayoutRepositories`; must prove no DB creation, migration, seed copy, provider init, repository init, reset/delete, or provider auto-init side effect. |
+| SQLUICore-owned persistence settings file under `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` | Selected design, implemented for backend-only writes | Lower than committed defaults because it is generated project/runtime state under SQLUI ownership. It is currently limited to a single backend value. | Needs packaged path behavior validated before broader writes are considered production-ready. | Must stay separate from `Saved/SQLUI/SmokeTests` and `Saved/SQLUI/LayoutRepositories`; current smoke coverage proves backend-only write/no-op/refusal behavior and no DB creation, migration, seed copy, provider init, repository init, reset/delete, provider auto-init, or SQLite path serialization side effect. |
 | Other plugin-managed settings file under `Saved/SQLUI` | Deferred | Similar risk profile, but less precise than the selected `PersistenceSettings/RuntimeSettings.ini` target. | Would need the same packaged path validation. | Do not invent an alternate filename in implementation without updating this strategy and smoke expectations. |
-| Existing explicit smoke-owned target under `Saved/SQLUI/SmokeTests` | Acceptable for smoke only | Low when explicitly requested from smoke code. It is not a production/user target. | Not a packaged/runtime policy target. | This is the only write-capable path today. It must stay explicit, temporary, cleaned up, and separated from real production targets; it does not enable SQLite/provider auto-init by default. |
-| Continue with no production write target | Current implementation state only | Lowest. No real settings file is written. | No packaged validation required because no startup/config behavior changes. | The design now chooses the future target, but code must remain blocked until a later implementation PR safely writes it. |
+| Existing explicit smoke-owned target under `Saved/SQLUI/SmokeTests` | Acceptable for smoke only | Low when explicitly requested from smoke code. It is not a production/user target. | Not a packaged/runtime policy target. | This remains the only full-draft write-capable path. It must stay explicit, temporary, cleaned up, and separated from the production target; it does not enable SQLite/provider auto-init by default. |
+| Continue with no production write target | Historical pre-backend-write state only | Lowest. No real settings file is written. | No packaged validation required because no startup/config behavior changes. | Superseded by the backend-only write slice; still useful as the fallback policy for any setting outside the scoped backend value. |
 
 ## Recommended Next Target Strategy
 
-No existing production target is write-enabled today. The selected future target is the SQLUICore-owned file under `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini`, and SQLUICore can now describe that target, but production/default Apply must remain unavailable until that target has a concrete SQLUICore writer implementation and smoke coverage.
+The selected production target is now write-enabled only for backend choice. It is the SQLUICore-owned file under `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini`, and SQLUICore can describe that target, but production/default Apply must remain unavailable for every setting beyond the backend value until additional scopes have concrete SQLUICore writer implementation and smoke coverage.
 
 The recommended next step is to implement that target behind the existing SQLUICore policy boundary, not in widgets or SQLUISamples. That future implementation PR should:
 
-- add a SQLUICore-owned resolver/writer for `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini`.
+- extend the SQLUICore-owned resolver/writer for `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` only through separately scoped settings.
 - keep `ResolveDefaultRuntimeTarget()` non-writable unless the future implementation explicitly enables this selected target.
 - keep `ResolveDocumentedProductionTargetStrategyWithEnablement()` blocked until the target is implemented and the request is policy-accepted.
 - keep explicit smoke-owned targets under `Saved/SQLUI/SmokeTests` separate from the production target.
@@ -200,10 +200,11 @@ Existing `-UsePersistenceSettingsDraftProbe` coverage already confirms the curre
 
 - default/runtime target unavailable.
 - smoke-owned target explicit only.
-- future real target unavailable.
-- documented production target strategy represented, non-writable, descriptor-backed, and deterministic.
-- selected production target descriptor resolves to `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini`, reports SQLUICore/plugin-managed ownership, rejects committed/default/generated/user config surfaces, and does not create the target file or directory.
-- guarded production target enablement requests are recorded but remain blocked, non-writable, deterministic, and side-effect free.
+- broad/default production target policy unavailable.
+- documented production target strategy represented, non-writable for broad/default Apply, descriptor-backed, and deterministic.
+- selected production target descriptor resolves to `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini`, reports SQLUICore/plugin-managed ownership, rejects committed/default/generated/user config surfaces, and does not create the target file or directory by descriptor resolution alone.
+- guarded production target enablement requests are recorded, deterministic, and side-effect free at the resolver layer.
+- explicit backend-only production apply can create/write the selected target with only `Backend=<value>` and cleans up the probe-created file.
 - invalid drafts do not mutate the smoke target.
 - no-change drafts remain no-op.
 - repo `Config` and `Saved/Config` stay unchanged.
@@ -225,4 +226,4 @@ Packaged validation becomes required for the future implementation that writes t
 
 Production Apply remains unavailable.
 
-The only write-capable path today is the explicit smoke-owned config target under `Saved/SQLUI/SmokeTests`. This document selects the future production target design as `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini`, owned by SQLUICore and used only for validated persistence settings intent. SQLUICore can now describe that selected target, but the current policy still represents the production target as non-writable and exposes no writable `ConfigFilePath` because no implementation writes that selected target yet. Explicit production target enablement can be requested in policy, but that request remains blocked and not accepted until a later SQLUICore policy PR implements and validates the selected target.
+The only full-draft write-capable path today is the explicit smoke-owned config target under `Saved/SQLUI/SmokeTests`. This document selects the production target design as `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini`, owned by SQLUICore and used only for validated persistence settings intent. SQLUICore can describe that selected target, and the first implementation writes only the backend value through an explicit guarded apply request. The current policy still exposes no broad writable production `ConfigFilePath`; SQLite path, provider auto-init, migration/seed/reset/delete settings, and lifecycle behavior require later SQLUICore policy PRs with focused validation.

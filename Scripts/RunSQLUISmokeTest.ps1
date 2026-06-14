@@ -144,16 +144,16 @@ Parameters:
       Blueprint-facing presenter/panel adapter/widget shell hook probe.
 
   -UsePersistenceSettingsDraftProbe
-      Run the optional SQLUICore validation/preview-only persistence settings draft
-      and validation display-row probe, including the dry-run apply-intent preview,
-      non-mutating apply/cancel contract, apply preview display rows, apply/cancel
-      contract display rows, the unavailable/non-mutating actual apply entrypoint
-      skeleton, UI-safe apply result display rows, the explicit smoke-owned
-      apply config target scaffold, SQLUISamples
-      validation/apply-preview/apply-contract/apply-result sample adapters, and
+      Run the optional SQLUICore persistence settings draft, validation,
+      dry-run apply preview, apply/cancel contract, apply result display,
+      smoke-owned apply config target, and backend-only production apply probe.
+      Default Apply remains unavailable/non-mutating, while the explicit
+      guarded backend-only production request writes only Backend=<value> to
+      Saved\SQLUI\PersistenceSettings\RuntimeSettings.ini and cleans up the
+      probe-created artifact. The probe also validates SQLUISamples
+      validation/apply-preview/apply-contract/apply-result sample adapters and
       validation/apply-preview/apply-contract/apply-result C++ UMG widget shell
-      contracts. The config target proof writes only to a smoke-owned temporary
-      ini artifact and cleans it up.
+      contracts.
 
   -UseSQLiteMigrationProbe
       Run the optional SQLUICore SQLite migration-runner probe.

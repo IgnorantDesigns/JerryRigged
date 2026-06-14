@@ -8782,6 +8782,41 @@ bool DeleteSQLUISamplePersistenceSettingsDraftConfigTarget(
 	return bRemoved;
 }
 
+bool DeleteSQLUISampleSelectedProductionPersistenceSettingsTargetIfCreated(
+	const FString& ConfigPath,
+	const bool bFileExistedBefore,
+	const bool bDirectoryExistedBefore,
+	FSQLUISamplePersistenceSettingsDraftProbeResult& Result)
+{
+	bool bRemoved = true;
+	if (!bFileExistedBefore
+		&& FPaths::FileExists(ConfigPath)
+		&& !IFileManager::Get().Delete(*ConfigPath, false, true, true))
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI persistence settings draft probe failed: could not remove selected production config target '%s'."),
+				*ConfigPath));
+		bRemoved = false;
+	}
+
+	const FString Directory = FPaths::GetPath(ConfigPath);
+	if (!bDirectoryExistedBefore
+		&& IFileManager::Get().DirectoryExists(*Directory)
+		&& !IFileManager::Get().DeleteDirectory(*Directory, false, true))
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI persistence settings draft probe failed: could not remove selected production config target directory '%s'."),
+				*Directory));
+		bRemoved = false;
+	}
+
+	return bRemoved;
+}
+
 TArray<FString> MakeSQLUISamplePersistenceSettingsDraftFiles(
 	const FString& DatabasePath)
 {
@@ -9658,6 +9693,9 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		IFileManager::Get().DirectoryExists(*SelectedProductionTargetDirectory);
 	const TArray<FSQLUISampleFileSnapshot> SelectedProductionTargetBefore =
 		CaptureSQLUISampleFileSnapshots({ SelectedProductionTargetPath });
+	const bool bSelectedProductionTargetFileExistedBefore =
+		SelectedProductionTargetBefore.Num() > 0
+		&& SelectedProductionTargetBefore[0].bExists;
 
 	DeleteSQLUISamplePersistenceSettingsDraftFiles(Result);
 	DeleteSQLUISamplePersistenceSettingsDraftConfigTarget(
@@ -10495,6 +10533,16 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		{
 			FSQLUIPersistenceSettingsApplyRequest Request;
 			Request.Draft = Draft;
+			return Request;
+		};
+	const auto MakeBackendOnlyProductionApplyRequest =
+		[](const FSQLUIPersistenceSettingsDraft& Draft)
+		{
+			FSQLUIPersistenceSettingsApplyRequest Request;
+			Request.Draft = Draft;
+			Request.bRequestBackendOnlyProductionApply = true;
+			Request.ProductionTargetEnablementRequestDescription =
+				TEXT("SQLUI persistence settings draft probe backend-only production apply request.");
 			return Request;
 		};
 	FSQLUIPersistenceSettingsDraft ApplyNoCreateDirectoryDraft = SQLiteDraft;
@@ -11496,6 +11544,152 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			ProductionTargetEnablementPolicy,
 			RepeatedProductionTargetEnablementPolicy);
 
+	Result.bBackendOnlyProductionApplyUnavailableWithoutRequest =
+		!SQLiteApplyRequestResult.bSucceeded
+		&& !SQLiteApplyRequestResult.bActualApplyImplemented
+		&& SQLiteApplyRequestResult.Status
+			== ESQLUIPersistenceSettingsApplyStatus::PreviewOnly
+		&& AreSQLUISampleFileSnapshotsUnchanged(
+			SelectedProductionTargetBefore,
+			CaptureSQLUISampleFileSnapshots({ SelectedProductionTargetPath }));
+
+	FString ProductionConfigTargetContents;
+	FString ProductionConfigTargetContentsBeforeInvalidWrite;
+	if (bSelectedProductionTargetFileExistedBefore)
+	{
+		AppendSQLUISamplePersistenceSettingsDraftProbeError(
+			Result,
+			FString::Printf(
+				TEXT("SQLUI persistence settings draft probe skipped backend-only production apply write because the selected target already existed: '%s'."),
+				*SelectedProductionTargetPath));
+	}
+	else
+	{
+		const FSQLUIPersistenceSettingsApplyResult
+			BackendOnlyProductionApplyResult =
+				USQLUIPersistenceSettingsDraftLibrary::
+					RequestPersistenceSettingsApply(
+						MakeBackendOnlyProductionApplyRequest(SQLiteDraft));
+		FFileHelper::LoadFileToString(
+			ProductionConfigTargetContents,
+			*SelectedProductionTargetPath);
+		Result.bBackendOnlyProductionApplyCreatedTarget =
+			BackendOnlyProductionApplyResult.bSucceeded
+			&& BackendOnlyProductionApplyResult.bActualApplyImplemented
+			&& BackendOnlyProductionApplyResult.Status
+				== ESQLUIPersistenceSettingsApplyStatus::Succeeded
+			&& BackendOnlyProductionApplyResult.bDidWriteConfig
+			&& BackendOnlyProductionApplyResult.bDidChangeSettings
+			&& FPaths::FileExists(SelectedProductionTargetPath)
+			&& IFileManager::Get().DirectoryExists(
+				*SelectedProductionTargetDirectory);
+		Result.bBackendOnlyProductionApplyWroteBackendOnly =
+			ProductionConfigTargetContents.Contains(
+				TEXT("[SQLUI.PersistenceSettings]"))
+			&& ProductionConfigTargetContents.Contains(TEXT("Backend=SQLite"))
+			&& !ProductionConfigTargetContents.Contains(TEXT("JsonFile"))
+			&& !ProductionConfigTargetContents.Contains(TEXT("ReadOnly"))
+			&& !ProductionConfigTargetContents.Contains(TEXT("Migration"))
+			&& !ProductionConfigTargetContents.Contains(TEXT("Seed"))
+			&& !ProductionConfigTargetContents.Contains(TEXT("Reset"))
+			&& !ProductionConfigTargetContents.Contains(TEXT("Delete"));
+		Result.bBackendOnlyProductionApplyDidNotWriteSQLitePath =
+			!ProductionConfigTargetContents.Contains(TEXT("SQLiteDatabasePath"))
+			&& !ProductionConfigTargetContents.Contains(Result.DatabasePath);
+		Result.bBackendOnlyProductionApplyDidNotWriteProviderAutoInit =
+			!ProductionConfigTargetContents.Contains(
+				TEXT("ProviderAutoInitialize"));
+		Result.bBackendOnlyProductionApplySQLiteDidNotCreateDb =
+			!BackendOnlyProductionApplyResult.bDidCreateDatabaseFiles
+			&& !BackendOnlyProductionApplyResult.bDidOpenDatabaseForWriting
+			&& !BackendOnlyProductionApplyResult.bDidRunMigrations
+			&& !BackendOnlyProductionApplyResult.bDidCopySeedDatabase
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+		Result.bBackendOnlyProductionApplyNoLifecycleSideEffects =
+			!BackendOnlyProductionApplyResult.bDidInitializeProvider
+			&& !BackendOnlyProductionApplyResult.bDidInitializeRepository
+			&& !BackendOnlyProductionApplyResult.bDidCreateDatabaseFiles
+			&& !BackendOnlyProductionApplyResult.bDidOpenDatabaseForWriting
+			&& !BackendOnlyProductionApplyResult.bDidRunMigrations
+			&& !BackendOnlyProductionApplyResult.bDidCopySeedDatabase
+			&& !BackendOnlyProductionApplyResult.bDidDeleteFiles;
+		Result.bBackendOnlyProductionApplyPreservedConfigFiles =
+			AreSQLUISampleFileSnapshotsUnchanged(
+				ApplyConfigBefore,
+				CaptureSQLUISampleFileSnapshots(ApplyConfigPaths));
+
+		const TArray<FSQLUISampleFileSnapshot>
+			SelectedProductionTargetAfterValidWrite =
+				CaptureSQLUISampleFileSnapshots({ SelectedProductionTargetPath });
+		const FSQLUIPersistenceSettingsApplyResult
+			BackendOnlyNoChangeApplyResult =
+				USQLUIPersistenceSettingsDraftLibrary::
+					RequestPersistenceSettingsApply(
+						MakeBackendOnlyProductionApplyRequest(DefaultDraft));
+		Result.bBackendOnlyProductionApplyNoChangeNoOp =
+			BackendOnlyNoChangeApplyResult.bSucceeded
+			&& BackendOnlyNoChangeApplyResult.bActualApplyImplemented
+			&& BackendOnlyNoChangeApplyResult.Status
+				== ESQLUIPersistenceSettingsApplyStatus::NoChanges
+			&& !BackendOnlyNoChangeApplyResult.bDidWriteConfig
+			&& !BackendOnlyNoChangeApplyResult.bDidChangeSettings
+			&& AreSQLUISampleFileSnapshotsUnchanged(
+				SelectedProductionTargetAfterValidWrite,
+				CaptureSQLUISampleFileSnapshots({ SelectedProductionTargetPath }));
+
+		const FSQLUIPersistenceSettingsApplyResult
+			BackendOnlyProviderAutoInitApplyResult =
+				USQLUIPersistenceSettingsDraftLibrary::
+					RequestPersistenceSettingsApply(
+						MakeBackendOnlyProductionApplyRequest(
+							ProviderAutoInitDraft));
+		Result.bBackendOnlyProductionApplyProviderAutoInitRejected =
+			!BackendOnlyProviderAutoInitApplyResult.bSucceeded
+			&& BackendOnlyProviderAutoInitApplyResult.bActualApplyImplemented
+			&& BackendOnlyProviderAutoInitApplyResult.Status
+				== ESQLUIPersistenceSettingsApplyStatus::Failed
+			&& !BackendOnlyProviderAutoInitApplyResult.bDidWriteConfig
+			&& !BackendOnlyProviderAutoInitApplyResult.bDidChangeSettings
+			&& AreSQLUISampleFileSnapshotsUnchanged(
+				SelectedProductionTargetAfterValidWrite,
+				CaptureSQLUISampleFileSnapshots({ SelectedProductionTargetPath }));
+
+		ProductionConfigTargetContentsBeforeInvalidWrite =
+			ProductionConfigTargetContents;
+		const FSQLUIPersistenceSettingsApplyResult
+			BackendOnlyInvalidDraftApplyResult =
+				USQLUIPersistenceSettingsDraftLibrary::
+					RequestPersistenceSettingsApply(
+						MakeBackendOnlyProductionApplyRequest(
+							UnknownBackendDraft));
+		FString ProductionConfigTargetContentsAfterInvalidWrite;
+		FFileHelper::LoadFileToString(
+			ProductionConfigTargetContentsAfterInvalidWrite,
+			*SelectedProductionTargetPath);
+		Result.bBackendOnlyProductionApplyInvalidDraftRefused =
+			!BackendOnlyInvalidDraftApplyResult.bSucceeded
+			&& BackendOnlyInvalidDraftApplyResult.bActualApplyImplemented
+			&& BackendOnlyInvalidDraftApplyResult.Status
+				== ESQLUIPersistenceSettingsApplyStatus::BlockedByValidation
+			&& !BackendOnlyInvalidDraftApplyResult.bDidWriteConfig
+			&& !BackendOnlyInvalidDraftApplyResult.bDidChangeSettings;
+		Result.bBackendOnlyProductionApplyInvalidDidNotMutate =
+			ProductionConfigTargetContentsAfterInvalidWrite
+			== ProductionConfigTargetContentsBeforeInvalidWrite;
+
+		Result.bBackendOnlyProductionApplyArtifactCleaned =
+			DeleteSQLUISampleSelectedProductionPersistenceSettingsTargetIfCreated(
+				SelectedProductionTargetPath,
+				bSelectedProductionTargetFileExistedBefore,
+				bSelectedProductionTargetDirectoryExistedBefore,
+				Result)
+			&& !FPaths::FileExists(SelectedProductionTargetPath);
+		Result.bBackendOnlyProductionApplyDirectoryCleaned =
+			bSelectedProductionTargetDirectoryExistedBefore
+			|| !IFileManager::Get().DirectoryExists(
+				*SelectedProductionTargetDirectory);
+	}
+
 	const FSQLUIPersistenceSettingsApplyConfigWriteResult
 		RuntimeConfigTargetResult =
 			FSQLUIPersistenceSettingsApplyConfigTargetWriter::WriteToConfigTarget(
@@ -11643,7 +11837,21 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		|| !Result.bApplyConfigTargetPolicyProductionEnablementBlocked
 		|| !Result.bApplyConfigTargetPolicyProductionEnablementNoWritablePath
 		|| !Result.bApplyConfigTargetPolicyProductionEnablementNoSideEffects
-		|| !Result.bApplyConfigTargetPolicyProductionEnablementDeterministic)
+		|| !Result.bApplyConfigTargetPolicyProductionEnablementDeterministic
+		|| !Result.bBackendOnlyProductionApplyUnavailableWithoutRequest
+		|| !Result.bBackendOnlyProductionApplyCreatedTarget
+		|| !Result.bBackendOnlyProductionApplyWroteBackendOnly
+		|| !Result.bBackendOnlyProductionApplyDidNotWriteSQLitePath
+		|| !Result.bBackendOnlyProductionApplyDidNotWriteProviderAutoInit
+		|| !Result.bBackendOnlyProductionApplySQLiteDidNotCreateDb
+		|| !Result.bBackendOnlyProductionApplyNoLifecycleSideEffects
+		|| !Result.bBackendOnlyProductionApplyPreservedConfigFiles
+		|| !Result.bBackendOnlyProductionApplyNoChangeNoOp
+		|| !Result.bBackendOnlyProductionApplyProviderAutoInitRejected
+		|| !Result.bBackendOnlyProductionApplyInvalidDraftRefused
+		|| !Result.bBackendOnlyProductionApplyInvalidDidNotMutate
+		|| !Result.bBackendOnlyProductionApplyArtifactCleaned
+		|| !Result.bBackendOnlyProductionApplyDirectoryCleaned)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
@@ -12995,6 +13203,20 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bApplyConfigTargetPolicyProductionEnablementNoWritablePath
 		&& Result.bApplyConfigTargetPolicyProductionEnablementNoSideEffects
 		&& Result.bApplyConfigTargetPolicyProductionEnablementDeterministic
+		&& Result.bBackendOnlyProductionApplyUnavailableWithoutRequest
+		&& Result.bBackendOnlyProductionApplyCreatedTarget
+		&& Result.bBackendOnlyProductionApplyWroteBackendOnly
+		&& Result.bBackendOnlyProductionApplyDidNotWriteSQLitePath
+		&& Result.bBackendOnlyProductionApplyDidNotWriteProviderAutoInit
+		&& Result.bBackendOnlyProductionApplySQLiteDidNotCreateDb
+		&& Result.bBackendOnlyProductionApplyNoLifecycleSideEffects
+		&& Result.bBackendOnlyProductionApplyPreservedConfigFiles
+		&& Result.bBackendOnlyProductionApplyNoChangeNoOp
+		&& Result.bBackendOnlyProductionApplyProviderAutoInitRejected
+		&& Result.bBackendOnlyProductionApplyInvalidDraftRefused
+		&& Result.bBackendOnlyProductionApplyInvalidDidNotMutate
+		&& Result.bBackendOnlyProductionApplyArtifactCleaned
+		&& Result.bBackendOnlyProductionApplyDirectoryCleaned
 		&& Result.bBackendChangeApplyContractDetected
 		&& Result.bSQLiteApplyContractSafe
 		&& Result.bUnknownBackendApplyContractBlocked

@@ -194,6 +194,149 @@ FString MakeSQLUIPersistenceSettingsSmokeConfigText(
 			Draft.bPendingProviderAutoInitialize));
 	return Text;
 }
+
+FString GetSQLUIPersistenceSettingsSelectedProductionConfigPath()
+{
+	FString ConfigPath = FPaths::Combine(
+		FPaths::ProjectDir(),
+		GetSQLUIPersistenceSettingsSelectedProductionRelativePath());
+	FPaths::NormalizeFilename(ConfigPath);
+	return FPaths::ConvertRelativePathToFull(ConfigPath);
+}
+
+FString MakeSQLUIPersistenceSettingsBackendOnlyProductionConfigText(
+	const ESQLUILayoutRepositoryBackend Backend)
+{
+	FString Text;
+	Text += TEXT("[SQLUI.PersistenceSettings]\n");
+	Text += FString::Printf(
+		TEXT("Backend=%s\n"),
+		*SQLUIPersistenceSettingsBackendText(Backend));
+	return Text;
+}
+
+FString TrimSQLUIPersistenceSettingsConfigString(FString Value)
+{
+	Value.TrimStartAndEndInline();
+	return Value;
+}
+
+bool AreSQLUIPersistenceSettingsConfigStringsEquivalent(
+	const FString& First,
+	const FString& Second)
+{
+	return TrimSQLUIPersistenceSettingsConfigString(First)
+		.Equals(
+			TrimSQLUIPersistenceSettingsConfigString(Second),
+			ESearchCase::CaseSensitive);
+}
+
+bool AreSQLUIPersistenceSettingsConfigPathsEquivalent(
+	const FString& First,
+	const FString& Second)
+{
+	return FSQLUILayoutRepositoryRuntimeConfigResolver::ResolveSQLiteDatabasePath(First)
+		.Equals(
+			FSQLUILayoutRepositoryRuntimeConfigResolver::ResolveSQLiteDatabasePath(
+				Second),
+			ESearchCase::CaseSensitive);
+}
+
+bool AreSQLUIPersistenceSettingsSeedConfigPathsEquivalent(
+	const FString& First,
+	const FString& Second)
+{
+	return FSQLUILayoutRepositoryRuntimeConfigResolver::ResolveSQLiteSeedDatabasePath(First)
+		.Equals(
+			FSQLUILayoutRepositoryRuntimeConfigResolver::
+				ResolveSQLiteSeedDatabasePath(Second),
+			ESearchCase::CaseSensitive);
+}
+
+bool IsSQLUIPersistenceSettingsBackendOnlyProductionScopeAllowed(
+	const FSQLUIPersistenceSettingsDraft& Draft,
+	FString& OutDetailText)
+{
+	const FSQLUILayoutRepositoryRuntimeConfig& Current =
+		Draft.CurrentRuntimeConfig;
+	const FSQLUILayoutRepositoryRuntimeConfig& Pending =
+		Draft.PendingRuntimeConfig;
+	const bool bWouldChangeBackend = Current.Backend != Pending.Backend;
+	const bool bWouldChangeJsonFileBaseDirectory =
+		!AreSQLUIPersistenceSettingsConfigStringsEquivalent(
+			Current.JsonFileBaseDirectory,
+			Pending.JsonFileBaseDirectory);
+	const bool bWouldChangeSQLiteDatabasePath =
+		!AreSQLUIPersistenceSettingsConfigPathsEquivalent(
+			Current.SQLiteDatabasePath,
+			Pending.SQLiteDatabasePath);
+	const bool bWouldChangeSQLiteSeedDatabasePath =
+		!AreSQLUIPersistenceSettingsSeedConfigPathsEquivalent(
+			Current.SQLiteSeedDatabasePath,
+			Pending.SQLiteSeedDatabasePath);
+	const bool bWouldChangeSQLitePolicy =
+		Current.bSQLiteReadOnly != Pending.bSQLiteReadOnly
+		|| Current.bSQLiteInitializeSchemaIfMissing
+			!= Pending.bSQLiteInitializeSchemaIfMissing
+		|| Current.bSQLiteCreateDatabaseIfMissing
+			!= Pending.bSQLiteCreateDatabaseIfMissing
+		|| Current.bSQLiteRunCallbackOperationsAsync
+			!= Pending.bSQLiteRunCallbackOperationsAsync
+		|| Current.bSQLiteCopySeedIfMissing
+			!= Pending.bSQLiteCopySeedIfMissing
+		|| Current.bSQLiteOverwriteDatabaseFromSeed
+			!= Pending.bSQLiteOverwriteDatabaseFromSeed;
+	const bool bWouldChangeProviderAutoInitialize =
+		Draft.bCurrentProviderAutoInitialize
+		!= Draft.bPendingProviderAutoInitialize;
+
+	if (!bWouldChangeBackend)
+	{
+		if (bWouldChangeJsonFileBaseDirectory
+			|| bWouldChangeSQLiteDatabasePath
+			|| bWouldChangeSQLiteSeedDatabasePath
+			|| bWouldChangeSQLitePolicy
+			|| bWouldChangeProviderAutoInitialize)
+		{
+			OutDetailText =
+				TEXT("Only the backend value may be written by this production Apply slice.");
+			return false;
+		}
+
+		return true;
+	}
+
+	if (bWouldChangeProviderAutoInitialize)
+	{
+		OutDetailText =
+			TEXT("Provider auto-init changes are not allowed in the backend-only production Apply slice.");
+		return false;
+	}
+
+	if (bWouldChangeJsonFileBaseDirectory)
+	{
+		OutDetailText =
+			TEXT("JsonFile directory changes are not allowed in the backend-only production Apply slice.");
+		return false;
+	}
+
+	if (bWouldChangeSQLiteSeedDatabasePath || bWouldChangeSQLitePolicy)
+	{
+		OutDetailText =
+			TEXT("SQLite policy, migration, database creation, async, or seed-copy settings are not allowed in the backend-only production Apply slice.");
+		return false;
+	}
+
+	if (bWouldChangeSQLiteDatabasePath
+		&& Pending.Backend != ESQLUILayoutRepositoryBackend::SQLite)
+	{
+		OutDetailText =
+			TEXT("SQLite database path changes are not allowed unless SQLite is only being selected as the backend for validation.");
+		return false;
+	}
+
+	return true;
+}
 }
 
 FSQLUIPersistenceSettingsApplyConfigTargetResolution
@@ -510,5 +653,140 @@ FSQLUIPersistenceSettingsApplyConfigTargetWriter::WriteToConfigTarget(
 		ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
 		TEXT("Smoke-owned persistence settings config target was written."),
 		TEXT("Runtime/default config, provider lifecycle, repositories, databases, migrations, seed copy, and destructive actions were not touched."));
+	return Result;
+}
+
+FSQLUIPersistenceSettingsApplyConfigWriteResult
+FSQLUIPersistenceSettingsApplyConfigTargetWriter::
+	WriteBackendOnlyToSelectedProductionTarget(
+		const FSQLUIPersistenceSettingsApplyRequest& Request,
+		const FSQLUIPersistenceSettingsApplyProductionTargetEnablement&
+			Enablement)
+{
+	FSQLUIPersistenceSettingsApplyConfigWriteResult Result;
+	Result.bUsedProductionTarget = true;
+	Result.bBackendOnlyWrite = true;
+	Result.TargetDescription =
+		TEXT("SQLUI persistence settings backend-only production target");
+	Result.ConfigFilePath =
+		GetSQLUIPersistenceSettingsSelectedProductionConfigPath();
+
+	const FSQLUIPersistenceSettingsApplyConfigTargetResolution Resolution =
+		FSQLUIPersistenceSettingsApplyConfigTargetPolicy::
+			ResolveDocumentedProductionTargetStrategyWithEnablement(
+				Enablement);
+	Result.Messages.Append(Resolution.Messages);
+
+	if (!Request.bRequestBackendOnlyProductionApply
+		|| !Enablement.bEnableProductionTarget)
+	{
+		Result.bRejectedByPolicy = true;
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings backend-only production Apply was not explicitly requested. No config was written.");
+		AddSQLUIPersistenceSettingsConfigWriteMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Warning,
+			TEXT("Backend-only production Apply requires an explicit guarded request."),
+			TEXT("Default/runtime Apply remains unavailable and non-mutating without this request."));
+		return Result;
+	}
+
+	const FSQLUIPersistenceSettingsApplyPreviewResult ApplyPreview =
+		USQLUIPersistenceSettingsDraftLibrary::PreviewPersistenceSettingsDraftApply(
+			Request.Draft);
+	Result.Messages.Append(ApplyPreview.Messages);
+	Result.bRequiresRestartOrReinitialize =
+		ApplyPreview.bRequiresRestartOrReinitialize;
+
+	if (!ApplyPreview.bIsValid)
+	{
+		Result.bBlockedByValidation = true;
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings backend-only production Apply was blocked by validation. No config was written.");
+		AddSQLUIPersistenceSettingsConfigWriteMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error,
+			TEXT("Draft validation failed before the production backend value was written."),
+			TEXT("The selected production target was left untouched."));
+		return Result;
+	}
+
+	FString ScopeError;
+	if (!IsSQLUIPersistenceSettingsBackendOnlyProductionScopeAllowed(
+			Request.Draft,
+			ScopeError))
+	{
+		Result.bRejectedByPolicy = true;
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings backend-only production Apply was rejected because the request included out-of-scope settings. No config was written.");
+		AddSQLUIPersistenceSettingsConfigWriteMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error,
+			TEXT("Backend-only production Apply can write only the backend value."),
+			ScopeError);
+		return Result;
+	}
+
+	const bool bBackendChanged =
+		Request.Draft.CurrentRuntimeConfig.Backend
+		!= Request.Draft.PendingRuntimeConfig.Backend;
+	if (!ApplyPreview.bHasChanges || !bBackendChanged)
+	{
+		Result.bSucceeded = true;
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings backend-only production Apply found no backend change. No config was written.");
+		AddSQLUIPersistenceSettingsConfigWriteMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
+			TEXT("No backend change was written to the selected production target."),
+			TEXT("Provider lifecycle, repositories, databases, migrations, seed copy, and destructive actions were not touched."));
+		return Result;
+	}
+
+	const FString Directory = FPaths::GetPath(Result.ConfigFilePath);
+	const bool bDirectoryExisted =
+		IFileManager::Get().DirectoryExists(*Directory);
+	if (!bDirectoryExisted
+		&& !IFileManager::Get().MakeDirectory(*Directory, true))
+	{
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings backend-only production Apply could not create the selected target directory.");
+		AddSQLUIPersistenceSettingsConfigWriteMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error,
+			TEXT("Could not create the selected SQLUI persistence settings directory."),
+			Directory);
+		return Result;
+	}
+	Result.bDidCreateDirectories = !bDirectoryExisted;
+
+	const FString ConfigText =
+		MakeSQLUIPersistenceSettingsBackendOnlyProductionConfigText(
+			Request.Draft.PendingRuntimeConfig.Backend);
+	if (!FFileHelper::SaveStringToFile(
+			ConfigText,
+			*Result.ConfigFilePath,
+			FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+	{
+		Result.SummaryText =
+			TEXT("SQLUI persistence settings backend-only production Apply failed while writing the selected target.");
+		AddSQLUIPersistenceSettingsConfigWriteMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error,
+			TEXT("Could not write the selected SQLUI persistence settings file."),
+			Result.ConfigFilePath);
+		return Result;
+	}
+
+	Result.bSucceeded = true;
+	Result.bDidWriteConfig = true;
+	Result.bDidChangeSettings = true;
+	Result.SummaryText =
+		TEXT("SQLUI persistence settings backend value was written to the selected production target.");
+	AddSQLUIPersistenceSettingsConfigWriteMessage(
+		Result,
+		ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
+		TEXT("Backend-only production persistence settings config target was written."),
+		TEXT("Only Backend was serialized. SQLite path, provider auto-init, migration, seed, reset/delete, provider lifecycle, repository lifecycle, and database file behavior were not touched."));
 	return Result;
 }

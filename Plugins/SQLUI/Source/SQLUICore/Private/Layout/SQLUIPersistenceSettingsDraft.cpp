@@ -2,6 +2,7 @@
 
 #include "Database/SQLUISQLiteAvailability.h"
 #include "Layout/SQLUILayoutRepositoryRuntimeSettings.h"
+#include "Layout/SQLUIPersistenceSettingsApplyConfigTarget.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Paths.h"
 
@@ -743,6 +744,55 @@ USQLUIPersistenceSettingsDraftLibrary::RequestPersistenceSettingsApply(
 	Result.bRequiresRestartOrReinitialize =
 		Result.ApplyContract.bRequiresRestartOrReinitialize;
 	Result.Messages = Result.ApplyContract.Messages;
+
+	if (Request.bRequestBackendOnlyProductionApply)
+	{
+		FSQLUIPersistenceSettingsApplyProductionTargetEnablement Enablement;
+		Enablement.bEnableProductionTarget = true;
+		Enablement.RequestDescription =
+			Request.ProductionTargetEnablementRequestDescription;
+
+		const FSQLUIPersistenceSettingsApplyConfigWriteResult WriteResult =
+			FSQLUIPersistenceSettingsApplyConfigTargetWriter::
+				WriteBackendOnlyToSelectedProductionTarget(
+					Request,
+					Enablement);
+		Result.bActualApplyImplemented = true;
+		Result.bSucceeded = WriteResult.bSucceeded;
+		Result.bDidWriteConfig = WriteResult.bDidWriteConfig;
+		Result.bDidChangeSettings = WriteResult.bDidChangeSettings;
+		Result.bDidInitializeProvider = WriteResult.bDidInitializeProvider;
+		Result.bDidInitializeRepository = WriteResult.bDidInitializeRepository;
+		Result.bDidCreateDatabaseFiles = WriteResult.bDidCreateDatabaseFiles;
+		Result.bDidCreateDirectories = WriteResult.bDidCreateDirectories;
+		Result.bDidOpenDatabaseForWriting =
+			WriteResult.bDidOpenDatabaseForWriting;
+		Result.bDidRunMigrations = WriteResult.bDidRunMigrations;
+		Result.bDidCopySeedDatabase = WriteResult.bDidCopySeedDatabase;
+		Result.bDidDeleteFiles = WriteResult.bDidDeleteFiles;
+		Result.bRequiresRestartOrReinitialize =
+			WriteResult.bRequiresRestartOrReinitialize;
+		Result.Messages.Append(WriteResult.Messages);
+		Result.SummaryText = WriteResult.SummaryText;
+
+		if (WriteResult.bSucceeded)
+		{
+			Result.Status = WriteResult.bDidChangeSettings
+				? ESQLUIPersistenceSettingsApplyStatus::Succeeded
+				: ESQLUIPersistenceSettingsApplyStatus::NoChanges;
+		}
+		else if (WriteResult.bBlockedByValidation)
+		{
+			Result.Status =
+				ESQLUIPersistenceSettingsApplyStatus::BlockedByValidation;
+		}
+		else
+		{
+			Result.Status = ESQLUIPersistenceSettingsApplyStatus::Failed;
+		}
+
+		return Result;
+	}
 
 	if (!Result.ApplyContract.bIsValid)
 	{

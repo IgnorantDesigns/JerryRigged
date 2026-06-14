@@ -128,7 +128,7 @@ Future settings editing, apply/cancel, and reset/delete UX must be scoped separa
 
 ## Ownership Boundaries
 
-SQLUICore owns draft validation, dry-run apply preview, apply/cancel contract/readiness, cancel-preview value semantics, the apply entrypoint skeleton, result flags, and display formatting. SQLUISamples demonstrates optional sample/dev-facing consumption. JerryRigged remains a thin host.
+SQLUICore owns draft validation, dry-run apply preview, apply/cancel contract/readiness, cancel-preview value semantics, the apply entrypoint, result flags, display formatting, and the guarded backend-only production write. SQLUISamples demonstrates optional sample/dev-facing consumption. JerryRigged remains a thin host.
 
 Widgets and sample UI must not:
 
@@ -170,13 +170,13 @@ For a future local/manual Blueprint exploration, keep the asset local unless a l
 
 ## Smoke Coverage
 
-The existing `-UsePersistenceSettingsDraftProbe` smoke path validates the SQLUICore draft model, validation display rows/summary, dry-run apply preview, apply-preview display-row formatting, non-mutating apply/cancel contract, apply/cancel contract display-row formatting, unavailable/non-mutating apply entrypoint skeleton, apply-result display-row formatting, `USQLUISamplePersistenceSettingsDraftPresenter`, `USQLUISamplePersistenceSettingsDraftPanelWidget`, `USQLUISamplePersistenceSettingsApplyPreviewPresenter`, `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget`, `USQLUISamplePersistenceSettingsApplyContractPresenter`, `USQLUISamplePersistenceSettingsApplyContractPanelWidget`, `USQLUISamplePersistenceSettingsApplyResultPresenter`, and `USQLUISamplePersistenceSettingsApplyResultPanelWidget` contracts by reflection.
+The existing `-UsePersistenceSettingsDraftProbe` smoke path validates the SQLUICore draft model, validation display rows/summary, dry-run apply preview, apply-preview display-row formatting, non-mutating apply/cancel contract, apply/cancel contract display-row formatting, default unavailable apply behavior, guarded backend-only apply behavior, apply-result display-row formatting, `USQLUISamplePersistenceSettingsDraftPresenter`, `USQLUISamplePersistenceSettingsDraftPanelWidget`, `USQLUISamplePersistenceSettingsApplyPreviewPresenter`, `USQLUISamplePersistenceSettingsApplyPreviewPanelWidget`, `USQLUISamplePersistenceSettingsApplyContractPresenter`, `USQLUISamplePersistenceSettingsApplyContractPanelWidget`, `USQLUISamplePersistenceSettingsApplyResultPresenter`, and `USQLUISamplePersistenceSettingsApplyResultPanelWidget` contracts by reflection.
 
 It verifies the apply-result shell derives from `UUserWidget`, that refresh/build functions are Blueprint-callable and not `BlueprintPure`, that cached getters are `BlueprintPure`, and that cached row/formatted-line/result/summary/flag properties are Blueprint-visible. It does this without a widget Blueprint asset, map, viewport instance, startup wiring, polling, ticking, or automatic refresh.
 
-The same probe verifies default/current `InMemory` apply results are safe, actual Apply execution is reported as unavailable/not implemented, unknown backends and empty SQLite paths are shown as blocked/error rows, pending SQLite paths can be represented without database creation, provider auto-init changes remain pending policy, repeated result/display/adapter output is deterministic, a smoke-owned sidecar is not deleted by display/adapter/widget generation, and config preservation plus smoke-owned cleanup remain intact.
+The same probe verifies default/current `InMemory` apply results are safe, default Apply execution is reported as unavailable/not implemented, the guarded backend-only Apply request writes only the backend value, unknown backends and empty SQLite paths are shown as blocked/error rows, pending SQLite paths can be represented without database creation, provider auto-init changes remain pending policy, repeated result/display/adapter output is deterministic, a smoke-owned sidecar is not deleted by display/adapter/widget generation, and config preservation plus smoke-owned and probe-created production-target cleanup remain intact.
 
-This guide adds no new smoke flag. Cleanup expectations remain unchanged: the probe removes only smoke-owned database and sidecar files under `Saved/SQLUI/SmokeTests/PersistenceSettingsDraft`.
+This guide adds no new smoke flag. Cleanup expectations remain unchanged for database artifacts: the probe removes smoke-owned database and sidecar files under `Saved/SQLUI/SmokeTests/PersistenceSettingsDraft`, plus the selected production settings file only when the probe created it.
 
 ## Remaining Work
 
