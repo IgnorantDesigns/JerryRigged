@@ -41,6 +41,21 @@ This guarded request does not:
 
 The purpose is to make the future enablement gate explicit without guessing the target. A later real-write PR must still choose and validate a concrete SQLUICore-owned target before any production/user config write can occur.
 
+## Guarded Production Target Enablement Checkpoint
+
+PR #139 added the guarded SQLUICore production target enablement request/resolution. This checkpoint documents what that implementation proves: SQLUICore can now represent an explicit request to enable the documented production target, record that request, and still block it through policy while no concrete safe target exists.
+
+The request remains blocked, non-writable, pathless, deterministic, and side-effect free. Production/default Apply remains unavailable/not implemented, real user/runtime config writes remain disabled, and explicit smoke-owned targets remain the only write-capable targets. No committed config was added, no runtime settings are applied, no provider/repository lifecycle behavior runs, no DB files are created or opened for writing, no migrations run, no seed copy runs, and cleanup removes only smoke-owned artifacts.
+
+The next required design decision is still the concrete production target. A future real-write PR must choose one of these paths deliberately:
+
+- a SQLUICore-owned runtime settings file under `Saved/SQLUI`.
+- a plugin-managed settings file under `Saved/SQLUI`.
+- a user/project settings layer only with explicit justification, diff/snapshot coverage, and packaged validation if startup/config behavior can change.
+- continued blocked behavior if no target is accepted.
+
+`DefaultEngine.ini`, committed defaults, user/global editor settings, and widget-owned writes remain rejected. Generated `Saved/Config` remains rejected/deferred unless a separate PR justifies it, proves restore/diff behavior, and runs packaged validation when startup/config/default-map/provider lifecycle or packaged runtime behavior can be affected.
+
 ## Production Target Question
 
 Real Apply behavior needs a deliberate target decision before implementation. The target must answer where SQLUICore writes the validated persistence settings draft when a user or product chooses Apply.
@@ -108,10 +123,14 @@ Future Apply implementations must not:
 A future PR that enables any real production/user config target must include:
 
 - an explicit SQLUICore target policy update.
+- an exact path or storage surface.
+- a safety rationale for that path/surface.
+- proof the target is not committed config, `DefaultEngine.ini`, or user/global editor settings.
 - draft validation before write.
 - invalid draft refusal without mutation.
 - no-change/no-op behavior for unchanged drafts.
 - config diff or snapshot checks.
+- smoke coverage proving the default/runtime target behavior remains intentional.
 - smoke coverage proving smoke-owned and real target paths remain separate.
 - smoke coverage proving committed config remains unchanged.
 - smoke coverage proving generated config changes are either absent or deliberately scoped and restored.
