@@ -88,6 +88,34 @@ struct SQLUICORE_API FSQLUIPersistenceSettingsApplyConfigWriteResult
 	TArray<FSQLUIPersistenceSettingsValidationMessage> Messages;
 };
 
+struct SQLUICORE_API FSQLUIPersistenceSettingsRuntimeSettingsReadResult
+{
+	bool bSucceeded = false;
+	bool bFileExists = false;
+	bool bHasBackend = false;
+	bool bHasErrors = false;
+	bool bUsedProductionTarget = false;
+	bool bDidReadBackend = false;
+	bool bDidReadSQLiteDatabasePath = false;
+	bool bDidReadProviderAutoInitialize = false;
+	bool bDidApplyRuntimeSettings = false;
+	bool bDidInitializeProvider = false;
+	bool bDidInitializeRepository = false;
+	bool bDidCreateDirectories = false;
+	bool bDidCreateDatabaseFiles = false;
+	bool bDidOpenDatabaseForWriting = false;
+	bool bDidRunMigrations = false;
+	bool bDidCopySeedDatabase = false;
+	bool bDidDeleteFiles = false;
+	ESQLUILayoutRepositoryBackend Backend =
+		ESQLUILayoutRepositoryBackend::Unavailable;
+	FString BackendText;
+	FString ConfigFilePath;
+	FString TargetDescription;
+	FString SummaryText;
+	TArray<FSQLUIPersistenceSettingsValidationMessage> Messages;
+};
+
 /**
  * Non-mutating policy/resolver for future persistence settings Apply targets.
  *
@@ -144,4 +172,15 @@ public:
 			const FSQLUIPersistenceSettingsApplyRequest& Request,
 			const FSQLUIPersistenceSettingsApplyProductionTargetEnablement&
 				Enablement);
+};
+
+/**
+ * Explicit, caller-invoked readback for the backend-only production settings
+ * target. This does not run at startup and does not apply runtime state.
+ */
+class SQLUICORE_API FSQLUIPersistenceSettingsRuntimeSettingsReader
+{
+public:
+	static FSQLUIPersistenceSettingsRuntimeSettingsReadResult
+		ReadBackendOnlyFromSelectedProductionTarget();
 };

@@ -1,6 +1,7 @@
 #include "Layout/SQLUIPersistenceSettingsApplyConfigTarget.h"
 
 #include "HAL/FileManager.h"
+#include "Misc/ConfigCacheIni.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 
@@ -82,6 +83,24 @@ void AddSQLUIPersistenceSettingsConfigTargetPolicyMessage(
 	PolicyMessage.Message = Message;
 	PolicyMessage.DetailText = DetailText;
 	Result.Messages.Add(MoveTemp(PolicyMessage));
+}
+
+void AddSQLUIPersistenceSettingsRuntimeSettingsReadMessage(
+	FSQLUIPersistenceSettingsRuntimeSettingsReadResult& Result,
+	const ESQLUIPersistenceSettingsValidationMessageSeverity Severity,
+	const FString& Message,
+	const FString& DetailText = FString())
+{
+	FSQLUIPersistenceSettingsValidationMessage ReadMessage;
+	ReadMessage.Severity = Severity;
+	ReadMessage.Message = Message;
+	ReadMessage.DetailText = DetailText;
+	Result.Messages.Add(MoveTemp(ReadMessage));
+
+	if (Severity == ESQLUIPersistenceSettingsValidationMessageSeverity::Error)
+	{
+		Result.bHasErrors = true;
+	}
 }
 
 bool IsSQLUIPersistenceSettingsSmokeConfigTargetPath(
@@ -213,6 +232,15 @@ FString MakeSQLUIPersistenceSettingsBackendOnlyProductionConfigText(
 		TEXT("Backend=%s\n"),
 		*SQLUIPersistenceSettingsBackendText(Backend));
 	return Text;
+}
+
+bool TryParseSQLUIPersistenceSettingsBackendText(
+	const FString& BackendText,
+	ESQLUILayoutRepositoryBackend& OutBackend)
+{
+	return FSQLUILayoutRepositoryRuntimeConfigResolver::TryParseBackend(
+		BackendText,
+		OutBackend);
 }
 
 FString TrimSQLUIPersistenceSettingsConfigString(FString Value)
@@ -788,5 +816,89 @@ FSQLUIPersistenceSettingsApplyConfigTargetWriter::
 		ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
 		TEXT("Backend-only production persistence settings config target was written."),
 		TEXT("Only Backend was serialized. SQLite path, provider auto-init, migration, seed, reset/delete, provider lifecycle, repository lifecycle, and database file behavior were not touched."));
+	return Result;
+}
+
+FSQLUIPersistenceSettingsRuntimeSettingsReadResult
+FSQLUIPersistenceSettingsRuntimeSettingsReader::
+	ReadBackendOnlyFromSelectedProductionTarget()
+{
+	FSQLUIPersistenceSettingsRuntimeSettingsReadResult Result;
+	Result.bUsedProductionTarget = true;
+	Result.TargetDescription =
+		TEXT("SQLUI persistence settings backend-only runtime settings readback");
+	Result.ConfigFilePath =
+		GetSQLUIPersistenceSettingsSelectedProductionConfigPath();
+
+	if (!FPaths::FileExists(Result.ConfigFilePath))
+	{
+		Result.bSucceeded = true;
+		Result.bFileExists = false;
+		Result.bHasBackend = false;
+		Result.SummaryText =
+			TEXT("SQLUI persistence runtime settings file was not found. No backend override was read.");
+		AddSQLUIPersistenceSettingsRuntimeSettingsReadMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
+			TEXT("No SQLUI persistence runtime settings file exists."),
+			TEXT("The readback helper did not create the file or directory and did not apply runtime settings."));
+		return Result;
+	}
+
+	Result.bFileExists = true;
+
+	FConfigFile ConfigFile;
+	ConfigFile.Read(Result.ConfigFilePath);
+
+	FString BackendText;
+	if (!ConfigFile.GetString(
+			TEXT("SQLUI.PersistenceSettings"),
+			TEXT("Backend"),
+			BackendText))
+	{
+		Result.bSucceeded = false;
+		Result.bHasBackend = false;
+		Result.SummaryText =
+			TEXT("SQLUI persistence runtime settings file did not contain a backend value. No runtime settings were applied.");
+		AddSQLUIPersistenceSettingsRuntimeSettingsReadMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error,
+			TEXT("Backend value is missing from SQLUI persistence runtime settings."),
+			TEXT("Only [SQLUI.PersistenceSettings] Backend is supported by this readback slice. The file was not repaired or deleted."));
+		return Result;
+	}
+
+	Result.bDidReadBackend = true;
+	BackendText.TrimStartAndEndInline();
+	Result.BackendText = BackendText;
+
+	ESQLUILayoutRepositoryBackend ParsedBackend =
+		ESQLUILayoutRepositoryBackend::Unavailable;
+	if (!TryParseSQLUIPersistenceSettingsBackendText(
+			BackendText,
+			ParsedBackend))
+	{
+		Result.bSucceeded = false;
+		Result.bHasBackend = false;
+		Result.SummaryText =
+			TEXT("SQLUI persistence runtime settings file contained an unknown backend. No runtime settings were applied.");
+		AddSQLUIPersistenceSettingsRuntimeSettingsReadMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Error,
+			TEXT("Backend value is not a selectable SQLUI persistence backend."),
+			BackendText);
+		return Result;
+	}
+
+	Result.bSucceeded = true;
+	Result.bHasBackend = true;
+	Result.Backend = ParsedBackend;
+	Result.SummaryText =
+		TEXT("SQLUI persistence runtime settings backend was read explicitly. Runtime settings were not applied.");
+	AddSQLUIPersistenceSettingsRuntimeSettingsReadMessage(
+		Result,
+		ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
+		TEXT("Backend-only SQLUI persistence runtime settings readback succeeded."),
+		TEXT("Only Backend was read. SQLite path, provider auto-init, migration, seed, reset/delete, provider lifecycle, repository lifecycle, and database file behavior were not touched."));
 	return Result;
 }

@@ -8979,6 +8979,22 @@ bool AreSQLUISampleApplyConfigTargetResolutionsEquivalent(
 			Second.ProductionTargetDescriptor);
 }
 
+bool DoesSQLUISampleRuntimeSettingsReadHaveNoSideEffects(
+	const FSQLUIPersistenceSettingsRuntimeSettingsReadResult& Result)
+{
+	return !Result.bDidReadSQLiteDatabasePath
+		&& !Result.bDidReadProviderAutoInitialize
+		&& !Result.bDidApplyRuntimeSettings
+		&& !Result.bDidInitializeProvider
+		&& !Result.bDidInitializeRepository
+		&& !Result.bDidCreateDirectories
+		&& !Result.bDidCreateDatabaseFiles
+		&& !Result.bDidOpenDatabaseForWriting
+		&& !Result.bDidRunMigrations
+		&& !Result.bDidCopySeedDatabase
+		&& !Result.bDidDeleteFiles;
+}
+
 bool WriteSQLUISamplePersistenceSettingsDraftSidecar(
 	const FString& Path,
 	FSQLUISamplePersistenceSettingsDraftProbeResult& Result)
@@ -11544,6 +11560,32 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			ProductionTargetEnablementPolicy,
 			RepeatedProductionTargetEnablementPolicy);
 
+	const FSQLUIPersistenceSettingsRuntimeSettingsReadResult
+		BackendOnlyAbsentReadResult =
+			FSQLUIPersistenceSettingsRuntimeSettingsReader::
+				ReadBackendOnlyFromSelectedProductionTarget();
+	Result.bBackendOnlyProductionReadAbsentNoOverride =
+		!bSelectedProductionTargetFileExistedBefore
+		&& BackendOnlyAbsentReadResult.bSucceeded
+		&& BackendOnlyAbsentReadResult.bUsedProductionTarget
+		&& !BackendOnlyAbsentReadResult.bFileExists
+		&& !BackendOnlyAbsentReadResult.bHasBackend
+		&& !BackendOnlyAbsentReadResult.bHasErrors
+		&& BackendOnlyAbsentReadResult.ConfigFilePath
+			== SelectedProductionTargetPath;
+	Result.bBackendOnlyProductionReadAbsentDidNotCreateTarget =
+		!bSelectedProductionTargetFileExistedBefore
+		&& !FPaths::FileExists(SelectedProductionTargetPath)
+		&& IFileManager::Get().DirectoryExists(
+			*SelectedProductionTargetDirectory)
+			== bSelectedProductionTargetDirectoryExistedBefore
+		&& DoesSQLUISampleRuntimeSettingsReadHaveNoSideEffects(
+			BackendOnlyAbsentReadResult)
+		&& AreSQLUISampleFileSnapshotsUnchanged(
+			SelectedProductionTargetBefore,
+			CaptureSQLUISampleFileSnapshots({ SelectedProductionTargetPath }))
+		&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result);
+
 	Result.bBackendOnlyProductionApplyUnavailableWithoutRequest =
 		!SQLiteApplyRequestResult.bSucceeded
 		&& !SQLiteApplyRequestResult.bActualApplyImplemented
@@ -11621,6 +11663,46 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		const TArray<FSQLUISampleFileSnapshot>
 			SelectedProductionTargetAfterValidWrite =
 				CaptureSQLUISampleFileSnapshots({ SelectedProductionTargetPath });
+		const FSQLUIPersistenceSettingsRuntimeSettingsReadResult
+			BackendOnlyReadAfterWriteResult =
+				FSQLUIPersistenceSettingsRuntimeSettingsReader::
+					ReadBackendOnlyFromSelectedProductionTarget();
+		const FSQLUIPersistenceSettingsDraft CurrentAfterRead =
+			USQLUIPersistenceSettingsDraftLibrary::
+				MakeCurrentPersistenceSettingsDraft();
+		Result.bBackendOnlyProductionReadAfterWriteSucceeded =
+			BackendOnlyReadAfterWriteResult.bSucceeded
+			&& BackendOnlyReadAfterWriteResult.bUsedProductionTarget
+			&& BackendOnlyReadAfterWriteResult.bFileExists
+			&& BackendOnlyReadAfterWriteResult.bHasBackend
+			&& BackendOnlyReadAfterWriteResult.bDidReadBackend
+			&& BackendOnlyReadAfterWriteResult.ConfigFilePath
+				== SelectedProductionTargetPath;
+		Result.bBackendOnlyProductionReadBackendMatched =
+			BackendOnlyReadAfterWriteResult.Backend
+				== ESQLUILayoutRepositoryBackend::SQLite
+			&& BackendOnlyReadAfterWriteResult.BackendText.Equals(
+				TEXT("SQLite"),
+				ESearchCase::IgnoreCase)
+			&& !BackendOnlyReadAfterWriteResult.bDidReadSQLiteDatabasePath
+			&& !BackendOnlyReadAfterWriteResult.bDidReadProviderAutoInitialize;
+		Result.bBackendOnlyProductionReadNoRuntimeSideEffects =
+			DoesSQLUISampleRuntimeSettingsReadHaveNoSideEffects(
+				BackendOnlyReadAfterWriteResult)
+			&& CurrentAfterRead.CurrentRuntimeConfig.Backend
+				== DefaultDraft.CurrentRuntimeConfig.Backend
+			&& CurrentAfterRead.PendingRuntimeConfig.Backend
+				== DefaultDraft.PendingRuntimeConfig.Backend
+			&& !FSQLUILayoutRepositoryRuntimeSettingsPolicy::
+				ShouldAutoInitializeProvider(DefaultSettings, TEXT(""))
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result)
+			&& AreSQLUISampleFileSnapshotsUnchanged(
+				ApplyConfigBefore,
+				CaptureSQLUISampleFileSnapshots(ApplyConfigPaths))
+			&& AreSQLUISampleFileSnapshotsUnchanged(
+				SelectedProductionTargetAfterValidWrite,
+				CaptureSQLUISampleFileSnapshots({ SelectedProductionTargetPath }));
+
 		const FSQLUIPersistenceSettingsApplyResult
 			BackendOnlyNoChangeApplyResult =
 				USQLUIPersistenceSettingsDraftLibrary::
@@ -11677,6 +11759,65 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			ProductionConfigTargetContentsAfterInvalidWrite
 			== ProductionConfigTargetContentsBeforeInvalidWrite;
 
+		const FString UnknownBackendConfigText =
+			TEXT("[SQLUI.PersistenceSettings]\n")
+			TEXT("Backend=DefinitelyNotReal\n")
+			TEXT("SQLiteDatabasePath=ShouldNotBeRead.db\n")
+			TEXT("bProviderAutoInitialize=true\n");
+		const bool bUnknownBackendConfigWritten =
+			FFileHelper::SaveStringToFile(
+				UnknownBackendConfigText,
+				*SelectedProductionTargetPath,
+				FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+		const FSQLUIPersistenceSettingsRuntimeSettingsReadResult
+			UnknownBackendReadResult =
+				FSQLUIPersistenceSettingsRuntimeSettingsReader::
+					ReadBackendOnlyFromSelectedProductionTarget();
+		Result.bBackendOnlyProductionReadUnknownBackendRejected =
+			bUnknownBackendConfigWritten
+			&& !UnknownBackendReadResult.bSucceeded
+			&& UnknownBackendReadResult.bFileExists
+			&& !UnknownBackendReadResult.bHasBackend
+			&& UnknownBackendReadResult.bHasErrors
+			&& UnknownBackendReadResult.bDidReadBackend
+			&& UnknownBackendReadResult.BackendText.Equals(
+				TEXT("DefinitelyNotReal"),
+				ESearchCase::CaseSensitive)
+			&& DoesSQLUISampleRuntimeSettingsReadHaveNoSideEffects(
+				UnknownBackendReadResult)
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result)
+			&& AreSQLUISampleFileSnapshotsUnchanged(
+				ApplyConfigBefore,
+				CaptureSQLUISampleFileSnapshots(ApplyConfigPaths));
+
+		const FString MalformedConfigText =
+			TEXT("[SQLUI.PersistenceSettings]\n")
+			TEXT("SQLiteDatabasePath=ShouldNotBeRead.db\n")
+			TEXT("bProviderAutoInitialize=true\n");
+		const bool bMalformedConfigWritten =
+			FFileHelper::SaveStringToFile(
+				MalformedConfigText,
+				*SelectedProductionTargetPath,
+				FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM);
+		const FSQLUIPersistenceSettingsRuntimeSettingsReadResult
+			MalformedReadResult =
+				FSQLUIPersistenceSettingsRuntimeSettingsReader::
+					ReadBackendOnlyFromSelectedProductionTarget();
+		Result.bBackendOnlyProductionReadMalformedRejected =
+			bMalformedConfigWritten
+			&& !MalformedReadResult.bSucceeded
+			&& MalformedReadResult.bFileExists
+			&& !MalformedReadResult.bHasBackend
+			&& MalformedReadResult.bHasErrors
+			&& !MalformedReadResult.bDidReadBackend
+			&& MalformedReadResult.BackendText.IsEmpty()
+			&& DoesSQLUISampleRuntimeSettingsReadHaveNoSideEffects(
+				MalformedReadResult)
+			&& !DoesAnySQLUISamplePersistenceSettingsDraftFileExist(Result)
+			&& AreSQLUISampleFileSnapshotsUnchanged(
+				ApplyConfigBefore,
+				CaptureSQLUISampleFileSnapshots(ApplyConfigPaths));
+
 		Result.bBackendOnlyProductionApplyArtifactCleaned =
 			DeleteSQLUISampleSelectedProductionPersistenceSettingsTargetIfCreated(
 				SelectedProductionTargetPath,
@@ -11688,6 +11829,10 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 			bSelectedProductionTargetDirectoryExistedBefore
 			|| !IFileManager::Get().DirectoryExists(
 				*SelectedProductionTargetDirectory);
+		Result.bBackendOnlyProductionReadArtifactCleaned =
+			Result.bBackendOnlyProductionApplyArtifactCleaned;
+		Result.bBackendOnlyProductionReadDirectoryCleaned =
+			Result.bBackendOnlyProductionApplyDirectoryCleaned;
 	}
 
 	const FSQLUIPersistenceSettingsApplyConfigWriteResult
@@ -11851,11 +11996,20 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		|| !Result.bBackendOnlyProductionApplyInvalidDraftRefused
 		|| !Result.bBackendOnlyProductionApplyInvalidDidNotMutate
 		|| !Result.bBackendOnlyProductionApplyArtifactCleaned
-		|| !Result.bBackendOnlyProductionApplyDirectoryCleaned)
+		|| !Result.bBackendOnlyProductionApplyDirectoryCleaned
+		|| !Result.bBackendOnlyProductionReadAbsentNoOverride
+		|| !Result.bBackendOnlyProductionReadAbsentDidNotCreateTarget
+		|| !Result.bBackendOnlyProductionReadAfterWriteSucceeded
+		|| !Result.bBackendOnlyProductionReadBackendMatched
+		|| !Result.bBackendOnlyProductionReadNoRuntimeSideEffects
+		|| !Result.bBackendOnlyProductionReadUnknownBackendRejected
+		|| !Result.bBackendOnlyProductionReadMalformedRejected
+		|| !Result.bBackendOnlyProductionReadArtifactCleaned
+		|| !Result.bBackendOnlyProductionReadDirectoryCleaned)
 	{
 		AppendSQLUISamplePersistenceSettingsDraftProbeError(
 			Result,
-			TEXT("SQLUI persistence settings draft probe failed: smoke-owned apply config target scaffold or target policy did not stay isolated, explicit, or clean."));
+			TEXT("SQLUI persistence settings draft probe failed: smoke-owned apply config target scaffold, backend-only runtime settings readback, or target policy did not stay isolated, explicit, or clean."));
 	}
 
 	Result.bProviderAutoInitApplyPreviewDisplayPending =
@@ -13217,6 +13371,15 @@ RunSQLUISamplePersistenceSettingsDraftProbe(UObject* Outer)
 		&& Result.bBackendOnlyProductionApplyInvalidDidNotMutate
 		&& Result.bBackendOnlyProductionApplyArtifactCleaned
 		&& Result.bBackendOnlyProductionApplyDirectoryCleaned
+		&& Result.bBackendOnlyProductionReadAbsentNoOverride
+		&& Result.bBackendOnlyProductionReadAbsentDidNotCreateTarget
+		&& Result.bBackendOnlyProductionReadAfterWriteSucceeded
+		&& Result.bBackendOnlyProductionReadBackendMatched
+		&& Result.bBackendOnlyProductionReadNoRuntimeSideEffects
+		&& Result.bBackendOnlyProductionReadUnknownBackendRejected
+		&& Result.bBackendOnlyProductionReadMalformedRejected
+		&& Result.bBackendOnlyProductionReadArtifactCleaned
+		&& Result.bBackendOnlyProductionReadDirectoryCleaned
 		&& Result.bBackendChangeApplyContractDetected
 		&& Result.bSQLiteApplyContractSafe
 		&& Result.bUnknownBackendApplyContractBlocked
