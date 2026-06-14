@@ -28,11 +28,19 @@ struct SQLUICORE_API FSQLUIPersistenceSettingsApplyConfigTargetResolution
 	bool bIsSmokeOwnedTarget = false;
 	bool bRequiresExplicitTarget = true;
 	bool bProductionApplyEnabled = false;
+	bool bProductionTargetEnablementRequested = false;
+	bool bProductionTargetEnablementAccepted = false;
 	bool bWouldAffectRuntimeDefaults = false;
 	FString ConfigFilePath;
 	FString TargetDescription;
 	FString SummaryText;
 	TArray<FSQLUIPersistenceSettingsValidationMessage> Messages;
+};
+
+struct SQLUICORE_API FSQLUIPersistenceSettingsApplyProductionTargetEnablement
+{
+	bool bEnableProductionTarget = false;
+	FString RequestDescription;
 };
 
 struct SQLUICORE_API FSQLUIPersistenceSettingsApplyConfigWriteResult
@@ -74,6 +82,9 @@ public:
 		const FSQLUIPersistenceSettingsApplyConfigTarget& Target);
 
 	static FSQLUIPersistenceSettingsApplyConfigTargetResolution ResolveDocumentedProductionTargetStrategy();
+
+	static FSQLUIPersistenceSettingsApplyConfigTargetResolution ResolveDocumentedProductionTargetStrategyWithEnablement(
+		const FSQLUIPersistenceSettingsApplyProductionTargetEnablement& Enablement);
 
 	static FSQLUIPersistenceSettingsApplyConfigTargetResolution ResolveFutureProjectUserConfigTarget();
 };

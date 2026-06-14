@@ -319,6 +319,44 @@ FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveDocumentedProductionTar
 }
 
 FSQLUIPersistenceSettingsApplyConfigTargetResolution
+FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveDocumentedProductionTargetStrategyWithEnablement(
+	const FSQLUIPersistenceSettingsApplyProductionTargetEnablement& Enablement)
+{
+	FSQLUIPersistenceSettingsApplyConfigTargetResolution Result =
+		ResolveDocumentedProductionTargetStrategy();
+	Result.bProductionTargetEnablementRequested =
+		Enablement.bEnableProductionTarget;
+	Result.bProductionTargetEnablementAccepted = false;
+
+	if (!Enablement.bEnableProductionTarget)
+	{
+		AddSQLUIPersistenceSettingsConfigTargetPolicyMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
+			TEXT("Production persistence settings config target enablement was not requested."),
+			TEXT("The documented production target remains unavailable and non-writable."));
+		return Result;
+	}
+
+	Result.SummaryText =
+		TEXT("SQLUI persistence settings documented production Apply target enablement was requested, but no safe concrete project/user target is selected yet. No config can be written.");
+	AddSQLUIPersistenceSettingsConfigTargetPolicyMessage(
+		Result,
+		ESQLUIPersistenceSettingsValidationMessageSeverity::Warning,
+		TEXT("Production persistence settings config target enablement remains blocked."),
+		TEXT("The strategy document has not selected a concrete writable target. This policy result records the explicit request only; it does not create directories, write files, or enable production Apply."));
+	if (!Enablement.RequestDescription.IsEmpty())
+	{
+		AddSQLUIPersistenceSettingsConfigTargetPolicyMessage(
+			Result,
+			ESQLUIPersistenceSettingsValidationMessageSeverity::Info,
+			TEXT("Production persistence settings config target enablement request description."),
+			Enablement.RequestDescription);
+	}
+	return Result;
+}
+
+FSQLUIPersistenceSettingsApplyConfigTargetResolution
 FSQLUIPersistenceSettingsApplyConfigTargetPolicy::ResolveFutureProjectUserConfigTarget()
 {
 	return ResolveDocumentedProductionTargetStrategy();
