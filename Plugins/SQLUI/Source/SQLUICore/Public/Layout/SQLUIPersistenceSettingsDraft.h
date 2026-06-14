@@ -247,6 +247,12 @@ struct SQLUICORE_API FSQLUIPersistenceSettingsApplyRequest
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
 	FSQLUIPersistenceSettingsDraft Draft;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	bool bRequestBackendOnlyProductionApply = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Persistence Settings")
+	FString ProductionTargetEnablementRequestDescription;
 };
 
 USTRUCT(BlueprintType)

@@ -68,6 +68,10 @@ struct SQLUICORE_API FSQLUIPersistenceSettingsApplyConfigWriteResult
 	bool bDidWriteConfig = false;
 	bool bDidChangeSettings = false;
 	bool bUsedSmokeOwnedTarget = false;
+	bool bUsedProductionTarget = false;
+	bool bBackendOnlyWrite = false;
+	bool bBlockedByValidation = false;
+	bool bRejectedByPolicy = false;
 	bool bWouldAffectRuntimeDefaults = false;
 	bool bDidCreateDirectories = false;
 	bool bDidInitializeProvider = false;
@@ -134,4 +138,10 @@ public:
 	static FSQLUIPersistenceSettingsApplyConfigWriteResult WriteToConfigTarget(
 		const FSQLUIPersistenceSettingsApplyRequest& Request,
 		const FSQLUIPersistenceSettingsApplyConfigTarget& Target);
+
+	static FSQLUIPersistenceSettingsApplyConfigWriteResult
+		WriteBackendOnlyToSelectedProductionTarget(
+			const FSQLUIPersistenceSettingsApplyRequest& Request,
+			const FSQLUIPersistenceSettingsApplyProductionTargetEnablement&
+				Enablement);
 };
