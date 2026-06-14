@@ -349,9 +349,9 @@ The smoke-owned config target portion verifies:
 - Runtime backend/provider-auto-init policy remains unchanged.
 - No SQLite database is created or opened for writing.
 - No migrations, seed copy, provider initialization, repository initialization, reset/delete action, or startup behavior runs.
-- Cleanup removes only smoke-owned files.
-- Target policy reports default/runtime unavailable, explicit smoke-owned write-capable only for the smoke target, future real project/user target unavailable, documented production strategy non-writable with no writable path, the selected `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` descriptor, and production Apply disabled.
-- Guarded production target enablement request reports requested-but-blocked, non-writable, descriptor-backed, no writable path, no side effects, and deterministic output.
+- Cleanup removes smoke-owned files and any probe-created backend-only production target artifact.
+- Target policy reports default/runtime unavailable, explicit smoke-owned write-capable only for the smoke target, future real project/user target unavailable, documented production strategy non-writable for broad Apply with no general writable path, the selected `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` descriptor, and production Apply disabled except for the separately guarded backend-only write request.
+- Guarded production target enablement resolver output remains policy-only: it is descriptor-backed, has no side effects, is deterministic, and does not create or write the target file by itself.
 
 After the probe succeeds, explicit cleanup checks should confirm no draft/status/apply probe `.db`, `.db-journal`, `.db-wal`, or `.db-shm` files remain and no temporary apply config target artifact remains under `Saved\SQLUI\SmokeTests\PersistenceSettingsDraft\ApplyConfigTarget`.
 
@@ -581,6 +581,19 @@ SQLUI persistence settings draft probe succeeded.
 ```
 
 This path proves validation/preview-only draft behavior, non-mutating apply/cancel contract reporting, the default non-mutating actual apply request skeleton, the smoke-owned apply config target scaffold, the selected production target descriptor, and the first explicitly requested backend-only production apply write. The backend-only write path writes only `Backend=<value>` to `Saved\SQLUI\PersistenceSettings\RuntimeSettings.ini`, refuses invalid drafts without mutation, treats no-change requests as no-ops, rejects provider auto-init changes, does not serialize SQLite paths or provider auto-init, preserves repo `Config` and generated `Saved\Config`, and performs no provider/repository lifecycle work, DB creation, DB write-open, migrations, seed copy, reset/delete behavior, startup wiring, maps, assets, or widget changes. The future Blueprint/UMG binding recipes live in [`sqlui_persistence_settings_draft_umg_usage.md`](sqlui_persistence_settings_draft_umg_usage.md) for validation, [`sqlui_persistence_settings_apply_preview_umg_usage.md`](sqlui_persistence_settings_apply_preview_umg_usage.md) for apply preview, [`sqlui_persistence_settings_apply_contract_umg_usage.md`](sqlui_persistence_settings_apply_contract_umg_usage.md) for apply/cancel contract, and [`sqlui_persistence_settings_apply_result_umg_usage.md`](sqlui_persistence_settings_apply_result_umg_usage.md) for apply result. Each shell follows the same caller-invoked, display-only pattern and still has no settings editing controls, backend selector controls, SQLite path editor controls, provider auto-init toggle controls, reset/delete behavior, widget blueprint assets, visual layout, viewport attachment, startup/config wiring, or direct persistence lifecycle behavior.
+
+For the backend-only production apply write checkpoint, the expected coverage is:
+
+- Default/runtime Apply without explicit guarded backend-only request does not write.
+- Descriptor resolution and guarded enablement resolution do not create `RuntimeSettings.ini` or its parent directory.
+- Explicit backend-only Apply can create `Saved\SQLUI\PersistenceSettings\RuntimeSettings.ini`.
+- The file contains only the expected backend setting and no SQLite path, provider auto-init, migration, seed, schema-init, reset, or delete settings.
+- Invalid backend/draft cases refuse and do not write.
+- No-change behavior reports a no-op without rewriting state.
+- Writing SQLite as the backend does not create SQLite database or sidecar files.
+- Provider/repository lifecycle, migrations, and seed copy do not run.
+- Repo `Config` and generated `Saved\Config` snapshots remain unchanged.
+- Cleanup removes the probe-created `RuntimeSettings.ini` and only the smoke-created empty `PersistenceSettings` directory.
 
 After the probe succeeds, database files under `Saved\SQLUI\SmokeTests\PersistenceSettingsDraft` should not exist, the temporary apply config target directory under `Saved\SQLUI\SmokeTests\PersistenceSettingsDraft\ApplyConfigTarget` should be gone, and the backend-only production apply target `Saved\SQLUI\PersistenceSettings\RuntimeSettings.ini` plus its parent directory should be gone if the probe created them. A full checkpoint cleanup check should also confirm that the related read-only status paths used by this phase, such as `Saved\SQLUI\SmokeTests\PersistenceStatusSampleSurface` and `Saved\SQLUI\SmokeTests\PersistenceStatusDisplayRows`, contain no smoke-owned `.db`, `.db-journal`, `.db-wal`, or `.db-shm` files.
 

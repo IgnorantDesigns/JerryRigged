@@ -103,6 +103,19 @@ The production config target resolution, guarded enablement, and backend-only wr
 
 The #139 guarded enablement checkpoint and the descriptor checkpoint are policy proofs, not UI readiness signals. They prove an explicit production target enablement request can be represented and that the selected target can be described without inferring unsafe config locations. This backend-only write slice proves the selected `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` target can be touched narrowly, but the product UI must still not expose Apply/Save/config-write controls for provider auto-init, SQLite paths, migrations, seeds, reset/delete, or lifecycle behavior until those paths are separately scoped and validated.
 
+## Backend-Only Apply Write UX Checkpoint
+
+The backend-only write checkpoint is useful for future UI because it proves the SQLUICore apply boundary can perform one narrow, validated production-target write without giving widgets ownership of config or persistence lifecycle. A future panel may display that backend-only result state, but it should not treat the checkpoint as permission to add mutating controls.
+
+For UI planning, the important constraints are:
+
+- The only selected-target setting written today is `Backend`.
+- `InMemory` remains the default backend, and SQLite remains opt-in.
+- Writing `Backend=SQLite` does not create a database, create database directories, initialize a provider or repository, run migrations, copy seeds, or attach lifecycle behavior.
+- SQLite path, provider auto-init, reset/delete, migration, seed-copy, schema-init, startup, map, viewport, and lifecycle controls remain future work.
+- `RuntimeSettings.ini` is a SQLUICore-owned generated settings-intent file, not a widget-owned artifact and not a layout database.
+- Smoke coverage must keep proving repo `Config`, generated `Saved/Config`, and smoke-created artifacts are preserved/cleaned before any UI control is added.
+
 Future actual Apply/Cancel work should keep widgets ignorant of SQL, schema, migrations, seed-copy policy, sidecar internals, deletion behavior, and provider/repository lifecycle details. Widgets should not write config directly, initialize providers/repositories, or delete files. Apply should route through SQLUICore helper/policy surfaces, keep validation failures user-readable and non-destructive, avoid silently initializing providers/repositories, and show restart/reopen/reinitialize-required messaging when lifecycle work is needed.
 
 ## Actual Apply Gate For UI Work

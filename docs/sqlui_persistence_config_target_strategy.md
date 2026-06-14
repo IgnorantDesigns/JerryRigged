@@ -4,6 +4,8 @@ This document records the decision gate for future production/user config writes
 
 The current implementation deliberately keeps broad/default Apply unavailable. SQLUICore has a default non-mutating apply entrypoint/result path, UI-safe result display rows, SQLUISamples sample/dev display surfaces, a smoke-owned config target scaffold, and an apply config target policy/resolver skeleton. The policy layer exposes `ResolveDocumentedProductionTargetStrategy()` so code and smoke coverage can identify the documented production target strategy without inferring unsafe config locations. It also exposes a descriptor for the selected target, `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini`, and a guarded production target enablement request resolver. The selected target now has one narrow writer: an explicit backend-only `RequestPersistenceSettingsApply` request may create/write that file with only `Backend=<value>`. Production/default Apply still does not write config unless that guarded request is used, does not change live provider/repository state, and does not create, open, migrate, seed, reset, or delete database files.
 
+PR #144 is a documentation-only checkpoint for that backend-only write. It records the #143 behavior and safety boundaries without adding runtime code, scripts, config changes, smoke flags, widget assets, maps, startup wiring, provider lifecycle work, database work, or packaged behavior.
+
 PR #136 introduced this strategy as a docs-only decision gate. That strategy checkpoint added no runtime code, settings controls, config writes, committed config changes, provider lifecycle behavior, database work, scripts, Build.cs changes, plugin descriptor changes, maps, assets, CI, or packaged behavior. The follow-up policy-resolution slice keeps those runtime safety boundaries intact. This design checkpoint chooses the production target shape for a future implementation, but it still does not write to that target or enable production Apply.
 
 ## Production Config Target Resolution Checkpoint
@@ -24,9 +26,33 @@ This checkpoint proves target resolution only:
 
 It does not add production/user config writes, runtime settings application, committed config changes, settings controls, backend selector UI, SQLite path editing, provider auto-init controls, reset/delete behavior, startup wiring, provider/repository initialization, database work, or file deletion outside smoke-owned cleanup.
 
+## Backend-Only Production Apply Write Checkpoint
+
+PR #143 is the first selected-target write checkpoint. It keeps the target and enablement gates from the earlier checkpoints, but adds one deliberately narrow mutation: an explicit guarded backend-only `RequestPersistenceSettingsApply` request may create/write `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` with only:
+
+```ini
+[SQLUI.PersistenceSettings]
+Backend=<value>
+```
+
+This is not broad settings Apply. The default runtime path, status surfaces, descriptor resolution, and guarded enablement resolution do not silently create the file or parent directory. The write path exists only when the caller requests backend-only production Apply and the production target is explicitly enabled for that request.
+
+The exact write scope is backend only. The writer does not serialize SQLite path, JSON file directory, provider auto-init, migration, seed-copy, schema-init, reset/delete, provider/repository lifecycle, or UI-control state. Writing `Backend=SQLite` records only the selected backend value; it does not create a SQLite database, create database directories, initialize a provider or repository, run migrations, copy seeds, open SQLite for writing, or change startup behavior. Applying that backend choice may require a future restart, reopen, provider reset, or reinitialization flow, but #143 does not perform those lifecycle actions.
+
+`-UsePersistenceSettingsDraftProbe` is the validation path for this checkpoint. It verifies that default/no-request Apply does not write, descriptor and guarded enablement resolution do not create the target, explicit backend-only Apply can create the target, the generated file contains only the expected backend value, invalid drafts are refused without mutation, no-change requests are no-ops, provider auto-init changes are rejected for this path, repo `Config` and generated `Saved/Config` remain unchanged, no DB/lifecycle/migration/seed-copy work runs, and smoke cleanup removes the probe-created `RuntimeSettings.ini` plus the empty `PersistenceSettings` directory when the probe created it.
+
+Future expansion order should stay conservative:
+
+1. Keep this backend-only write as the checkpointed base.
+2. Add readback/resolution of `RuntimeSettings.ini` separately if needed, without changing startup behavior unless that PR explicitly scopes and validates it.
+3. Add provider auto-init writes only after restart/reopen/reinitialize messaging and default-off behavior are represented.
+4. Add SQLite path writes only in a separate path-safety PR with relative/absolute path policy, packaged path expectations, and no-default-create behavior covered.
+5. Add backend selector UI only after the SQLUICore behavior is fully smoke-tested.
+6. Run packaged validation before startup, packaged runtime, default-map, provider lifecycle, or runtime config consumption starts reading this file.
+
 ## Guarded Production Target Enablement Request
 
-The guarded enablement resolver is intentionally policy-only. `ResolveDocumentedProductionTargetStrategyWithEnablement()` accepts an explicit request value so future Apply work can distinguish "no production target requested" from "production target requested but blocked." In this slice both states remain non-writable because the selected descriptor target has no writer implementation yet.
+The guarded enablement resolver is intentionally policy-only. `ResolveDocumentedProductionTargetStrategyWithEnablement()` accepts an explicit request value so future Apply work can distinguish "no production target requested" from "production target requested but blocked." The resolver itself remains non-writable and side-effect free; the separate backend-only apply request is the only selected-target writer.
 
 When no enablement request is supplied, the documented production target stays unavailable, non-writable, and production Apply disabled. When an enablement request is supplied to the resolver, SQLUICore records that request but still exposes no general writable `ConfigFilePath` and keeps the broad target policy blocked. The backend-only apply path is separate: it uses an explicit apply request and writes only the `Backend` value to the selected `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` target.
 
@@ -41,7 +67,7 @@ This guarded request does not:
 - initialize providers or repositories.
 - add UI controls.
 
-The purpose is to make the future enablement gate explicit without making the selected target writable prematurely. A later real-write PR must still implement and validate the SQLUICore-owned `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` target before any production/user config write can occur.
+The purpose is to make the enablement gate explicit without turning descriptor resolution into a broad writer. Future real-write PRs must still implement and validate each additional setting before any production/user config write beyond backend-only can occur.
 
 ## Guarded Production Target Enablement Checkpoint
 
@@ -66,8 +92,8 @@ SQLUICore now exposes a descriptor for the selected production target through th
 - ownership: SQLUICore/plugin-managed.
 - production target: true.
 - smoke-owned target: false.
-- write capability: false.
-- implementation/write-enabled state: false.
+- general write capability: false.
+- implementation/write-enabled state: backend-only writes are handled by the explicit apply request, not by descriptor resolution.
 - committed config, `DefaultEngine.ini`, generated `Saved/Config`, and user/global editor settings usage: false.
 
 This descriptor is not a writer. It does not create `Saved/SQLUI/PersistenceSettings`, does not create `RuntimeSettings.ini`, does not open the file, does not write config, and does not enable production Apply. The policy result keeps the descriptor separate from `ConfigFilePath`; `ConfigFilePath` remains empty for production/default policy results because no writable path is exposed.
