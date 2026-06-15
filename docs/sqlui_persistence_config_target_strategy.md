@@ -6,6 +6,8 @@ The current implementation deliberately keeps broad/default Apply unavailable. S
 
 PR #144 is a documentation-only checkpoint for that backend-only write. It records the #143 behavior and safety boundaries without adding runtime code, scripts, config changes, smoke flags, widget assets, maps, startup wiring, provider lifecycle work, database work, or packaged behavior.
 
+PR #145 added the matching backend-only readback checkpoint. It is a caller-invoked parser only: it reads `Backend` from `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini`, reports absent/valid/invalid states, and does not apply runtime settings, initialize providers/repositories, create or open databases, run migrations, copy seeds, delete files, or change startup behavior.
+
 PR #136 introduced this strategy as a docs-only decision gate. That strategy checkpoint added no runtime code, settings controls, config writes, committed config changes, provider lifecycle behavior, database work, scripts, Build.cs changes, plugin descriptor changes, maps, assets, CI, or packaged behavior. The follow-up policy-resolution slice keeps those runtime safety boundaries intact. This design checkpoint chooses the production target shape for a future implementation, but it still does not write to that target or enable production Apply.
 
 ## Production Config Target Resolution Checkpoint
@@ -43,7 +45,7 @@ The exact write scope is backend only. The writer does not serialize SQLite path
 
 ## Backend-Only Runtime Settings Readback Checkpoint
 
-The selected target now also has an explicit backend-only readback helper. `FSQLUIPersistenceSettingsRuntimeSettingsReader` reads `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` only when caller code asks for it, parses only the `Backend` value from `[SQLUI.PersistenceSettings]`, and reports a structured result.
+PR #145 gives the selected target an explicit backend-only readback helper. `FSQLUIPersistenceSettingsRuntimeSettingsReader` reads `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` only when caller code asks for it, parses only the `Backend` value from `[SQLUI.PersistenceSettings]`, and reports a structured result.
 
 This readback is not startup consumption. It is not wired into module startup, subsystem initialization, provider initialization, repository factory defaults, widgets, maps, timers, polling, or config-backed runtime settings. An absent `RuntimeSettings.ini` is a neutral no-override result and does not create the file or parent directory. A valid backend value is returned as parsed data only; it is not applied to the active provider, repository, or runtime settings. Missing, malformed, or unknown backend values are reported as validation/errors without repairing, deleting, rewriting, or falling back silently.
 
@@ -53,12 +55,13 @@ The reader intentionally stays backend-only. It does not read or interpret SQLit
 
 Future expansion order should stay conservative:
 
-1. Keep this backend-only write as the checkpointed base.
-2. Keep backend-only readback caller-invoked only; do not add startup consumption unless a later PR explicitly scopes and validates it.
-3. Add provider auto-init writes only after restart/reopen/reinitialize messaging and default-off behavior are represented.
-4. Add SQLite path writes only in a separate path-safety PR with relative/absolute path policy, packaged path expectations, and no-default-create behavior covered.
-5. Add backend selector UI only after the SQLUICore behavior is fully smoke-tested.
-6. Run packaged validation before startup, packaged runtime, default-map, provider lifecycle, or runtime config consumption starts reading this file.
+1. Keep this backend-only write/readback pair as the checkpointed base.
+2. Add any broader settings merge/preview behavior as caller-invoked read-only reporting first, with no startup consumption or provider lifecycle work.
+3. Add startup consumption separately only after the merge/preview semantics are smoke-tested.
+4. Add provider auto-init writes only after restart/reopen/reinitialize messaging and default-off behavior are represented.
+5. Add SQLite path writes only in a separate path-safety PR with relative/absolute path policy, packaged path expectations, and no-default-create behavior covered.
+6. Add backend selector UI only after the SQLUICore behavior is fully smoke-tested.
+7. Run packaged validation before startup, packaged runtime, default-map, provider lifecycle, or runtime config consumption starts reading this file.
 
 ## Guarded Production Target Enablement Request
 
