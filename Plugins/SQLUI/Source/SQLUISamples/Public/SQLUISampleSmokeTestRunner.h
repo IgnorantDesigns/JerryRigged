@@ -1755,6 +1755,33 @@ struct SQLUISAMPLES_API FSQLUISamplePersistenceSettingsDraftProbeResult
 	bool bBackendOnlyProductionApplyDirectoryCleaned = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bBackendOnlyProductionReadAbsentNoOverride = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bBackendOnlyProductionReadAbsentDidNotCreateTarget = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bBackendOnlyProductionReadAfterWriteSucceeded = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bBackendOnlyProductionReadBackendMatched = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bBackendOnlyProductionReadNoRuntimeSideEffects = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bBackendOnlyProductionReadUnknownBackendRejected = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bBackendOnlyProductionReadMalformedRejected = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bBackendOnlyProductionReadArtifactCleaned = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
+	bool bBackendOnlyProductionReadDirectoryCleaned = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")
 	bool bBackendChangeApplyContractDetected = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SQLUI|Samples")

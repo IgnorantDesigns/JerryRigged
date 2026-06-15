@@ -146,11 +146,14 @@ Parameters:
   -UsePersistenceSettingsDraftProbe
       Run the optional SQLUICore persistence settings draft, validation,
       dry-run apply preview, apply/cancel contract, apply result display,
-      smoke-owned apply config target, and backend-only production apply probe.
+      smoke-owned apply config target, backend-only production apply, and
+      backend-only runtime settings readback probe.
       Default Apply remains unavailable/non-mutating, while the explicit
       guarded backend-only production request writes only Backend=<value> to
       Saved\SQLUI\PersistenceSettings\RuntimeSettings.ini and cleans up the
-      probe-created artifact. The probe also validates SQLUISamples
+      probe-created artifact. The explicit readback path reads only Backend,
+      treats absence as no override, and does not apply runtime settings.
+      The probe also validates SQLUISamples
       validation/apply-preview/apply-contract/apply-result sample adapters and
       validation/apply-preview/apply-contract/apply-result C++ UMG widget shell
       contracts.

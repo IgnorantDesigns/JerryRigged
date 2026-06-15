@@ -3196,6 +3196,15 @@ void LogSQLUISampleSmokeTestPersistenceSettingsDraftProbeResult(
 	LogPersistenceSettingsDraftBool(TEXT("backend-only production apply invalid did not mutate"), ProbeResult.bBackendOnlyProductionApplyInvalidDidNotMutate);
 	LogPersistenceSettingsDraftBool(TEXT("backend-only production apply artifact cleaned"), ProbeResult.bBackendOnlyProductionApplyArtifactCleaned);
 	LogPersistenceSettingsDraftBool(TEXT("backend-only production apply directory cleaned"), ProbeResult.bBackendOnlyProductionApplyDirectoryCleaned);
+	LogPersistenceSettingsDraftBool(TEXT("backend-only production read absent no override"), ProbeResult.bBackendOnlyProductionReadAbsentNoOverride);
+	LogPersistenceSettingsDraftBool(TEXT("backend-only production read absent did not create target"), ProbeResult.bBackendOnlyProductionReadAbsentDidNotCreateTarget);
+	LogPersistenceSettingsDraftBool(TEXT("backend-only production read after write succeeded"), ProbeResult.bBackendOnlyProductionReadAfterWriteSucceeded);
+	LogPersistenceSettingsDraftBool(TEXT("backend-only production read backend matched"), ProbeResult.bBackendOnlyProductionReadBackendMatched);
+	LogPersistenceSettingsDraftBool(TEXT("backend-only production read no runtime side effects"), ProbeResult.bBackendOnlyProductionReadNoRuntimeSideEffects);
+	LogPersistenceSettingsDraftBool(TEXT("backend-only production read unknown backend rejected"), ProbeResult.bBackendOnlyProductionReadUnknownBackendRejected);
+	LogPersistenceSettingsDraftBool(TEXT("backend-only production read malformed rejected"), ProbeResult.bBackendOnlyProductionReadMalformedRejected);
+	LogPersistenceSettingsDraftBool(TEXT("backend-only production read artifact cleaned"), ProbeResult.bBackendOnlyProductionReadArtifactCleaned);
+	LogPersistenceSettingsDraftBool(TEXT("backend-only production read directory cleaned"), ProbeResult.bBackendOnlyProductionReadDirectoryCleaned);
 	LogPersistenceSettingsDraftBool(TEXT("backend change apply contract detected"), ProbeResult.bBackendChangeApplyContractDetected);
 	LogPersistenceSettingsDraftBool(TEXT("SQLite apply contract safe"), ProbeResult.bSQLiteApplyContractSafe);
 	LogPersistenceSettingsDraftBool(TEXT("unknown backend apply contract blocked"), ProbeResult.bUnknownBackendApplyContractBlocked);
