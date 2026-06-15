@@ -123,13 +123,15 @@ The smoke requirement for this checkpoint is `-UsePersistenceSettingsDraftProbe`
 
 ## Backend-Only Runtime Settings Readback Checkpoint
 
-The current runtime status also includes one narrow selected-target readback path. `FSQLUIPersistenceSettingsRuntimeSettingsReader` reads `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` only when called explicitly, parses only the `Backend` key from `[SQLUI.PersistenceSettings]`, and returns structured status/messages for absent, valid, and invalid files.
+PR #145 added one narrow selected-target readback path. `FSQLUIPersistenceSettingsRuntimeSettingsReader` reads `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` only when called explicitly, parses only the `Backend` key from `[SQLUI.PersistenceSettings]`, and returns structured status/messages for absent, valid, and invalid files.
 
 This checkpoint does not consume runtime settings. An absent file means no runtime override and creates no file or directory. A valid backend value is returned as parsed data only; it does not change `USQLUILayoutRepositoryRuntimeSettings`, the active provider, active repository, factory defaults, startup behavior, or packaged behavior. Missing or unknown backend values are validation/error results and are not repaired, deleted, rewritten, or silently treated as another backend.
 
 The readback helper intentionally ignores every setting outside the backend value. It does not read or interpret SQLite path, provider auto-init, migration, seed-copy, schema-init, reset/delete, startup, lifecycle, or UI-control data. It does not create database files, open SQLite for writing, run migrations, copy seeds, initialize providers/repositories, delete files, or write `Saved/Config`.
 
 `-UsePersistenceSettingsDraftProbe` validates this checkpoint by reading before any selected target exists, reading after a backend-only smoke write, rejecting unknown and missing-backend files, preserving repo `Config` and generated `Saved\Config`, preserving database/lifecycle no-op behavior, and cleaning up the probe-created `RuntimeSettings.ini` plus the empty `PersistenceSettings` directory.
+
+Future expansion should keep merge/preview reporting caller-invoked first, then scope startup consumption, provider auto-init, SQLite path read/write, and UI work as separate validation gates.
 
 ## Smoke-Owned Apply Config Target Scaffold
 

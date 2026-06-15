@@ -80,7 +80,7 @@ The SQLUI SQLite phase has moved past proof-only work into an explicit, opt-in r
 
 This is still not a default production persistence policy. Implementing the user-facing settings UI, choosing product startup policy, broader platform validation, production async service hardening, and actual future schema upgrades remain future work.
 
-The recommended next persistence-settings slices remain ordered: keep backend-only write/readback as the checkpointed base; keep readback explicit and out of startup; add provider auto-init write separately; add SQLite path write separately with path-safety and packaged-path validation; add backend selector UI only after SQLUICore write/readback behavior is tested; and require packaged validation before startup/package behavior consumes `RuntimeSettings.ini`.
+The recommended next persistence-settings slices remain ordered: keep backend-only write/readback as the checkpointed base; keep readback explicit and out of startup; add broader merge/preview reporting before startup consumption; add startup consumption separately; add provider auto-init write separately; add SQLite path write separately with path-safety and packaged-path validation; add backend selector UI only after SQLUICore write/readback behavior is tested; and require packaged validation before startup/package behavior consumes `RuntimeSettings.ini`.
 
 ## Smoke-Owned Apply Config Target Checkpoint
 
@@ -123,7 +123,7 @@ The current decision is:
 - Do not write user/global editor settings unexpectedly.
 - Do not let widgets or SQLUISamples own file/config writes.
 - Treat `USQLUILayoutRepositoryRuntimeSettings` as the current config-backed policy surface, not as an automatically writable Apply target.
-- Implement any additional writes or readback fields for the selected SQLUICore-owned `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` runtime settings file only in future scoped implementation PRs. Current code may describe that target, write only the backend value through the explicit guarded request, and read only that backend value through an explicit caller-invoked helper, but must not create/write/read broader settings.
+- Implement any additional writes or readback fields for the selected SQLUICore-owned `Saved/SQLUI/PersistenceSettings/RuntimeSettings.ini` runtime settings file only in future scoped implementation PRs. Current code may describe that target, write only the backend value through the explicit guarded request, and, through PR #145, read only that backend value through an explicit caller-invoked helper, but must not create/write/read broader settings.
 - Keep explicit smoke-owned targets as the only full-draft write-capable path, and keep the production target limited to backend-only writes/readback.
 
 Real apply/save remains future work. The first real write slice should be narrow, preferably backend choice only, and must preserve `InMemory` default, SQLite opt-in, provider auto-init off by default, no committed config changes, no DB creation, no DB write-open, no migrations, no seed copy, no provider/repository initialization, and no file deletion.

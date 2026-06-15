@@ -176,6 +176,8 @@ It verifies the apply-result shell derives from `UUserWidget`, that refresh/buil
 
 The same probe verifies default/current `InMemory` apply results are safe, default Apply execution is reported as unavailable/not implemented, the guarded backend-only Apply request writes only the backend value, unknown backends and empty SQLite paths are shown as blocked/error rows, pending SQLite paths can be represented without database creation, provider auto-init changes remain pending policy, repeated result/display/adapter output is deterministic, a smoke-owned sidecar is not deleted by display/adapter/widget generation, and config preservation plus smoke-owned and probe-created production-target cleanup remain intact.
 
+The probe also covers PR #145's backend-only `RuntimeSettings.ini` readback, but this apply-result widget guide does not consume that readback. The readback remains caller-invoked, backend-only, non-applying, and separate from settings controls or startup/provider lifecycle behavior.
+
 This guide adds no new smoke flag. Cleanup expectations remain unchanged for database artifacts: the probe removes smoke-owned database and sidecar files under `Saved/SQLUI/SmokeTests/PersistenceSettingsDraft`, plus the selected production settings file only when the probe created it.
 
 ## Remaining Work
